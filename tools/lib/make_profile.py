@@ -58,6 +58,8 @@ BASELINE_SETTINGS = [
     ("global", "window_animation_scale", "WINDOW_ANIM"),
     ("global", "transition_animation_scale", "TRANSITION_ANIM"),
     ("global", "animator_duration_scale", "ANIMATOR_DURATION"),
+    ("global", "stay_on_while_plugged_in", "STAY_ON"),
+    ("secure", "enabled_notification_listeners", "NOTIF_LISTENERS"),
 ]
 
 PEN_NAME = re.compile(r"pen|stylus|xiaomi.*(smart|focus)|mipen", re.IGNORECASE)

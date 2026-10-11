@@ -67,6 +67,10 @@ restore_setting secure enabled_accessibility_services "${A11Y_SERVICES:-}" "${A1
 restore_setting secure accessibility_enabled "${A11Y_ENABLED:-}" "${A11Y_ENABLED_UNSET:-1}"
 restore_setting secure launcher3.layout.provider "${LAYOUT_PROVIDER:-}" "${LAYOUT_PROVIDER_UNSET:-1}"
 restore_setting global adb_wifi_enabled "${ADB_WIFI_ENABLED:-}" "${ADB_WIFI_ENABLED_UNSET:-1}"
+# Testing keeps the screen awake while charging (svc power stayon); put it back.
+[[ -n "${STAY_ON_UNSET:-}" ]] && restore_setting global stay_on_while_plugged_in "${STAY_ON:-}" "${STAY_ON_UNSET:-1}"
+# Key Mapper's media actions need its notification listener; uninstalling it also drops the entry.
+[[ -n "${NOTIF_LISTENERS_UNSET:-}" ]] && restore_setting secure enabled_notification_listeners "${NOTIF_LISTENERS:-}" "${NOTIF_LISTENERS_UNSET:-1}"
 
 # 4. Apps Pad Suite added (never ones that were there before the baseline).
 remove_if_added() { # remove_if_added <pkg> <preexisting-flag>
