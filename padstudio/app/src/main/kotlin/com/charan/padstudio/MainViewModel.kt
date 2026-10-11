@@ -166,11 +166,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _message.value = "Nothing to hand over: this pen has no recorded or measured buttons. Check the pen type."
             return null
         }
-        studio.config.update { it.copy(appliedProfileHash = plan.hash) }
+        studio.config.update { it.copy(appliedProfileHash = plan.hash, appliedAt = System.currentTimeMillis()) }
         return KeyMapperBridge.importIntent(studio, plan.json)
     }
 
-    /** Key Mapper switches only the key maps directly inside a group, so every generated group is switched. */
+    /**
+     * Key Mapper switches only the key maps directly inside a group, so every generated group is switched.
+     * Once the broadcasts are sent, the request is remembered as
+     * [com.charan.padstudio.data.StudioConfig.penEnabled]; Key Mapper can't confirm it.
+     */
     fun setPenEnabled(enabled: Boolean) {
         val groups = _plan.value?.generated?.groups.orEmpty()
         if (!KeyMapperBridge.isInstalled(studio)) {
@@ -178,6 +182,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         groups.forEach { KeyMapperBridge.setGroupEnabled(studio, it.uid, enabled) }
+        if (groups.isNotEmpty()) studio.config.update { it.copy(penEnabled = enabled) }
         _message.value = if (groups.isEmpty()) "The pen profile isn't ready yet." else "Pen actions ${if (enabled) "on" else "off"}."
     }
 
@@ -200,6 +205,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateWidgets()
     }
 
+    /**
+     * The grid for widgets set to Default (plan §6b): columns x rows such as "8x4" (GridSpec's form), or
+     * null for Auto. A blank spec counts as null. Widgets with their own grid don't change.
+     */
+    fun setDefaultWidgetGrid(spec: String?) {
+        studio.config.update { it.copy(widgetGrid = spec?.trim()?.ifEmpty { null }) }
+        updateWidgets()
+    }
+
     fun pinWidget(group: AppGroup, size: com.charan.padstudio.home.WidgetSize = com.charan.padstudio.home.WidgetSize.WIDE) {
         if (!WidgetPinning.request(studio, group, size)) {
             _message.value = "This launcher doesn't accept requests: long-press the home screen → Widgets → PadStudio → App group."
@@ -215,6 +229,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun iconPacks() = studio.icons.installedPacks()
+
+    /** Looks → "Match wallpaper colours": Material You colours instead of the brand palette. */
+    fun setMatchWallpaperColours(enabled: Boolean) {
+        studio.config.update { it.copy(matchWallpaperColours = enabled) }
+        updateWidgets()
+    }
 
     fun applyWallpaper(seed: Long, dark: Boolean, accent: Int) {
         viewModelScope.launch(Dispatchers.Default) {
