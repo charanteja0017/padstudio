@@ -103,6 +103,20 @@ class KeyMapperJsonTest {
         assertFalse("parent_uid" in groups.first())
     }
 
+    @Test fun `ui element clicks match by resource id only`() {
+        // Key Mapper's matchAccessibilityNode accepts a node whose class name alone matches, so a
+        // class name would let any clickable view of that class be clicked instead of the shutter.
+        val actions = backup(PenFixtures.BASIC_TWO_BUTTON, PenKind.TWO_BUTTON).getValue("keymap_list").jsonArray
+            .flatMap { it.jsonObject.getValue("actionList").jsonArray.map { action -> action.jsonObject } }
+            .filter { it.getValue("type").jsonPrimitive.content == "INTERACT_UI_ELEMENT" }
+        assertTrue(actions.isNotEmpty())
+        for (action in actions) {
+            val extras = action.getValue("extras").jsonArray.map { it.jsonObject.getValue("id").jsonPrimitive.content }
+            assertTrue("extra_accessibility_view_resource_id" in extras)
+            assertFalse("extra_accessibility_class_name" in extras, "class name would widen the match")
+        }
+    }
+
     @Test fun `squeeze with no android key code is detected by scan code`() {
         val keyMaps = backup(PenFixtures.EXPERT_FOCUS_PRO, PenKind.FOCUS_PEN_PRO).getValue("keymap_list").jsonArray
         val pinchKey = keyMaps.map { it.jsonObject.getValue("trigger").jsonObject.getValue("keys").jsonArray.single().jsonObject }

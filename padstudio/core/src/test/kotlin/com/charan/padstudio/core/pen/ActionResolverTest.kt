@@ -1,5 +1,7 @@
 package com.charan.padstudio.core.pen
 
+import com.charan.padstudio.core.pen.ActionResolver.Companion.KEYCODE_CAMERA
+import com.charan.padstudio.core.pen.ActionResolver.Companion.KEYCODE_VOLUME_DOWN
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -39,13 +41,43 @@ class ActionResolverTest {
         assertTrue(onenote.variants.isEmpty() && onenote.warnings.single().contains("Expert"))
     }
 
-    @Test fun `shutter outside a camera context opens the camera`() {
-        assertEquals(KmAction.System("open_camera"), basic.resolve(PenIntent.SHUTTER, null).variants.single().actions.single())
+    @Test fun `shutter outside a camera context opens the probed camera directly`() {
+        assertEquals(KmAction.App("com.android.camera", null), basic.resolve(PenIntent.SHUTTER, null).variants.single().actions.single())
+        assertEquals(KmAction.App("com.android.camera", null), basic.resolve(PenIntent.OPEN_CAMERA, null).variants.single().actions.single())
+        // Nothing probed: Android's own camera action, chooser or not.
+        val unprobed = ActionResolver(PenFixtures.FACTS.copy(cameras = DefaultProfiles.KNOWN_CAMERAS), PenMode.BASIC)
+        assertEquals(KmAction.System("open_camera"), unprobed.resolve(PenIntent.OPEN_CAMERA, null).variants.single().actions.single())
     }
 
     @Test fun `library opens PadStudio through an intent uri key mapper can parse`() {
         val intent = basic.resolve(PenIntent.OPEN_LIBRARY, null).variants.single().actions.single() as KmAction.Intent
         assertEquals("#Intent;component=com.charan.padstudio/com.charan.padstudio.home.LibraryActivity;end", intent.uri)
+    }
+
+    @Test fun `expert mode without key injection uses swipes and recorded buttons`() {
+        val noInjection = ActionResolver(PenFixtures.FACTS.copy(canInjectKeys = false), PenMode.EXPERT)
+        val page = noInjection.resolve(PenIntent.NEXT_PAGE, "com.adobe.reader").variants
+        assertTrue(page.size == 2 && page.all { it.actions.single() is KmAction.Swipe }, page.toString())
+        val shutter = noInjection.resolve(PenIntent.SHUTTER, "com.android.camera").variants.single().actions.single()
+        assertTrue(shutter is KmAction.UiElement, "recorded shutter node wins: $shutter")
+        val openCamera = noInjection.resolve(PenIntent.SHUTTER, "net.sourceforge.opencamera")
+        assertTrue(openCamera.variants.isEmpty() && openCamera.warnings.isNotEmpty(), "no camera key without injection")
+    }
+
+    @Test fun `with key injection a measured shutter key beats the recorded button`() {
+        val measured = PenFixtures.FACTS.cameras.getValue("com.android.camera").copy(honoursCameraKey = true, volumeKeyIsShutter = true)
+        val facts = PenFixtures.FACTS.copy(canInjectKeys = true, cameras = PenFixtures.FACTS.cameras + ("com.android.camera" to measured))
+        val expert = ActionResolver(facts, PenMode.EXPERT)
+        assertEquals(KmAction.KeyEvent(KEYCODE_CAMERA), expert.resolve(PenIntent.SHUTTER, "com.android.camera").variants.single().actions.single())
+
+        val volumeOnly = facts.copy(cameras = facts.cameras + ("com.android.camera" to measured.copy(honoursCameraKey = false)))
+        assertEquals(
+            KmAction.KeyEvent(KEYCODE_VOLUME_DOWN),
+            ActionResolver(volumeOnly, PenMode.EXPERT).resolve(PenIntent.SHUTTER, "com.android.camera").variants.single().actions.single(),
+        )
+        // Basic mode can't inject keys, so the recorded button stays.
+        val basicShutter = ActionResolver(facts, PenMode.BASIC).resolve(PenIntent.SHUTTER, "com.android.camera").variants.single().actions.single()
+        assertTrue(basicShutter is KmAction.UiElement, basicShutter.toString())
     }
 
     @Test fun `notes shortcut needs a chosen app`() {

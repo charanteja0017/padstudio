@@ -38,6 +38,8 @@ object PenFixtures {
         undoNodes = mapOf("com.google.android.keep" to UiNode("com.google.android.keep:id/undo", null, "Undo")),
         redoNodes = mapOf("com.google.android.keep" to UiNode("com.google.android.keep:id/redo", null, "Redo")),
         notesApp = "com.orion.notein.global",
+        // Most tests describe a fully set-up Expert mode; ActionResolverTest covers injection being off.
+        canInjectKeys = true,
     )
 
     /** Every package any default context mentions, plus apps no context lists. */

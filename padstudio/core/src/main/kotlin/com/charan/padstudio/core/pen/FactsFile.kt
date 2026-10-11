@@ -16,6 +16,13 @@ data class FactsFile(
     val penDevices: List<EvdevDevice> = emptyList(),
     val undoNodes: Map<String, UiNode> = emptyMap(),
     val redoNodes: Map<String, UiNode> = emptyMap(),
+    /**
+     * Pen controls recorded from the kernel by tools/capture-pen.sh. Needed when HyperOS keeps
+     * the pen's keys from apps (Focus Pen Pro), so PadStudio's in-window recorder never sees them.
+     */
+    val controls: Map<String, PenTrigger> = emptyMap(),
+    val penKind: PenKind? = null,
+    val penMode: PenMode? = null,
 ) {
     fun applyTo(base: DeviceFacts): DeviceFacts = base.copy(
         screen = screen ?: base.screen,

@@ -171,4 +171,10 @@ data class DeviceFacts(
     val notesApp: String? = null,
     val libraryComponent: String = "com.charan.padstudio/com.charan.padstudio.home.LibraryActivity",
     val appNames: Map<String, String> = emptyMap(),
+    /**
+     * Key Mapper can inject key events system-wide only in Expert Mode with its "key event actions
+     * use system bridge" setting on (Keys.keyEventActionsUseSystemBridge, off by default). Until
+     * then key actions would silently go nowhere, so other mechanisms are preferred.
+     */
+    val canInjectKeys: Boolean = false,
 )

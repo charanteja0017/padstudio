@@ -103,7 +103,9 @@ object KeyMapperJson {
                 put("deviceVendor", t.device.vendor)
                 put("deviceProduct", t.device.product)
                 put("clickType", keyMap.press.clickType)
-                put("flags", if (t.keyCode == KEYCODE_UNKNOWN) EVDEV_FLAG_DETECT_WITH_SCAN_CODE else 0)
+                // Evdev codes are what the probe measured; matching on them avoids depending on
+                // how a key layout maps them to Android key codes.
+                put("flags", EVDEV_FLAG_DETECT_WITH_SCAN_CODE)
                 put("uid", uid)
             }
         }
@@ -137,7 +139,8 @@ object KeyMapperJson {
             is KmAction.UiElement -> entity("INTERACT_UI_ELEMENT", action.node.description) {
                 extra("extra_accessibility_node_action", action.nodeAction.name)
                 extra("extra_accessibility_package_name", action.packageName)
-                action.node.className?.let { extra("extra_accessibility_class_name", it) }
+                // No class name: Key Mapper also accepts a node whose class name alone matches, so it
+                // could click any view of that class instead of this one (matchAccessibilityNode).
                 extra("extra_accessibility_view_resource_id", action.node.viewResourceId)
                 extra("extra_accessibility_actions", action.nodeAction.accessibilityActionId.toString())
             }

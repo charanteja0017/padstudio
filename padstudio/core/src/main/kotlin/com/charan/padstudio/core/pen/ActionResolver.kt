@@ -15,6 +15,7 @@ data class Resolution(val variants: List<Variant>, val warnings: List<String> = 
  * Mapper's keyboard, which must be the active input method to work.
  */
 class ActionResolver(private val facts: DeviceFacts, private val mode: PenMode) {
+    private val injectKeys = mode == PenMode.EXPERT && facts.canInjectKeys
 
     fun resolve(intent: PenIntent, packageName: String?): Resolution = when (intent) {
         PenIntent.SCREENSHOT -> system("screenshot")
@@ -23,7 +24,7 @@ class ActionResolver(private val facts: DeviceFacts, private val mode: PenMode) 
         PenIntent.RECENTS -> system("open_recents")
         PenIntent.SPLIT_SCREEN -> system("toggle_split_screen")
         PenIntent.NOTIFICATIONS -> system("expand_notification_drawer")
-        PenIntent.OPEN_CAMERA -> system("open_camera")
+        PenIntent.OPEN_CAMERA -> openCamera()
         PenIntent.PLAY_PAUSE -> system("play_pause_media")
         PenIntent.NEXT_TRACK -> system("next_track")
         PenIntent.PREVIOUS_TRACK -> system("previous_track")
@@ -33,21 +34,34 @@ class ActionResolver(private val facts: DeviceFacts, private val mode: PenMode) 
         PenIntent.OPEN_NOTES -> facts.notesApp
             ?.let { single(KmAction.App(it, facts.appNames[it])) }
             ?: Resolution(emptyList(), listOf("No notes app chosen, so \"${intent.label}\" was skipped."))
-        PenIntent.SHUTTER -> if (packageName == null) system("open_camera") else shutter(packageName)
+        PenIntent.SHUTTER -> if (packageName == null) openCamera() else shutter(packageName)
         PenIntent.NEXT_PAGE -> page(packageName, forward = true)
         PenIntent.PREVIOUS_PAGE -> page(packageName, forward = false)
         PenIntent.UNDO -> edit(packageName, redo = false)
         PenIntent.REDO -> edit(packageName, redo = true)
     }
 
+    /**
+     * The camera the probe measured, opened as an app: Key Mapper's "open camera" uses Android's
+     * generic camera action, which shows a chooser when several apps can take photos (it does on the Pad 8).
+     */
+    private fun openCamera(): Resolution {
+        val probed = facts.cameras.values.firstOrNull { it.shutterNode != null || it.volumeKeyIsShutter || it.shutterTap.isNotEmpty() }
+        val camera = probed?.packageName?.takeIf { facts.appNames.isEmpty() || it in facts.appNames } ?: return system("open_camera")
+        return single(KmAction.App(camera, facts.appNames[camera]))
+    }
+
     private fun shutter(packageName: String): Resolution {
         val camera = facts.cameras[packageName]
-        if (mode == PenMode.EXPERT && camera?.honoursCameraKey == true) {
+        // A key the probe saw take a photo comes first: on the Pad 8 (HyperOS 3, Key Mapper 4.6.1) clicking
+        // the recorded shutter button did nothing, while an injected camera key did (tests 2026-10-11).
+        if (injectKeys && camera?.honoursCameraKey == true) {
             return single(KmAction.KeyEvent(KEYCODE_CAMERA))
         }
-        if (mode == PenMode.EXPERT && camera?.volumeKeyIsShutter == true) {
+        if (injectKeys && camera?.volumeKeyIsShutter == true) {
             return single(KmAction.KeyEvent(KEYCODE_VOLUME_DOWN))
         }
+        // Without key injection: the recorded shutter button, which needs no orientation variants.
         camera?.shutterNode?.let { return single(KmAction.UiElement(packageName, it, NodeAction.CLICK)) }
 
         val taps = camera?.shutterTap.orEmpty()
@@ -68,7 +82,7 @@ class ActionResolver(private val facts: DeviceFacts, private val mode: PenMode) 
                 missing.map { "Shutter for $packageName is not calibrated in ${it.name.lowercase()}, so presses there do nothing." },
             )
         }
-        if (mode == PenMode.EXPERT) {
+        if (injectKeys) {
             return Resolution(
                 listOf(Variant("volume", listOf(KmAction.KeyEvent(KEYCODE_VOLUME_DOWN)))),
                 listOf("Shutter for $packageName sends Volume Down, which is not verified for this app yet."),
@@ -81,7 +95,7 @@ class ActionResolver(private val facts: DeviceFacts, private val mode: PenMode) 
     }
 
     private fun page(packageName: String?, forward: Boolean): Resolution {
-        if (mode == PenMode.EXPERT) {
+        if (injectKeys) {
             return single(KmAction.KeyEvent(if (forward) KEYCODE_PAGE_DOWN else KEYCODE_PAGE_UP))
         }
         val paging = packageName?.let { facts.paging[it] } ?: Paging.VERTICAL
@@ -98,14 +112,14 @@ class ActionResolver(private val facts: DeviceFacts, private val mode: PenMode) 
 
     private fun edit(packageName: String?, redo: Boolean): Resolution {
         val label = if (redo) "Redo" else "Undo"
-        if (mode == PenMode.EXPERT) {
+        if (injectKeys) {
             return single(KmAction.KeyEvent(if (redo) KEYCODE_Y else KEYCODE_Z, META_CTRL))
         }
         val node = packageName?.let { (if (redo) facts.redoNodes else facts.undoNodes)[it] }
         if (node != null) return single(KmAction.UiElement(packageName, node, NodeAction.CLICK))
         return Resolution(
             emptyList(),
-            listOf("$label in ${packageName ?: "this context"} needs Expert mode or a recorded $label button."),
+            listOf("$label in ${packageName ?: "this context"} needs key injection (Expert mode + Key Mapper's system-bridge key setting) or a recorded $label button."),
         )
     }
 
