@@ -22,6 +22,9 @@ enum class IconStyle(val label: String) {
 /**
  * Everything PadStudio remembers, in files/config.json. tools/rollback.sh saves this file with
  * `run-as` before uninstalling and tools/install.sh writes it back, so a reinstall keeps it.
+ *
+ * Fields are only ever added, each with a default, and never renamed: an older config.json then loads
+ * with the defaults, and an older PadStudio (also `ignoreUnknownKeys`) reads a newer file (plan §4).
  */
 @Serializable
 data class StudioConfig(
@@ -44,6 +47,20 @@ data class StudioConfig(
     val factsAdopted: Boolean = false,
     /** The user turned on Key Mapper's "key event actions use system bridge" (Expert) setting. */
     val keyInjection: Boolean = false,
+    /**
+     * Pen actions on or off, as last requested from PadStudio. Key Mapper can't be asked, so this is
+     * the request, not an observed state (plan §7).
+     */
+    val penEnabled: Boolean = true,
+    /**
+     * When the profile behind [appliedProfileHash] was handed to Key Mapper, in epoch ms. Null when unknown:
+     * nothing handed over yet, or handed over by a build older than this field.
+     */
+    val appliedAt: Long? = null,
+    /** Looks → "Match wallpaper colours": Material You colours instead of the brand palette. */
+    val matchWallpaperColours: Boolean = false,
+    /** Grid for widgets set to Default, as columns x rows ("8x4"); null means Auto (plan §6b). */
+    val widgetGrid: String? = null,
 )
 
 class ConfigStore(private val file: File) {

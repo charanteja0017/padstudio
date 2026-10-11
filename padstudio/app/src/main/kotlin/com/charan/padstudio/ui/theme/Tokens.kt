@@ -59,10 +59,21 @@ object Tokens {
         BrandPalette.GRAPHITE -> graphiteDark
     }
 
-    // Semantic colours, separate from the brand. Fixed ones are the same in both themes.
+    // Semantic colours, separate from the brand. These bases are for tints and fills, the same in both themes;
+    // status icons and labels use the inks below.
     val Good: Color = Color(0xFF34C759)
     val Warn: Color = Color(0xFFFFB300)
     // Bad is each scheme's own error colour: use MaterialTheme.colorScheme.error.
+
+    // Inks: status icons and short status labels. Each reaches 3:1 on its theme's background, surface and
+    // surface containers (the generator checks). A theme without its own ink in tokens.json uses the base.
+    val GoodInkLight: Color = Color(0xFF16672B)
+    val GoodInkDark: Color = Color(0xFF34C759)
+    fun goodInk(dark: Boolean): Color = if (dark) GoodInkDark else GoodInkLight
+    val WarnInkLight: Color = Color(0xFF714D00)
+    val WarnInkDark: Color = Color(0xFFFFB300)
+    fun warnInk(dark: Boolean): Color = if (dark) WarnInkDark else WarnInkLight
+    // Bad's ink is each scheme's own error colour: use MaterialTheme.colorScheme.error.
 
     // Type scale in sp at font scale 1.0: size and line height. Android scales sp nonlinearly above 1.0.
     val DisplaySize: TextUnit = 36.sp
@@ -75,6 +86,8 @@ object Tokens {
     val BodyLineHeight: TextUnit = 24.sp
     val LabelSize: TextUnit = 13.sp
     val LabelLineHeight: TextUnit = 18.sp
+    val LabelSmallSize: TextUnit = 11.sp
+    val LabelSmallLineHeight: TextUnit = 16.sp
 
     // Weights: body regular, titles medium, never above 600, because Android's Bold text adds 300.
     val WeightRegular: FontWeight = FontWeight(400)

@@ -10,7 +10,9 @@
 //   - background and surface pinned to #F5F5F7 / #1C1C1E, with a hand-spaced surface-container ladder.
 //
 // Before writing anything it checks WCAG 2 contrast for every scheme (plan §13 "Contrast") and prints the
-// table. If any pair fails, or a token breaks a house rule, it writes nothing and exits 1.
+// table: text pairs at 4.5, primary titles at 3.0, and each semantic ink (status icons and labels) at 3.0 on
+// its theme's background, surface and surface containers. If any pair fails, or a token breaks a house
+// rule, it writes nothing and exits 1.
 //
 // Usage (node 22, from any directory):
 //   npm ci --prefix padstudio/design                  once; installs exactly what package-lock.json pins
@@ -93,10 +95,17 @@ const CSS_CONTRACT = [
   "outline", "outlineVariant", "inverseSurface", "inverseOnSurface", "inversePrimary", "scrim",
 ];
 const SEMANTIC = ["good", "warn", "bad"];
+const THEMES = ["light", "dark"];
 const CSS_EXTRA = ROLES.filter((r) => !CSS_CONTRACT.includes(r));
+// Where status icons and labels sit: an ink must reach 3.0 (WCAG's minimum for icons) on each of these.
+const INK_GROUNDS = [
+  "background", "surface", "surfaceContainerLowest", "surfaceContainerLow", "surfaceContainer",
+  "surfaceContainerHigh", "surfaceContainerHighest",
+];
+const inkKey = (k) => `${k}Ink`;
 
 // The contrast gate: [foreground, background, minimum ratio]. 4.5 is WCAG AA for body text; primary on
-// surface is used only for titles (title size and up), where 3.0 applies.
+// surface is used only for titles (title size and up), where 3.0 applies; so are the semantic inks.
 const GATE = [
   ["onSurface", "surface", 4.5],
   ["onSurface", "surfaceContainerLowest", 4.5],
@@ -112,8 +121,9 @@ const GATE = [
   ["onTertiaryContainer", "tertiaryContainer", 4.5],
   ["onError", "error", 4.5],
   ["primary", "surface", 3.0],
+  ...SEMANTIC.flatMap((k) => INK_GROUNDS.map((g) => [inkKey(k), g, 3.0])),
 ];
-// Shown, not gated: the semantic colours are fixed by tokens.json. 3.0 is WCAG's minimum for icons.
+// Shown, not gated: the base semantic colours, used for tints and fills. Icons and labels use the inks.
 const INFO = [["good", "surface", 3.0], ["warn", "surface", 3.0], ["bad", "surface", 3.0]];
 
 // ---------------------------------------------------------------------------------------------------
@@ -197,12 +207,36 @@ for (const theme of ["light", "dark"]) {
     if (!(HEX.test(String(v)) || (typeof v === "number" && v >= 0 && v <= 100))) fail(`surfaces.${theme}.${role} must be #RRGGBB or a tone 0-100`);
   }
 }
-const sem = entries(colour.semantic ?? {});
+const semantic = colour.semantic ?? {};
+const isObject = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+const isColour = (v) => HEX.test(v ?? "") || ROLES.includes(v);
 for (const k of SEMANTIC) {
-  const v = colour.semantic?.[k];
-  if (!(HEX.test(v ?? "") || ROLES.includes(v))) fail(`colour.semantic.${k} must be #RRGGBB or a role name`);
+  if (!isColour(semantic[k])) fail(`colour.semantic.${k} must be #RRGGBB or a role name`);
 }
-if (sem.length !== SEMANTIC.length) fail(`colour.semantic must have exactly ${SEMANTIC.join(", ")}`);
+const semExtra = entries(semantic).map(([k]) => k).filter((k) => !SEMANTIC.includes(k) && k !== "ink");
+if (semExtra.length) fail(`colour.semantic has unknown keys ${semExtra.join(", ")} (allowed: ${SEMANTIC.join(", ")}, ink)`);
+// Optional per-theme inks: colour.semantic.ink.<light|dark>.<good|warn|bad>. A missing entry means the base colour.
+const inks = semantic.ink ?? {};
+if (!isObject(inks)) fail("colour.semantic.ink must be an object of light and/or dark");
+else {
+  for (const [theme, set] of entries(inks)) {
+    if (!THEMES.includes(theme)) { fail(`colour.semantic.ink.${theme}: use light or dark`); continue; }
+    if (!isObject(set)) { fail(`colour.semantic.ink.${theme} must be an object`); continue; }
+    for (const [k, v] of entries(set)) {
+      if (!SEMANTIC.includes(k)) fail(`colour.semantic.ink.${theme}.${k} is not one of ${SEMANTIC.join(", ")}`);
+      else if (!isColour(v)) fail(`colour.semantic.ink.${theme}.${k} must be #RRGGBB or a role name`);
+    }
+  }
+}
+// What each theme's ink is made from: a fixed #RRGGBB, or a role resolved per scheme.
+const inkSource = (k, theme) => (isObject(inks) && isObject(inks[theme]) ? inks[theme][k] : undefined) ?? semantic[k];
+for (const k of SEMANTIC) {
+  const [l, d] = THEMES.map((t) => inkSource(k, t));
+  // Tokens.kt gives a fixed ink a val per theme and a role ink a pointer to MaterialTheme; a mix fits neither.
+  if (isColour(l) && isColour(d) && !(HEX.test(l) && HEX.test(d)) && l !== d) {
+    fail(`colour.semantic ${k}: the light ink (${l}) and dark ink (${d}) must both be #RRGGBB or the same role`);
+  }
+}
 const typeRoles = entries(tokens.type ?? {});
 for (const [k, v] of typeRoles) if (!(v.size > 0 && v.line >= v.size)) fail(`type.${k}: needs size > 0 and line >= size`);
 for (const [k, v] of entries(tokens.weight ?? {})) {
@@ -245,9 +279,10 @@ function buildScheme(p, dark) {
   for (const [r, v] of entries(surfaces[dark ? "dark" : "light"] ?? {})) {
     o[r] = typeof v === "number" ? hex(s.neutralPalette.tone(v)) : v.toUpperCase();
   }
+  const resolve = (v) => (HEX.test(v) ? v.toUpperCase() : o[v]);
   for (const k of SEMANTIC) {
-    const v = colour.semantic[k];
-    o[k] = HEX.test(v) ? v.toUpperCase() : o[v];
+    o[k] = resolve(semantic[k]);
+    o[inkKey(k)] = resolve(inkSource(k, dark ? "dark" : "light"));
   }
   return o;
 }
@@ -294,7 +329,7 @@ const rowFor = ([f, b, min], gated) =>
 console.log(`WCAG 2 contrast, ${schemes.length} schemes (L = light, D = dark). Gated: every pair must reach its minimum.`);
 console.log(head);
 for (const g of GATE) console.log(rowFor(g, true));
-console.log(`\nNot gated (semantic colours are fixed in tokens.json; 3.0 is WCAG's minimum for icons, "<" = below it):`);
+console.log(`\nNot gated: the base semantic colours, for tints and fills (icons and labels use the inks above; "<" = below 3.0):`);
 for (const g of INFO) console.log(rowFor(g, false));
 const total = GATE.length * schemes.length;
 console.log(`\nContrast gate: ${passed} of ${total} pairs pass.` +
@@ -362,11 +397,29 @@ function kotlin() {
     for (const s of schemes.filter((x) => x.theme === theme)) L.push(`        BrandPalette.${ENUM(s.name)} -> ${ktSchemeName(s)}`);
     L.push("    }", "");
   }
-  L.push("    // Semantic colours, separate from the brand. Fixed ones are the same in both themes.");
+  L.push(
+    "    // Semantic colours, separate from the brand. These bases are for tints and fills, the same in both themes;",
+    "    // status icons and labels use the inks below.",
+  );
   for (const k of SEMANTIC) {
-    const v = colour.semantic[k];
+    const v = semantic[k];
     if (HEX.test(v)) L.push(`    val ${cap(k)}: Color = ${ktColor(v.toUpperCase())}`);
     else L.push(`    // ${cap(k)} is each scheme's own ${v} colour: use MaterialTheme.colorScheme.${v}.`);
+  }
+  L.push(
+    "",
+    "    // Inks: status icons and short status labels. Each reaches 3:1 on its theme's background, surface and",
+    "    // surface containers (the generator checks). A theme without its own ink in tokens.json uses the base.",
+  );
+  for (const k of SEMANTIC) {
+    const [light, dark] = THEMES.map((t) => inkSource(k, t));
+    if (HEX.test(light) && HEX.test(dark)) {
+      L.push(`    val ${cap(k)}InkLight: Color = ${ktColor(light.toUpperCase())}`);
+      L.push(`    val ${cap(k)}InkDark: Color = ${ktColor(dark.toUpperCase())}`);
+      L.push(`    fun ${k}Ink(dark: Boolean): Color = if (dark) ${cap(k)}InkDark else ${cap(k)}InkLight`);
+    } else {
+      L.push(`    // ${cap(k)}'s ink is each scheme's own ${light} colour: use MaterialTheme.colorScheme.${light}.`);
+    }
   }
   L.push("", "    // Type scale in sp at font scale 1.0: size and line height. Android scales sp nonlinearly above 1.0.");
   for (const [k, v] of typeRoles) {
@@ -414,6 +467,8 @@ function css() {
     L.push("", `[data-palette="${s.name}"][data-theme="${s.theme}"] {`, `  color-scheme: ${s.theme};`);
     for (const r of CSS_CONTRACT) L.push(`  --${kebab(r)}: ${s.c[r]};`);
     for (const k of SEMANTIC) L.push(`  --${k}: ${s.c[k]};`);
+    L.push("  /* Status icons and labels; the base colours above are for tints and fills: */");
+    for (const k of SEMANTIC) L.push(`  --${k}-ink: ${s.c[inkKey(k)]};`);
     L.push("  /* Also in the app's ColorScheme, though not in the contract: */");
     for (const r of CSS_EXTRA) L.push(`  --${kebab(r)}: ${s.c[r]};`);
     L.push("}");
