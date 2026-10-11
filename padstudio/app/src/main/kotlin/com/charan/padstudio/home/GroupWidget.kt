@@ -4,7 +4,6 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -29,12 +28,12 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
-import androidx.glance.layout.width
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
@@ -55,9 +54,9 @@ import kotlinx.coroutines.withContext
  * Glance lays out at most 10 children per row, which GroupPlanner.gridFor already respects.
  */
 class GroupWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(
-        setOf(DpSize(140.dp, 110.dp), DpSize(280.dp, 110.dp), DpSize(280.dp, 200.dp), DpSize(420.dp, 200.dp), DpSize(560.dp, 300.dp)),
-    )
+    // Exact: one layout per size the launcher reports (portrait and landscape), each filling the real
+    // box. Responsive snapped to the nearest preset and left the grid off-centre with empty bands.
+    override val sizeMode = SizeMode.Exact
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -85,7 +84,10 @@ class GroupWidgetReceiver : GlanceAppWidgetReceiver() {
 private fun WidgetContent(context: Context, group: PlannedGroup?, snapshot: HomeSnapshot, config: StudioConfig, appWidgetId: Int) {
     val size = LocalSize.current
     val density = config.density
-    val (columns, rows) = GroupPlanner.gridFor(size.width.value.toInt(), size.height.value.toInt(), density)
+    val (columns, rows) = GroupPlanner.gridFor(size.width.value.toInt() - 2 * PADDING_DP, size.height.value.toInt() - 2 * PADDING_DP, density)
+    // Cells share the width equally, so icons grow a little with the cell instead of leaving margins.
+    val cellDp = (size.width.value - 2 * PADDING_DP) / columns
+    val iconDp = (cellDp * ICON_SHARE).coerceIn(density.iconDp.toFloat(), density.iconDp * MAX_ICON_GROWTH)
     val openPanel = Intent(context, FolderPanelActivity::class.java)
         .putExtra(FolderPanelActivity.EXTRA_GROUP, group?.group?.name)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -95,7 +97,7 @@ private fun WidgetContent(context: Context, group: PlannedGroup?, snapshot: Home
     val colors = themedIconColors(context)
 
     Column(
-        modifier = GlanceModifier.fillMaxSize().cornerRadius(24.dp).background(GlanceTheme.colors.widgetBackground).padding(10.dp),
+        modifier = GlanceModifier.fillMaxSize().cornerRadius(24.dp).background(GlanceTheme.colors.widgetBackground).padding(PADDING_DP.dp),
     ) {
         Row(modifier = GlanceModifier.fillMaxWidth().height(28.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -115,34 +117,42 @@ private fun WidgetContent(context: Context, group: PlannedGroup?, snapshot: Home
         val overflow = group.apps.size - shown.size
         val cells = shown.map<_, Cell> { Cell.App(it) } + if (overflow > 0) listOf(Cell.More(overflow)) else emptyList()
         cells.chunked(columns).forEach { row ->
-            Row(modifier = GlanceModifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(modifier = GlanceModifier.fillMaxWidth()) {
                 row.forEach { cell ->
                     when (cell) {
                         is Cell.App -> {
                             val app = snapshot.app(cell.facts) ?: return@forEach
                             val icon = context.studio.icons.icon(app, config.iconStyle, config.iconPack, colors.background, colors.glyph)
                             Column(
-                                modifier = GlanceModifier.width(density.cellDp.dp).padding(vertical = 3.dp).clickable(actionStartActivity(app.launchIntent())),
+                                modifier = GlanceModifier.defaultWeight().padding(vertical = 3.dp).clickable(actionStartActivity(app.launchIntent())),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                Image(ImageProvider(icon), contentDescription = app.facts.label, modifier = GlanceModifier.size(density.iconDp.dp))
+                                Image(ImageProvider(icon), contentDescription = app.facts.label, modifier = GlanceModifier.size(iconDp.dp))
                                 if (density.showLabels) {
                                     Text(app.facts.label, maxLines = 1, style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurface))
                                 }
                             }
                         }
                         is Cell.More -> Box(
-                            modifier = GlanceModifier.width(density.cellDp.dp).height(density.iconDp.dp).clickable(actionStartActivity(openPanel)),
+                            modifier = GlanceModifier.defaultWeight().height(iconDp.dp).clickable(actionStartActivity(openPanel)),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text("+${cell.count}", style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 13.sp, color = GlanceTheme.colors.primary))
                         }
                     }
                 }
+                // Empty cells keep a short last row on the same columns as the rows above.
+                repeat(columns - row.size) { Spacer(GlanceModifier.defaultWeight()) }
             }
         }
     }
 }
+
+private const val PADDING_DP = 10
+
+/** Icon size as a share of its cell, and how far past the density's size it may grow. */
+private const val ICON_SHARE = 0.78f
+private const val MAX_ICON_GROWTH = 1.3f
 
 private sealed interface Cell {
     data class App(val facts: com.charan.padstudio.core.home.AppFacts) : Cell

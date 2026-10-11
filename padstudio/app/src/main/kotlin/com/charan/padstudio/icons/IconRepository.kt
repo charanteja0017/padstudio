@@ -5,14 +5,18 @@ import android.content.Intent
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
+import android.graphics.drawable.InsetDrawable
 import android.util.Xml
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.drawable.toDrawable
 import com.charan.padstudio.core.icons.AppFilter
 import com.charan.padstudio.core.icons.XmlTag
 import com.charan.padstudio.data.IconStyle
@@ -49,12 +53,28 @@ class IconRepository(private val context: Context) {
     fun drawable(app: InstalledApp, style: IconStyle, pack: String?, accent: Int, onAccent: Int): Drawable =
         icon(app, style, pack, accent, onAccent).loadDrawable(context) ?: app.info.getIcon(0)
 
+    /** Which branch [icon] takes for this app; for the debug icon dump. */
+    fun source(app: InstalledApp, style: IconStyle, pack: String?): String {
+        val original = if (app.info.getIcon(0) is AdaptiveIconDrawable) "original/adaptive" else "original/legacy-plate"
+        return when (style) {
+            IconStyle.ORIGINAL -> original
+            IconStyle.ICON_PACK -> if (pack != null && fromPack(pack, app) != null) "pack" else original
+            IconStyle.THEMED -> when {
+                monochrome(app) != null -> "themed/monochrome"
+                lawniconsGlyph(app) != null -> "themed/lawnicons"
+                else -> "themed→$original"
+            }
+        }
+    }
+
     private fun original(app: InstalledApp): Icon {
         val res = app.info.activityInfo.iconResource
-        return if (res != 0) {
+        val drawable = app.info.getIcon(0)
+        // Adaptive icons stay resource references (small widget updates); legacy ones need a plate.
+        return if (res != 0 && drawable is AdaptiveIconDrawable) {
             Icon.createWithResource(app.component.packageName, res)
         } else {
-            Icon.createWithBitmap(render(app.info.getIcon(0)))
+            Icon.createWithBitmap(render(drawable))
         }
     }
 
@@ -80,8 +100,12 @@ class IconRepository(private val context: Context) {
     private fun monochrome(app: InstalledApp): Drawable? =
         if (android.os.Build.VERSION.SDK_INT >= 33) (app.info.getIcon(0) as? AdaptiveIconDrawable)?.monochrome else null
 
+    /** Lawnicons ships whole adaptive icons; the glyph is their monochrome (or foreground) layer. */
     private fun lawniconsGlyph(app: InstalledApp): Drawable? =
-        runCatching { fromPack(LAWNICONS, app)?.loadDrawable(context) }.getOrNull()
+        when (val icon = runCatching { fromPack(LAWNICONS, app)?.loadDrawable(context) }.getOrNull()) {
+            is AdaptiveIconDrawable -> (if (android.os.Build.VERSION.SDK_INT >= 33) icon.monochrome else null) ?: icon.foreground
+            else -> icon
+        }
 
     private fun badge(glyph: Drawable, accent: Int, onAccent: Int): Bitmap {
         val size = ICON_PX
@@ -92,18 +116,67 @@ class IconRepository(private val context: Context) {
         canvas.drawRoundRect(0f, 0f, size.toFloat(), size.toFloat(), radius, radius, paint)
         val glyphCopy = glyph.mutate().constantState?.newDrawable()?.mutate() ?: glyph.mutate()
         glyphCopy.colorFilter = PorterDuffColorFilter(onAccent, PorterDuff.Mode.SRC_IN)
-        // Adaptive-icon monochrome layers carry an 18dp safe-zone inset on each side of 108dp.
-        val inset = if (glyph is AdaptiveIconDrawable || glyph.intrinsicWidth <= 0) 0 else (size * 0.18f).toInt()
-        glyphCopy.setBounds(inset, inset, size - inset, size - inset)
+        // Glyphs here are adaptive-icon layers: 108dp, of which an icon shows the middle 72dp. Drawn at
+        // 150% and clipped to the plate they match what the launcher shows (drawn 1:1 they come out tiny).
+        val bleed = size / 4
+        canvas.clipPath(Path().apply { addRoundRect(0f, 0f, size.toFloat(), size.toFloat(), radius, radius, Path.Direction.CW) })
+        glyphCopy.setBounds(-bleed, -bleed, size + bleed, size + bleed)
         glyphCopy.draw(canvas)
         return bitmap
     }
 
     private fun render(drawable: Drawable): Bitmap {
         val bitmap = createBitmap(ICON_PX, ICON_PX)
-        drawable.setBounds(0, 0, ICON_PX, ICON_PX)
-        drawable.draw(Canvas(bitmap))
+        val canvas = Canvas(bitmap)
+        val shaped = when {
+            drawable is AdaptiveIconDrawable -> drawable
+            // Square artwork (most legacy game icons): full size, cut to the system icon shape.
+            sample(drawable).let { opaqueBorder(it) >= FULL_BLEED } -> {
+                canvas.clipPath(systemShape(ICON_PX))
+                drawable
+            }
+            // Artwork with its own transparent padding: on a plate, as launchers do; drawn bare it floats
+            // as a small glyph.
+            else -> onPlate(drawable)
+        }
+        shaped.setBounds(0, 0, ICON_PX, ICON_PX)
+        shaped.draw(canvas)
         return bitmap
+    }
+
+    private fun sample(drawable: Drawable): IntArray {
+        val bitmap = createBitmap(SAMPLE_PX, SAMPLE_PX)
+        drawable.setBounds(0, 0, SAMPLE_PX, SAMPLE_PX)
+        drawable.draw(Canvas(bitmap))
+        return IntArray(SAMPLE_PX * SAMPLE_PX).also { bitmap.getPixels(it, 0, SAMPLE_PX, 0, 0, SAMPLE_PX, SAMPLE_PX) }
+    }
+
+    /** Share of the outermost pixel ring that is opaque: near 1 for square artwork, 0 for padded glyphs. */
+    private fun opaqueBorder(pixels: IntArray): Float {
+        val last = SAMPLE_PX - 1
+        val ring = pixels.indices.filter { val x = it % SAMPLE_PX; val y = it / SAMPLE_PX; x == 0 || y == 0 || x == last || y == last }
+        return ring.count { Color.alpha(pixels[it]) > 200 }.toFloat() / ring.size
+    }
+
+    private fun systemShape(size: Int): Path =
+        AdaptiveIconDrawable(Color.TRANSPARENT.toDrawable(), Color.TRANSPARENT.toDrawable()).run {
+            setBounds(0, 0, size, size)
+            iconMask
+        }
+
+    /** White plate for dark artwork, near-black for light artwork (a white glyph on white vanishes). */
+    private fun onPlate(legacy: Drawable): AdaptiveIconDrawable {
+        var weight = 0f
+        var luminance = 0f
+        for (pixel in sample(legacy)) {
+            val alpha = Color.alpha(pixel) / 255f
+            weight += alpha
+            luminance += alpha * Color.luminance(pixel)
+        }
+        val plate = if (weight > 0f && luminance / weight > LIGHT_ARTWORK) Color.rgb(32, 33, 36) else Color.WHITE
+        // Foreground layers are 108dp with the visible part in the middle 72dp; the inset keeps the
+        // artwork inside it with a little air.
+        return AdaptiveIconDrawable(plate.toDrawable(), InsetDrawable(legacy, LEGACY_INSET))
     }
 
     private fun packResources(pack: String): Resources? =
@@ -142,6 +215,10 @@ class IconRepository(private val context: Context) {
     companion object {
         const val LAWNICONS = "app.lawnchair.lawnicons"
         const val ICON_PX = 96
+        private const val SAMPLE_PX = 24
+        private const val LIGHT_ARTWORK = 0.6f
+        private const val LEGACY_INSET = 0.25f
+        private const val FULL_BLEED = 0.6f
         private val THEME_ACTIONS = listOf("org.adw.launcher.THEMES", "com.novalauncher.THEME")
     }
 }

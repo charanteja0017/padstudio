@@ -99,6 +99,10 @@ class MainActivity : ComponentActivity() {
         if (intent?.getStringExtra("open") == "pentest") startActivity(Intent(this, com.charan.padstudio.pen.PenTestActivity::class.java))
         // `--es apply keymapper` opens Key Mapper's restore dialog with the current profile.
         if (intent?.getStringExtra("apply") == "keymapper") model.applyWhenReady { startActivity(it) }
+        // `--es widgets update` redraws every placed group widget (after installing a new build).
+        if (intent?.getStringExtra("widgets") == "update") model.updateWidgets()
+        // `--es dumpicons games` writes that group's icons as widgets draw them to files/icon-debug/.
+        intent?.getStringExtra("dumpicons")?.let { model.dumpIcons(it) }
     }
 
     private var requestedTab by mutableStateOf<String?>(null)

@@ -25,8 +25,10 @@ data class ThemedIconColors(val background: Int, val glyph: Int)
 
 fun themedIconColors(context: Context): ThemedIconColors {
     val night = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+    // Dark plates sit on PadStudio's dark widget card, not the wallpaper, so they are a step lighter than
+    // Android's own dark themed icons (accent1_800 measured as 48,48,48: invisible on the card).
     return if (night) {
-        ThemedIconColors(context.getColor(android.R.color.system_accent1_800), context.getColor(android.R.color.system_accent1_100))
+        ThemedIconColors(context.getColor(android.R.color.system_accent1_600), context.getColor(android.R.color.system_accent1_50))
     } else {
         ThemedIconColors(context.getColor(android.R.color.system_accent1_100), context.getColor(android.R.color.system_accent1_700))
     }

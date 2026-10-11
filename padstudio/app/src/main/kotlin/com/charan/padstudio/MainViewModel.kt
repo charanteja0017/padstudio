@@ -228,7 +228,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun updateWidgets() {
+    /**
+     * Debug: each icon of a group as widgets draw it, into files/icon-debug/ with an index of sources.
+     * [spec] is "group" or "group:STYLE" to render another icon style without changing the setting.
+     */
+    fun dumpIcons(spec: String) {
+        val groupName = spec.substringBefore(':')
+        val styleOverride = spec.substringAfter(':', "").takeIf { it.isNotEmpty() }?.let { IconStyle.valueOf(it.uppercase()) }
+        viewModelScope.launch(Dispatchers.Default) {
+            val snapshot = studio.apps.snapshot()
+            val group = snapshot.groups.firstOrNull { it.group.name.equals(groupName, ignoreCase = true) } ?: return@launch
+            val cfg = config.value.let { if (styleOverride != null) it.copy(iconStyle = styleOverride) else it }
+            val colors = com.charan.padstudio.ui.themedIconColors(studio)
+            val dir = java.io.File(studio.filesDir, "icon-debug").apply {
+                deleteRecursively()
+                mkdirs()
+            }
+            val index = group.apps.mapNotNull { snapshot.app(it) }.map { app ->
+                val drawable = studio.icons.drawable(app, cfg.iconStyle, cfg.iconPack, colors.background, colors.glyph)
+                val bitmap = androidx.core.graphics.createBitmap(IconRepository.ICON_PX, IconRepository.ICON_PX)
+                drawable.setBounds(0, 0, IconRepository.ICON_PX, IconRepository.ICON_PX)
+                drawable.draw(android.graphics.Canvas(bitmap))
+                java.io.File(dir, "${app.component.packageName}.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                "${app.component.packageName}\t${app.facts.label}\t${studio.icons.source(app, cfg.iconStyle, cfg.iconPack)}"
+            }
+            java.io.File(dir, "index.tsv").writeText(index.joinToString("\n", postfix = "\n"))
+        }
+    }
+
+    fun updateWidgets() {
         viewModelScope.launch { withContext(Dispatchers.Default) { GroupWidget().updateAll(studio) } }
     }
 
