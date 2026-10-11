@@ -28,6 +28,14 @@ class ActionResolver(private val facts: DeviceFacts, private val mode: PenMode) 
         PenIntent.PLAY_PAUSE -> system("play_pause_media")
         PenIntent.NEXT_TRACK -> system("next_track")
         PenIntent.PREVIOUS_TRACK -> system("previous_track")
+        PenIntent.LAST_APP -> system("go_last_app")
+        PenIntent.QUICK_SETTINGS -> system("expand_quick_settings")
+        PenIntent.ASSISTANT -> system("open_assistant")
+        PenIntent.VOLUME_UP -> single(KmAction.System("volume_up", flags = FLAG_SHOW_VOLUME_UI))
+        PenIntent.VOLUME_DOWN -> single(KmAction.System("volume_down", flags = FLAG_SHOW_VOLUME_UI))
+        PenIntent.DO_NOT_DISTURB -> single(KmAction.System("toggle_do_not_disturb_mode", mapOf("extra_do_not_disturb_mode" to "do_not_disturb_priority")))
+        PenIntent.FLASHLIGHT -> single(KmAction.System("toggle_flashlight", mapOf("extra_flash" to "option_lens_back")))
+        PenIntent.ROTATION_LOCK -> system("toggle_auto_rotate")
         PenIntent.OPEN_LIBRARY -> single(
             KmAction.Intent("#Intent;component=${facts.libraryComponent};end", "PadStudio app library"),
         )
@@ -128,6 +136,9 @@ class ActionResolver(private val facts: DeviceFacts, private val mode: PenMode) 
     private fun single(action: KmAction) = Resolution(listOf(Variant("default", listOf(action))))
 
     companion object {
+        /** ActionEntity.ACTION_FLAG_SHOW_VOLUME_UI: volume actions show the volume bar. */
+        const val FLAG_SHOW_VOLUME_UI = 1
+
         // android.view.KeyEvent constants (stable since API 1).
         const val KEYCODE_VOLUME_DOWN = 25
         const val KEYCODE_CAMERA = 27

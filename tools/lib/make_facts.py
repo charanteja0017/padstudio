@@ -24,8 +24,8 @@ import make_profile as mp  # noqa: E402
 
 # Linux input-event-codes.h scan codes, and the Android key code Generic.kl maps each to
 # (checked on the Pad 8: `key 189 F19`, `key 73 NUMPAD_9`, `key 81 NUMPAD_3`; values from android.jar).
-LINUX = {"KEY_F19": 189, "KEY_KP9": 73, "KEY_KP3": 81, "KEY_PAGEUP": 104, "KEY_PAGEDOWN": 109, "KEY_KPPLUS": 78}
-ANDROID = {"KEY_F19": 332, "KEY_KP9": 153, "KEY_KP3": 147, "KEY_PAGEUP": 92, "KEY_PAGEDOWN": 93, "KEY_KPPLUS": 157}
+LINUX = {"KEY_F19": 189, "KEY_KP9": 73, "KEY_KP3": 81, "KEY_PAGEUP": 104, "KEY_PAGEDOWN": 109, "KEY_KPPLUS": 78, "KEY_KPENTER": 96}
+ANDROID = {"KEY_F19": 332, "KEY_KP9": 153, "KEY_KP3": 147, "KEY_PAGEUP": 92, "KEY_PAGEDOWN": 93, "KEY_KPPLUS": 157, "KEY_KPENTER": 160}
 
 
 def screen(raw: Path) -> dict | None:

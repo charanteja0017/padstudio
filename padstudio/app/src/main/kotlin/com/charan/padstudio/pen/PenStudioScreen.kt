@@ -44,7 +44,7 @@ import com.charan.padstudio.core.pen.Press
 
 private fun controlsFor(kind: PenKind) = when (kind) {
     PenKind.TWO_BUTTON -> listOf(PenControl.UPPER, PenControl.LOWER)
-    PenKind.FOCUS_PEN_PRO -> listOf(PenControl.PINCH, PenControl.SLIDE_UP, PenControl.SLIDE_DOWN)
+    PenKind.FOCUS_PEN_PRO -> listOf(PenControl.PINCH, PenControl.SLIDE_UP, PenControl.SLIDE_DOWN, PenControl.DOUBLE_TAP)
 }
 
 private fun describe(trigger: PenTrigger?): String = when (trigger) {
@@ -212,10 +212,11 @@ private fun BindingsCard(penContext: PenContext, controls: List<PenControl>, mod
     Section(penContext.title) {
         if (penContext.packages.isNotEmpty()) Text(penContext.packages.joinToString(), style = MaterialTheme.typography.bodySmall)
         controls.forEach { control ->
-            presses.forEach { press ->
+            // A gesture the pen recognises itself (double tap) arrives as one key: nothing to hold or repeat.
+            (if (control.singleGesture) listOf(Press.SHORT) else presses).forEach { press ->
                 val current = bindings.firstOrNull { it.contextId == penContext.id && it.control == control.id && it.press == press }?.intent
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Text("${control.label} ${press.label}", modifier = Modifier.width(200.dp))
+                    Text(if (control.singleGesture) control.label else "${control.label} ${press.label}", modifier = Modifier.width(200.dp))
                     IntentPicker(current) { model.setBinding(penContext.id, control.id, press, it) }
                 }
             }
@@ -231,7 +232,15 @@ private fun IntentPicker(current: PenIntent?, onPick: (PenIntent?) -> Unit) {
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text("Nothing (leave to the app / HyperOS)") }, onClick = { open = false; onPick(null) })
             PenIntent.entries.forEach { intent ->
-                DropdownMenuItem(text = { Text(intent.label) }, onClick = { open = false; onPick(intent) })
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(intent.label)
+                            intent.needs?.let { Text("Key Mapper needs $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        }
+                    },
+                    onClick = { open = false; onPick(intent) },
+                )
             }
         }
     }

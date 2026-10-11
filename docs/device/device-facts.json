@@ -233,6 +233,55 @@
           "KEY_UP"
         ]
       }
+    },
+    "double_tap": {
+      "type": "evdev",
+      "keyCode": 160,
+      "scanCode": 96,
+      "device": {
+        "name": "Xiaomi Focus Pen Pro Keyboard",
+        "bus": 5,
+        "vendor": 34,
+        "product": 20609,
+        "capabilities": [
+          "KEY_102ND",
+          "KEY_COMPOSE",
+          "KEY_DELETE",
+          "KEY_DOWN",
+          "KEY_END",
+          "KEY_F13",
+          "KEY_F14",
+          "KEY_F15",
+          "KEY_F16",
+          "KEY_F17",
+          "KEY_F18",
+          "KEY_F19",
+          "KEY_KP0",
+          "KEY_KP1",
+          "KEY_KP2",
+          "KEY_KP3",
+          "KEY_KP4",
+          "KEY_KP5",
+          "KEY_KP6",
+          "KEY_KP7",
+          "KEY_KP8",
+          "KEY_KP9",
+          "KEY_KPASTERISK",
+          "KEY_KPDOT",
+          "KEY_KPENTER",
+          "KEY_KPEQUAL",
+          "KEY_KPMINUS",
+          "KEY_KPPLUS",
+          "KEY_KPSLASH",
+          "KEY_LEFT",
+          "KEY_NUMLOCK",
+          "KEY_PAGEDOWN",
+          "KEY_PAGEUP",
+          "KEY_POWER",
+          "KEY_RIGHT",
+          "KEY_UP"
+        ]
+      }
     }
   },
   "penKind": "FOCUS_PEN_PRO",

@@ -7,7 +7,7 @@ package com.charan.padstudio.core.pen
  */
 sealed interface KmAction {
     /** ActionEntity.Type.SYSTEM_ACTION; [id] is a value of ActionDataEntityMapper.SYSTEM_ACTION_ID_MAP. */
-    data class System(val id: String) : KmAction
+    data class System(val id: String, val extras: Map<String, String> = emptyMap(), val flags: Int = 0) : KmAction
 
     data class App(val packageName: String, val appName: String?) : KmAction
 

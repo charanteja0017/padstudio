@@ -103,6 +103,41 @@ class KeyMapperJsonTest {
         assertFalse("parent_uid" in groups.first())
     }
 
+    @Test fun `every pen intent produces actions Key Mapper knows`() {
+        for (intent in PenIntent.entries) {
+            val profile = PenProfile(DefaultProfiles.CONTEXTS, listOf(Binding(PenProfile.EVERYWHERE, "pinch", Press.SHORT, intent)))
+            val generated = ProfileGenerator(PenFixtures.FACTS).generate(profile, PenFixtures.EXPERT_FOCUS_PRO)
+            checkAgainstSchema(KeyMapperJson.backupJson(generated))
+        }
+    }
+
+    @Test fun `actions Key Mapper drops without extras carry them`() {
+        // ActionDataEntityMapper returns null (drops the action) for these when the extra is missing.
+        val required = mapOf(
+            PenIntent.FLASHLIGHT to ("extra_flash" to "option_lens_back"),
+            PenIntent.DO_NOT_DISTURB to ("extra_do_not_disturb_mode" to "do_not_disturb_priority"),
+        )
+        for ((intent, extra) in required) {
+            val profile = PenProfile(DefaultProfiles.CONTEXTS, listOf(Binding(PenProfile.EVERYWHERE, "pinch", Press.SHORT, intent)))
+            val action = KeyMapperJson.backupJson(ProfileGenerator(PenFixtures.FACTS).generate(profile, PenFixtures.EXPERT_FOCUS_PRO))
+                .getValue("keymap_list").jsonArray.single().jsonObject.getValue("actionList").jsonArray.single().jsonObject
+            val extras = action.getValue("extras").jsonArray.associate { it.jsonObject.getValue("id").jsonPrimitive.content to it.jsonObject.getValue("data").jsonPrimitive.content }
+            assertEquals(extra.second, extras[extra.first], "$intent needs ${extra.first}")
+        }
+    }
+
+    @Test fun `double tap becomes a single evdev press on the pen's key`() {
+        val keyMaps = backup(PenFixtures.EXPERT_FOCUS_PRO, PenKind.FOCUS_PEN_PRO).getValue("keymap_list").jsonArray.map { it.jsonObject }
+        val doubleTaps = keyMaps.filter { map -> map.getValue("trigger").jsonObject.getValue("keys").jsonArray.single().jsonObject.getValue("scanCode").jsonPrimitive.int == 96 }
+        assertTrue(doubleTaps.isNotEmpty(), "no double-tap key maps")
+        for (map in doubleTaps) {
+            val key = map.getValue("trigger").jsonObject.getValue("keys").jsonArray.single().jsonObject
+            assertEquals(Press.SHORT.clickType, key.getValue("clickType").jsonPrimitive.int)
+        }
+        val everywhere = doubleTaps.single { it.getValue("name").jsonPrimitive.content.startsWith("Everywhere") }
+        assertEquals("go_last_app", everywhere.getValue("actionList").jsonArray.single().jsonObject.getValue("data").jsonPrimitive.content)
+    }
+
     @Test fun `ui element clicks match by resource id only`() {
         // Key Mapper's matchAccessibilityNode accepts a node whose class name alone matches, so a
         // class name would let any clickable view of that class be clicked instead of the shutter.

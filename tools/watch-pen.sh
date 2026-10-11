@@ -14,8 +14,13 @@ pad_require_device
 
 stamp() { date '+%H:%M:%S'; }
 
-adb shell "getevent -lt 2>/dev/null | grep --line-buffered -E 'KEY_F1[3-9]|KEY_KP[0-9A-Z]*|KEY_PAGE(UP|DOWN)'" |
-  while IFS= read -r line; do echo "$(stamp) passed on  ${line//$'\r'/}"; done &
+# The adb stream drops now and then (Wi-Fi debugging); restart it rather than go silently deaf.
+while true; do
+  adb shell "getevent -lt 2>/dev/null | grep --line-buffered -E 'KEY_F1[3-9]|KEY_KP[0-9A-Z]*|KEY_PAGE(UP|DOWN)'" |
+    while IFS= read -r line; do echo "$(stamp) passed on  ${line//$'\r'/}"; done
+  echo "$(stamp) (pen key stream ended, restarting)"
+  sleep 2
+done &
 events=$!
 trap 'kill "$events" 2>/dev/null' EXIT
 

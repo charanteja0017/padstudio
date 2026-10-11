@@ -14,12 +14,19 @@ object PenFixtures {
     val FOCUS_PEN_PRO_PINCH = PenTrigger.Evdev(keyCode = 0, scanCode = 189, device = FOCUS_PEN_PRO)
     val FOCUS_PEN_PRO_SLIDE_UP = PenTrigger.Evdev(keyCode = 196, scanCode = 196, device = FOCUS_PEN_PRO)
     val FOCUS_PEN_PRO_SLIDE_DOWN = PenTrigger.Evdev(keyCode = 197, scanCode = 197, device = FOCUS_PEN_PRO)
+    /** KEY_KPENTER (96), Android KEYCODE_NUMPAD_ENTER (160): the pen's double tap. */
+    val FOCUS_PEN_PRO_DOUBLE_TAP = PenTrigger.Evdev(keyCode = 160, scanCode = 96, device = FOCUS_PEN_PRO)
 
     val BASIC_TWO_BUTTON = PenSetup(PenMode.BASIC, mapOf("upper" to SMART_PEN_UPPER, "lower" to SMART_PEN_LOWER))
     val EXPERT_TWO_BUTTON = PenSetup(PenMode.EXPERT, mapOf("upper" to SMART_PEN_UPPER, "lower" to SMART_PEN_LOWER))
     val EXPERT_FOCUS_PRO = PenSetup(
         PenMode.EXPERT,
-        mapOf("pinch" to FOCUS_PEN_PRO_PINCH, "slide_up" to FOCUS_PEN_PRO_SLIDE_UP, "slide_down" to FOCUS_PEN_PRO_SLIDE_DOWN),
+        mapOf(
+            "pinch" to FOCUS_PEN_PRO_PINCH,
+            "slide_up" to FOCUS_PEN_PRO_SLIDE_UP,
+            "slide_down" to FOCUS_PEN_PRO_SLIDE_DOWN,
+            "double_tap" to FOCUS_PEN_PRO_DOUBLE_TAP,
+        ),
     )
 
     val FACTS = DeviceFacts(

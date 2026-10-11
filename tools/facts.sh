@@ -7,7 +7,8 @@
 # Inputs: the newest docs/device/raw/<stamp>/ with getevent_lp.txt (pen devices, screen) and every
 # raw dir with camera dumps (probe-device.sh --camera / --camera-keys). The pen controls are the
 # Focus Pen Pro codes measured for gate G1 (docs/device/pen-matrix.md): squeeze = KEY_F19,
-# slide up = KEY_KP9, slide down = KEY_KP3, all on "Xiaomi Focus Pen Pro Keyboard", Expert mode.
+# slide up = KEY_KP9, slide down = KEY_KP3, double tap = KEY_KPENTER, all on
+# "Xiaomi Focus Pen Pro Keyboard", Expert mode.
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 
@@ -31,7 +32,7 @@ done
 OUT="$PAD_ROOT/docs/device/device-facts.json"
 python3 -I "$PAD_ROOT/tools/lib/make_facts.py" --probe "$probe" "${camera_args[@]}" \
   --device "Xiaomi Focus Pen Pro Keyboard" \
-  --control pinch=KEY_F19 --control slide_up=KEY_KP9 --control slide_down=KEY_KP3 \
+  --control pinch=KEY_F19 --control slide_up=KEY_KP9 --control slide_down=KEY_KP3 --control double_tap=KEY_KPENTER \
   --kind FOCUS_PEN_PRO --mode EXPERT --out "$OUT"
 
 if (( PUSH )); then

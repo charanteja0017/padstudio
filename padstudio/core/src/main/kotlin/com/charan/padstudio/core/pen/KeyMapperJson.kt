@@ -113,7 +113,9 @@ object KeyMapperJson {
 
     private fun action(action: KmAction, uid: String) = buildJsonObject {
         when (action) {
-            is KmAction.System -> entity("SYSTEM_ACTION", action.id)
+            is KmAction.System -> entity("SYSTEM_ACTION", action.id) {
+                action.extras.forEach { (id, data) -> extra(id, data) }
+            }
             is KmAction.App -> entity("APP", action.packageName) {
                 action.appName?.let { extra("extra_app_name", it) }
             }
@@ -145,7 +147,7 @@ object KeyMapperJson {
                 extra("extra_accessibility_actions", action.nodeAction.accessibilityActionId.toString())
             }
         }
-        put("flags", 0)
+        put("flags", (action as? KmAction.System)?.flags ?: 0)
         put("uid", uid)
     }
 

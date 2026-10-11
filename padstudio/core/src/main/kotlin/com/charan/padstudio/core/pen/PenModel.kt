@@ -11,7 +11,12 @@ import kotlinx.serialization.Serializable
  * barrel slides as key codes 196/197 from the input device "Xiaomi Focus Pen Pro" (0022:5081),
  * per reference/focuspen-pro-x CompatProfile.kt.
  */
-data class PenControl(val id: String, val label: String) {
+data class PenControl(
+    val id: String,
+    val label: String,
+    /** The pen recognises the gesture itself and sends one key, so holds and repeats mean nothing. */
+    val singleGesture: Boolean = false,
+) {
     companion object {
         val UPPER = PenControl("upper", "Upper button")
         val LOWER = PenControl("lower", "Lower button")
@@ -19,7 +24,8 @@ data class PenControl(val id: String, val label: String) {
         val PINCH = PenControl("pinch", "Squeeze")
         val SLIDE_UP = PenControl("slide_up", "Slide up")
         val SLIDE_DOWN = PenControl("slide_down", "Slide down")
-        val KNOWN = listOf(UPPER, LOWER, FOCUS, PINCH, SLIDE_UP, SLIDE_DOWN)
+        val DOUBLE_TAP = PenControl("double_tap", "Double tap", singleGesture = true)
+        val KNOWN = listOf(UPPER, LOWER, FOCUS, PINCH, SLIDE_UP, SLIDE_DOWN, DOUBLE_TAP)
 
         fun byId(id: String) = KNOWN.firstOrNull { it.id == id } ?: PenControl(id, id)
     }
@@ -79,7 +85,8 @@ data class EvdevDevice(
 )
 
 /** What a press should do; resolved per app into concrete Key Mapper actions by [ActionResolver]. */
-enum class PenIntent(val label: String, val perApp: Boolean = false) {
+/** [needs] names a Key Mapper permission the action can't run without (Key Mapper offers to fix it). */
+enum class PenIntent(val label: String, val perApp: Boolean = false, val needs: String? = null) {
     SHUTTER("Shutter", perApp = true),
     NEXT_PAGE("Next page", perApp = true),
     PREVIOUS_PAGE("Previous page", perApp = true),
@@ -97,6 +104,14 @@ enum class PenIntent(val label: String, val perApp: Boolean = false) {
     PLAY_PAUSE("Play/pause"),
     NEXT_TRACK("Next track"),
     PREVIOUS_TRACK("Previous track"),
+    LAST_APP("Last app"),
+    QUICK_SETTINGS("Quick settings"),
+    ASSISTANT("Assistant"),
+    VOLUME_UP("Volume up", needs = "Do Not Disturb access"),
+    VOLUME_DOWN("Volume down", needs = "Do Not Disturb access"),
+    DO_NOT_DISTURB("Do Not Disturb", needs = "Do Not Disturb access"),
+    FLASHLIGHT("Flashlight", needs = "camera permission"),
+    ROTATION_LOCK("Rotation lock", needs = "modify system settings"),
 }
 
 /**

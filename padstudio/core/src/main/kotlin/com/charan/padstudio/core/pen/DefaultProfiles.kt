@@ -1,7 +1,9 @@
 package com.charan.padstudio.core.pen
 
 import com.charan.padstudio.core.pen.PenIntent.BACK
+import com.charan.padstudio.core.pen.PenIntent.LAST_APP
 import com.charan.padstudio.core.pen.PenIntent.NEXT_PAGE
+import com.charan.padstudio.core.pen.PenIntent.NEXT_TRACK
 import com.charan.padstudio.core.pen.PenIntent.OPEN_CAMERA
 import com.charan.padstudio.core.pen.PenIntent.OPEN_LIBRARY
 import com.charan.padstudio.core.pen.PenIntent.OPEN_NOTES
@@ -135,6 +137,7 @@ object DefaultProfiles {
     /** Focus Pen Pro gestures are intercepted by HyperOS, so this profile assumes Expert mode. */
     private fun focusPenPro(): List<Binding> {
         val pinch = PenControl.PINCH.id
+        val doubleTap = PenControl.DOUBLE_TAP.id
         return listOf(
             Binding(CAMERA.id, pinch, Press.SHORT, SHUTTER),
             Binding(READING.id, PenControl.SLIDE_DOWN.id, Press.SHORT, NEXT_PAGE),
@@ -144,6 +147,13 @@ object DefaultProfiles {
             Binding(HOME.id, pinch, Press.DOUBLE, OPEN_CAMERA),
             Binding(EVERYWHERE, pinch, Press.DOUBLE, SCREENSHOT),
             Binding(EVERYWHERE, pinch, Press.SHORT, BACK),
+            // Double tap: shutter in the camera, next track in media, otherwise jump to the last app.
+            // Pen-native notes apps keep it (HyperOS switches tools with it there).
+            Binding(CAMERA.id, doubleTap, Press.SHORT, SHUTTER),
+            Binding(MEDIA.id, doubleTap, Press.SHORT, NEXT_TRACK),
+            Binding(HOME.id, doubleTap, Press.SHORT, LAST_APP),
+            Binding(READING.id, doubleTap, Press.SHORT, LAST_APP),
+            Binding(EVERYWHERE, doubleTap, Press.SHORT, LAST_APP),
         )
     }
 }
