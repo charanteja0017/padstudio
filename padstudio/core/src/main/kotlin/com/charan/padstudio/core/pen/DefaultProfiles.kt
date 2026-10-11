@@ -80,7 +80,7 @@ object DefaultProfiles {
             "com.jio.media.jiobeats",
         ),
     )
-    val HOME = PenContext(id = "home", title = "Home screen", packages = listOf("com.miui.home"))
+    val HOME = PenContext(id = "home", title = "Home screen", packages = listOf("com.miui.home", "app.lawnchair"))
 
     val CONTEXTS = listOf(CAMERA, READING, NATIVE_NOTES, OTHER_NOTES, MEDIA, HOME)
 

@@ -6,8 +6,8 @@
 #   tools/rollback.sh --keep-keymapper  keep upstream Key Mapper installed
 #   tools/rollback.sh --keep-extras     keep Lawnicons / Arcticons / Open Camera installed
 #
-# Idempotent: running it twice is harmless. Never touches MIUI optimisation, navigation mode
-# or animation scales (Pad Suite never changes them).
+# Idempotent: running it twice is harmless. Never touches MIUI optimisation or animation scales;
+# navigation mode is restored because HyperOS changes it when a third-party launcher becomes home.
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 
@@ -56,11 +56,14 @@ if installed "$PKG_PADSTUDIO"; then
   (( DRY )) || read -r -t 120 -p "Press Enter after confirming the reset on the tablet (or wait 2 min)… " _ || true
 fi
 
-# 2. Home app.
+# 2. Home app. HyperOS switches to 3-button navigation whenever another launcher becomes home, so
+#    the gesture settings are put back after the stock launcher returns.
 CURRENT_HOME="$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tr -d '\r' | tail -1)"
 if [[ -n "${HOME_COMPONENT:-}" && "$CURRENT_HOME" != "$HOME_COMPONENT" ]]; then
   run "HOME → $HOME_COMPONENT" adb shell cmd package set-home-activity "$HOME_COMPONENT"
 fi
+restore_setting global force_fsg_nav_bar "${FORCE_FSG_NAV_BAR:-}" "${FORCE_FSG_NAV_BAR_UNSET:-1}"
+restore_setting secure navigation_mode "${NAV_MODE:-}" "${NAV_MODE_UNSET:-1}"
 
 # 3. Settings Pad Suite may have changed.
 restore_setting secure enabled_accessibility_services "${A11Y_SERVICES:-}" "${A11Y_SERVICES_UNSET:-1}"
