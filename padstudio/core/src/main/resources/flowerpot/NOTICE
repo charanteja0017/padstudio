@@ -1,0 +1,9 @@
+Flowerpot app-category rule files
+=================================
+
+Copied unchanged from Lawnchair (https://github.com/LawnchairLauncher/lawnchair),
+path lawnchair/assets/flowerpot/, branch 16-dev, commit 4793ba3a238bb1a3e786a3471a6d84767ed05267.
+Format: flowerpot-1 "azalea" (see flowerpot/README.md in that repository).
+
+Lawnchair's own source files are licensed GPL-3.0-or-later and the repository's LICENSE.txt is
+Apache-2.0; PadStudio is GPL-3.0, which is compatible with both. Credited in PadStudio's About screen.
