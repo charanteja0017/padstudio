@@ -2,6 +2,7 @@
 // group planning. No Android types, so every rule is unit-tested on the JVM without a tablet.
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {

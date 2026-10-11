@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose draws the UI; these only set the window colours shown while an activity starts. -->
+    <style name="Theme.PadStudio" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Folder panel, library and small dialogs: drawn over whatever is behind them. -->
+    <style name="Theme.PadStudio.Panel" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

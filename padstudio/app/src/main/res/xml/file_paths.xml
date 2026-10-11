@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Generated Key Mapper profiles, shared read-only with Key Mapper's restore screen. -->
+    <cache-path name="profiles" path="profiles/" />
+</paths>

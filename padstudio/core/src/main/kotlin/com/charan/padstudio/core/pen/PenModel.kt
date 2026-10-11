@@ -1,5 +1,8 @@
 package com.charan.padstudio.core.pen
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
 /**
  * One physical control on the pen, as the setup wizard recorded it.
  *
@@ -37,11 +40,14 @@ enum class Press(val clickType: Int, val label: String) {
 enum class PenMode { BASIC, EXPERT }
 
 /** How Key Mapper will recognise one pen control. */
+@Serializable
 sealed interface PenTrigger {
     val keyCode: Int
     val scanCode: Int?
 
     /** A key event seen by the accessibility service; [deviceDescriptor] is InputDevice.descriptor. */
+    @Serializable
+    @SerialName("key_event")
     data class KeyEvent(
         override val keyCode: Int,
         override val scanCode: Int?,
@@ -50,6 +56,8 @@ sealed interface PenTrigger {
     ) : PenTrigger
 
     /** A raw key from /dev/input, grabbed by Key Mapper's system bridge. */
+    @Serializable
+    @SerialName("evdev")
     data class Evdev(
         override val keyCode: Int,
         override val scanCode: Int,
@@ -61,6 +69,7 @@ sealed interface PenTrigger {
  * [capabilities] are the KEY/BTN/ABS names `getevent -lp` lists for the device. They are only used
  * by [EvdevSafetyFilter] and never written to Key Mapper.
  */
+@Serializable
 data class EvdevDevice(
     val name: String,
     val bus: Int,
@@ -103,6 +112,7 @@ data class PenContext(
     val labelHints: List<String> = emptyList(),
 )
 
+@Serializable
 data class Binding(val contextId: String, val control: String, val press: Press, val intent: PenIntent)
 
 data class PenProfile(val contexts: List<PenContext>, val bindings: List<Binding>) {
@@ -118,6 +128,7 @@ data class PenSetup(val mode: PenMode, val controls: Map<String, PenTrigger>)
 enum class Orientation { PORTRAIT, LANDSCAPE }
 
 /** Logical display size in pixels; [inOrientation] swaps sides for portrait/landscape. */
+@Serializable
 data class ScreenSize(val width: Int, val height: Int) {
     fun inOrientation(orientation: Orientation): ScreenSize {
         val short = minOf(width, height)
@@ -126,15 +137,18 @@ data class ScreenSize(val width: Int, val height: Int) {
     }
 }
 
+@Serializable
 data class Point(val x: Int, val y: Int)
 
 /** A view found with `uiautomator dump` or Key Mapper's node recorder. */
+@Serializable
 data class UiNode(val viewResourceId: String, val className: String? = null, val description: String)
 
 /**
  * What the probe learned about one camera app. Key Mapper does not move tap coordinates when the
  * tablet rotates (PerformActionsUseCase.normaliseSourceDisplaySize), so taps are per orientation.
  */
+@Serializable
 data class CameraFacts(
     val packageName: String,
     val shutterNode: UiNode? = null,

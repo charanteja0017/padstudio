@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Sorting every installed app into groups needs the full app list (sideloaded, personal use). -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+    <!-- Generated wallpapers. -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
+    <queries>
+        <package android:name="io.github.sds100.keymapper" />
+        <intent>
+            <action android:name="org.adw.launcher.THEMES" />
+        </intent>
+        <intent>
+            <action android:name="com.novalauncher.THEME" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".PadStudioApp"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:theme="@style/Theme.PadStudio">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Folder-style panel and the app library. Exported so Key Mapper's pen actions can open them. -->
+        <activity
+            android:name=".home.FolderPanelActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.charan.padstudio.panel"
+            android:theme="@style/Theme.PadStudio.Panel" />
+        <activity
+            android:name=".home.LibraryActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.charan.padstudio.panel"
+            android:theme="@style/Theme.PadStudio.Panel" />
+        <activity
+            android:name=".home.EditGroupWidgetActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:theme="@style/Theme.PadStudio.Panel">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- Debug-friendly helpers: in-window pen event logger, and the rollback wallpaper reset. -->
+        <activity
+            android:name=".setup.PenProbeActivity"
+            android:exported="false" />
+        <activity
+            android:name=".setup.ResetActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:theme="@style/Theme.PadStudio.Panel" />
+
+        <receiver
+            android:name=".home.GroupWidgetReceiver"
+            android:exported="true"
+            android:label="@string/group_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/group_widget_info" />
+        </receiver>
+
+        <!-- Told by the launcher which widget id a pin request created, so it shows the requested group. -->
+        <receiver
+            android:name=".home.PinnedWidgetReceiver"
+            android:exported="false" />
+
+        <!-- Hands the generated pen profile to Key Mapper's restore screen. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+</manifest>

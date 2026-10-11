@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Never back up or transfer the WiGLE API token, or recorded walks (signal readings and paths). -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="wigle_credentials.xml" />
+        <exclude domain="file" path="walks/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="wigle_credentials.xml" />
+        <exclude domain="file" path="walks/" />
+    </device-transfer>
+</data-extraction-rules>
