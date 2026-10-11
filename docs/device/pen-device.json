@@ -6,6 +6,25 @@
   "getevent_available": true,
   "pen_devices": [
     {
+      "id": "196",
+      "name": "Xiaomi Focus Pen Pro Keyboard",
+      "classes": "KEYBOARD | EXTERNAL",
+      "path": "/dev/input/event17",
+      "descriptor": "257d03d196580b8060ae1654c3f2a3f49c2e5e4f",
+      "bus": "0x0005",
+      "vendor": "0x0022",
+      "product": "0x5081",
+      "version": "0x0000",
+      "key_layout": "/system/usr/keylayout/Generic.kl",
+      "enabled": "true",
+      "is_pen_candidate": true,
+      "reasons": [
+        "name looks like a pen",
+        "Bluetooth (bus 0x0005) device with keys",
+        "getevent keys: KEY_102ND, KEY_COMPOSE, KEY_DELETE, KEY_DOWN, KEY_END, KEY_F13, KEY_F14, KEY_F15, KEY_F16, KEY_F17, KEY_F18, KEY_F19, KEY_KP0, KEY_KP1, KEY_KP2, KEY_KP3, KEY_KP4, KEY_KP5, KEY_KP6, KEY_KP7, KEY_KP8, KEY_KP9, KEY_KPASTERISK, KEY_KPDOT"
+      ]
+    },
+    {
       "id": "33",
       "name": "Xiaomi Focus Pen Pro Mouse",
       "classes": "CURSOR | EXTERNAL",
@@ -182,6 +201,25 @@
       "enabled": "false",
       "is_pen_candidate": false,
       "reasons": []
+    },
+    {
+      "id": "196",
+      "name": "Xiaomi Focus Pen Pro Keyboard",
+      "classes": "KEYBOARD | EXTERNAL",
+      "path": "/dev/input/event17",
+      "descriptor": "257d03d196580b8060ae1654c3f2a3f49c2e5e4f",
+      "bus": "0x0005",
+      "vendor": "0x0022",
+      "product": "0x5081",
+      "version": "0x0000",
+      "key_layout": "/system/usr/keylayout/Generic.kl",
+      "enabled": "true",
+      "is_pen_candidate": true,
+      "reasons": [
+        "name looks like a pen",
+        "Bluetooth (bus 0x0005) device with keys",
+        "getevent keys: KEY_102ND, KEY_COMPOSE, KEY_DELETE, KEY_DOWN, KEY_END, KEY_F13, KEY_F14, KEY_F15, KEY_F16, KEY_F17, KEY_F18, KEY_F19, KEY_KP0, KEY_KP1, KEY_KP2, KEY_KP3, KEY_KP4, KEY_KP5, KEY_KP6, KEY_KP7, KEY_KP8, KEY_KP9, KEY_KPASTERISK, KEY_KPDOT"
+      ]
     },
     {
       "id": "8",
