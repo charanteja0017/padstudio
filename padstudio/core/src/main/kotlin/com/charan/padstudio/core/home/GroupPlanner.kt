@@ -1,10 +1,10 @@
 package com.charan.padstudio.core.home
 
 /** Icon density for widgets and panels (PLAN D7); tuned from screenshots on the tablet. */
-enum class Density(val cellDp: Int, val iconDp: Int, val showLabels: Boolean) {
-    CALM(cellDp = 76, iconDp = 52, showLabels = true),
-    COMPACT(cellDp = 64, iconDp = 44, showLabels = true),
-    DENSE(cellDp = 52, iconDp = 40, showLabels = false),
+enum class Density(val cellDp: Int, val iconDp: Int, val showLabels: Boolean, val label: String) {
+    CALM(cellDp = 76, iconDp = 52, showLabels = true, label = "Roomy"),
+    COMPACT(cellDp = 64, iconDp = 44, showLabels = true, label = "Standard"),
+    DENSE(cellDp = 52, iconDp = 40, showLabels = false, label = "Dense"),
 }
 
 data class PlannedGroup(val group: AppGroup, val apps: List<AppFacts>)

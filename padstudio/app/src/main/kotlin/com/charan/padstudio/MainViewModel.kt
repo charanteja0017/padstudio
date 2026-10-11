@@ -200,8 +200,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateWidgets()
     }
 
-    fun pinWidget(group: AppGroup) {
-        if (!WidgetPinning.request(studio, group)) {
+    fun pinWidget(group: AppGroup, size: com.charan.padstudio.home.WidgetSize = com.charan.padstudio.home.WidgetSize.WIDE) {
+        if (!WidgetPinning.request(studio, group, size)) {
             _message.value = "This launcher doesn't accept requests: long-press the home screen → Widgets → PadStudio → App group."
         }
     }

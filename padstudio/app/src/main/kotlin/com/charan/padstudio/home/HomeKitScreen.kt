@@ -41,10 +41,10 @@ fun HomeKitScreen(model: MainViewModel, modifier: Modifier = Modifier) {
                         "so the home screen stays tidy and HyperOS keeps its gestures, dock and split-screen.",
                     style = MaterialTheme.typography.bodySmall,
                 )
-                Text("Density", style = MaterialTheme.typography.labelLarge)
+                Text("Grid (each widget can pick its own under Edit)", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Density.entries.forEach { density ->
-                        FilterChip(config.density == density, onClick = { model.setDensity(density) }, label = { Text(density.name.lowercase().replaceFirstChar(Char::uppercase)) })
+                        FilterChip(config.density == density, onClick = { model.setDensity(density) }, label = { Text(density.label) })
                     }
                 }
                 TextButton(onClick = model::resetOverrides) { Text("Undo all my moves") }
@@ -53,7 +53,12 @@ fun HomeKitScreen(model: MainViewModel, modifier: Modifier = Modifier) {
         val groups = snapshot?.groups.orEmpty()
         items(groups, key = { it.group.name }) { planned ->
             Section("${planned.group.title} · ${planned.apps.size}") {
-                OutlinedButton(onClick = { model.pinWidget(planned.group) }) { Text("Add ${planned.group.title} widget") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Text("Add widget", style = MaterialTheme.typography.labelLarge)
+                    WidgetSize.entries.forEach { size ->
+                        OutlinedButton(onClick = { model.pinWidget(planned.group, size) }) { Text(size.label) }
+                    }
+                }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     planned.apps.forEach { app ->
                         val placement = snapshot?.placements?.firstOrNull { it.app == app }

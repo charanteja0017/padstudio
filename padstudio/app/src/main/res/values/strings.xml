@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PadStudio</string>
-    <string name="group_widget_name">App group</string>
+    <string name="group_widget_name">App group · wide</string>
+    <string name="group_widget_name_small">App group · small</string>
+    <string name="group_widget_name_large">App group · large</string>
     <string name="group_widget_description">A tidy, auto-sorted group of apps (Study, Work, Reading…)</string>
 </resources>

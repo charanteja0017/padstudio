@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -34,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -46,9 +48,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.lifecycle.lifecycleScope
 import com.charan.padstudio.core.home.AppGroup
+import com.charan.padstudio.core.home.Density
 import com.charan.padstudio.data.HomeSnapshot
 import com.charan.padstudio.data.InstalledApp
 import com.charan.padstudio.studio
@@ -205,18 +210,52 @@ class EditGroupWidgetActivity : ComponentActivity() {
         setContent {
             PadStudioTheme {
                 val snapshot = rememberSnapshot()
-                PanelFrame("Show which group?", onDismiss = ::finish) {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        items(snapshot?.groups.orEmpty()) { group ->
-                            ListItem(
-                                headlineContent = { Text(group.group.title) },
-                                supportingContent = { Text(group.apps.take(6).joinToString { it.label } + if (group.apps.size > 6) "…" else "") },
-                                modifier = Modifier.clickable { choose(appWidgetId, group.group) },
-                            )
+                var density by remember { mutableStateOf<Density?>(null) }
+                LaunchedEffect(appWidgetId) { density = currentDensity(appWidgetId) }
+                PanelFrame("Edit widget", onDismiss = ::finish) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Grid", style = MaterialTheme.typography.labelLarge)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Density.entries.forEach { option ->
+                                FilterChip(
+                                    selected = density == option,
+                                    onClick = {
+                                        density = option
+                                        setDensity(appWidgetId, option)
+                                    },
+                                    label = { Text(option.label) },
+                                )
+                            }
+                        }
+                        Text("Show which group?", style = MaterialTheme.typography.labelLarge)
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            items(snapshot?.groups.orEmpty()) { group ->
+                                ListItem(
+                                    headlineContent = { Text(group.group.title) },
+                                    supportingContent = { Text(group.apps.take(6).joinToString { it.label } + if (group.apps.size > 6) "…" else "") },
+                                    modifier = Modifier.clickable { choose(appWidgetId, group.group) },
+                                )
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+
+    /** This widget's own grid if it has one, else PadStudio's. */
+    private suspend fun currentDensity(appWidgetId: Int): Density {
+        val glanceId = GlanceAppWidgetManager(this).getGlanceIdBy(appWidgetId)
+        val state = getAppWidgetState(this, PreferencesGlanceStateDefinition, glanceId)
+        return state[GroupWidget.DENSITY]?.let { name -> Density.entries.firstOrNull { it.name == name } } ?: studio.config.config.value.density
+    }
+
+    private fun setDensity(appWidgetId: Int, density: Density) {
+        lifecycleScope.launch {
+            val glanceId = GlanceAppWidgetManager(this@EditGroupWidgetActivity).getGlanceIdBy(appWidgetId)
+            updateAppWidgetState(this@EditGroupWidgetActivity, glanceId) { it[GroupWidget.DENSITY] = density.name }
+            GroupWidget().update(this@EditGroupWidgetActivity, glanceId)
+            setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
         }
     }
 

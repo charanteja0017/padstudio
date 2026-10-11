@@ -17,21 +17,22 @@ import kotlinx.coroutines.launch
 object WidgetPinning {
     fun isSupported(context: Context) = AppWidgetManager.getInstance(context).isRequestPinAppWidgetSupported
 
-    fun request(context: Context, group: AppGroup): Boolean {
+    fun request(context: Context, group: AppGroup, size: WidgetSize = WidgetSize.WIDE): Boolean {
         val manager = AppWidgetManager.getInstance(context)
         if (!manager.isRequestPinAppWidgetSupported) return false
         // Mutable: the launcher fills in EXTRA_APPWIDGET_ID when the widget has been placed.
         val callback = PendingIntent.getBroadcast(
             context,
-            group.ordinal,
+            group.ordinal * WidgetSize.entries.size + size.ordinal,
             Intent(context, PinnedWidgetReceiver::class.java).putExtra(FolderPanelActivity.EXTRA_GROUP, group.name),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
         )
-        return manager.requestPinAppWidget(ComponentName(context, GroupWidgetReceiver::class.java), null, callback)
+        return manager.requestPinAppWidget(ComponentName(context, size.receiver), null, callback)
     }
 
-    fun placedCount(context: Context) =
-        AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, GroupWidgetReceiver::class.java)).size
+    fun placedCount(context: Context) = WidgetSize.entries.sumOf { size ->
+        AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, size.receiver)).size
+    }
 }
 
 class PinnedWidgetReceiver : BroadcastReceiver() {

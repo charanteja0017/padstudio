@@ -39,6 +39,7 @@ import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import com.charan.padstudio.core.home.Density
 import com.charan.padstudio.core.home.GroupPlanner
 import com.charan.padstudio.core.home.PlannedGroup
 import com.charan.padstudio.data.HomeSnapshot
@@ -65,25 +66,43 @@ class GroupWidget : GlanceAppWidget() {
         val config = studio.config.config.value
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         provideContent {
-            val name = currentState<Preferences>()[GROUP]
-            val group = snapshot.groups.firstOrNull { it.group.name == name } ?: snapshot.groups.firstOrNull()
-            GlanceTheme { WidgetContent(context, group, snapshot, config, appWidgetId) }
+            val state = currentState<Preferences>()
+            val group = snapshot.groups.firstOrNull { it.group.name == state[GROUP] } ?: snapshot.groups.firstOrNull()
+            // Each widget may keep its own grid; otherwise it follows PadStudio's setting.
+            val density = state[DENSITY]?.let { name -> Density.entries.firstOrNull { it.name == name } } ?: config.density
+            GlanceTheme { WidgetContent(context, group, snapshot, config, appWidgetId, density) }
         }
     }
 
     companion object {
         val GROUP = stringPreferencesKey("group")
+        val DENSITY = stringPreferencesKey("density")
     }
 }
 
+/** The wide (4×2) widget; the original receiver, so widgets placed before sizes existed keep working. */
 class GroupWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = GroupWidget()
 }
 
+class GroupWidgetSmallReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = GroupWidget()
+}
+
+class GroupWidgetLargeReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = GroupWidget()
+}
+
+/** Sizes in the launcher's widget picker; one receiver each, all drawn by [GroupWidget]. */
+enum class WidgetSize(val label: String, val receiver: Class<out GlanceAppWidgetReceiver>) {
+    SMALL("Small 2×2", GroupWidgetSmallReceiver::class.java),
+    WIDE("Wide 4×2", GroupWidgetReceiver::class.java),
+    LARGE("Large 4×4", GroupWidgetLargeReceiver::class.java),
+}
+
 @Composable
-private fun WidgetContent(context: Context, group: PlannedGroup?, snapshot: HomeSnapshot, config: StudioConfig, appWidgetId: Int) {
+private fun WidgetContent(context: Context, group: PlannedGroup?, snapshot: HomeSnapshot, config: StudioConfig, appWidgetId: Int, density: Density) {
     val size = LocalSize.current
-    val density = config.density
     val (columns, rows) = GroupPlanner.gridFor(size.width.value.toInt() - 2 * PADDING_DP, size.height.value.toInt() - 2 * PADDING_DP, density)
     // Cells share the width equally, so icons grow a little with the cell instead of leaving margins.
     val cellDp = (size.width.value - 2 * PADDING_DP) / columns

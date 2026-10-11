@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Same widget as group_widget_info (wide), offered at 2×2 in the widget picker. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.charan.padstudio.home.EditGroupWidgetActivity"
+    android:description="@string/group_widget_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="80dp"
+    android:minResizeHeight="80dp"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional" />
