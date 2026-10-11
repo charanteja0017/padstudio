@@ -1,0 +1,1646 @@
+{
+  "probe": "PadStudio logo probe, round 1 (plan §9)",
+  "status": "pass",
+  "palette": "Violet",
+  "thresholds": {
+    "size_target": {
+      "line": 1.06,
+      "tile": 0.92
+    },
+    "size_tolerance": 0.03,
+    "piece_sizes": [
+      168,
+      66
+    ],
+    "fragment_share": 0.02,
+    "feature": "opening and closing at 264 px with a disc of radius 3 px (6 px across = 1.5 px at 66 px) keep the piece count",
+    "beam_max": 0.85,
+    "beam_sigma_deg": 25,
+    "rotation_step_deg": 5,
+    "radial_max": 0.45,
+    "radial_k_min": 3,
+    "grid_min": 4,
+    "grid_area_tolerance": 0.03,
+    "grid_iou": 0.9,
+    "distinct_max": 0.7,
+    "contrast_min": 3.0,
+    "silhouette": "every tone counts as mark; knockouts do not",
+    "comparison": "unit area about the centroid, 256 px grid spanning +-2.5, 2x2 samples per pixel, from the 440 px silhouette"
+  },
+  "instrument": {
+    "ink_drop": {
+      "fixture": "Ink drop (fixture)",
+      "beam_iou": 0.8655,
+      "review_iou": 0.86,
+      "rejected": true,
+      "rotation": 90,
+      "mirrored": false
+    },
+    "self_checks": [
+      {
+        "check": "size: a mark that ignores the canvas scale is rejected",
+        "value": 0.6,
+        "expect": "not 0.92 +- 0.03",
+        "ok": true
+      },
+      {
+        "check": "size: a plain tile is brought to 0.92",
+        "value": 0.9182,
+        "expect": "0.92 +- 0.03",
+        "ok": true
+      },
+      {
+        "check": "beam: WiFiBar's own beam at 45 degrees is rejected",
+        "value": 0.9975,
+        "expect": "IoU > 0.98",
+        "ok": true
+      },
+      {
+        "check": "beam: a plain tile passes",
+        "value": 0.6782,
+        "expect": "IoU < 0.85",
+        "ok": true
+      },
+      {
+        "check": "pieces: a tile with a 1 % speck is rejected",
+        "value": 1,
+        "expect": "1 fragment",
+        "ok": true
+      },
+      {
+        "check": "pieces: a plain tile passes at 66 px",
+        "value": 1,
+        "expect": "1 piece",
+        "ok": true
+      },
+      {
+        "check": "feature: a 0.5 px neck is rejected",
+        "value": [
+          1,
+          2
+        ],
+        "expect": "opening splits it",
+        "ok": true
+      },
+      {
+        "check": "feature: a 0.9 px gap is rejected",
+        "value": [
+          2,
+          1
+        ],
+        "expect": "closing joins it",
+        "ok": true
+      },
+      {
+        "check": "feature: 0.06 strokes and gaps (the plan's floor) pass",
+        "value": [
+          1,
+          1,
+          1
+        ],
+        "expect": "unchanged",
+        "ok": true
+      },
+      {
+        "check": "radial: six spokes are rejected",
+        "value": [
+          0.7038,
+          6
+        ],
+        "expect": "k = 6 over the limit",
+        "ok": true
+      },
+      {
+        "check": "radial: a plain tile passes",
+        "value": 0.1025,
+        "expect": "< 0.45",
+        "ok": true
+      },
+      {
+        "check": "grid: four identical tiles are rejected",
+        "value": 4,
+        "expect": "4 alike",
+        "ok": true
+      },
+      {
+        "check": "grid: three identical tiles pass",
+        "value": 3,
+        "expect": "3 alike",
+        "ok": true
+      },
+      {
+        "check": "distinct: a mirrored, turned copy is rejected (and needs the mirror)",
+        "value": [
+          0.999,
+          0.7874
+        ],
+        "expect": "IoU >= 0.95 via a mirrored pose; unmirrored lower",
+        "ok": true
+      },
+      {
+        "check": "distinct: a hook and a tile pass",
+        "value": 0.1607,
+        "expect": "IoU < 0.7",
+        "ok": true
+      },
+      {
+        "check": "contrast: a pale end close to the plate is rejected",
+        "value": 1.9906,
+        "expect": "< 3.0",
+        "ok": true
+      },
+      {
+        "check": "contrast: the Violet palette passes",
+        "value": 4.3686,
+        "expect": ">= 3.0",
+        "ok": true
+      },
+      {
+        "check": "contrast: white on black is 21:1",
+        "value": 21.0,
+        "expect": "21",
+        "ok": true
+      },
+      {
+        "check": "contrast: #767676 on white is 4.54:1",
+        "value": 4.5422,
+        "expect": "4.54",
+        "ok": true
+      }
+    ]
+  },
+  "marks_folder": "Branding/probe/marks",
+  "missing": [],
+  "problems": [],
+  "dropped": [],
+  "candidates": [
+    {
+      "number": 1,
+      "name": "Pad stroke",
+      "slug": "pad_stroke",
+      "file": "Branding/probe/marks/pad_stroke.py",
+      "sha256": "5b54b6fcf05e6345ca5c94fef35d4bd258dad83897a60e5d23dcf273082cc997",
+      "size_class": "tile",
+      "pieces_declared": {
+        "168": 2,
+        "66": 2
+      },
+      "glow": [
+        0.0,
+        0.0
+      ],
+      "status": "pass",
+      "failed": [],
+      "gates": {
+        "size": {
+          "target": 0.92,
+          "long_side": 0.9182,
+          "bbox": [
+            -0.4591,
+            -0.4591,
+            0.4591,
+            0.4591
+          ],
+          "before": {
+            "bbox": [
+              -0.4614,
+              -0.4614,
+              0.4614,
+              0.4614
+            ],
+            "long_side": 0.9227,
+            "bbox_plate_units": [
+              -0.4614,
+              -0.4614,
+              0.4614,
+              0.4614
+            ]
+          },
+          "scale": 0.997,
+          "pass": true
+        },
+        "pieces_168": {
+          "count": 2,
+          "expected": 2,
+          "fragments": 0,
+          "smallest_share": 0.5,
+          "pass": true
+        },
+        "pieces_66": {
+          "count": 2,
+          "expected": 2,
+          "fragments": 0,
+          "smallest_share": 0.5,
+          "pass": true
+        },
+        "feature_66": {
+          "pieces_at_264": 2,
+          "after_opening": 2,
+          "after_closing": 2,
+          "advisory_7px_disc": {
+            "after_opening": 2,
+            "after_closing": 2,
+            "unchanged": true
+          },
+          "pass": true
+        },
+        "beam": {
+          "iou": 0.6285,
+          "limit": 0.85,
+          "mirrored": false,
+          "rotation": 45,
+          "pass": true
+        },
+        "radial": {
+          "max_ratio": 0.0801,
+          "at_k": 6,
+          "limit": 0.45,
+          "pass": true
+        },
+        "grid": {
+          "pieces": 2,
+          "most_alike": 1,
+          "limit": 4,
+          "pass": true
+        },
+        "contrast": {
+          "ratio": 4.3714,
+          "limit": 3.0,
+          "pale_end": [
+            213,
+            201,
+            255
+          ],
+          "plate_top": "#5A3FD6",
+          "advisory_by_tone": {
+            "1.000": 4.3714
+          },
+          "pass": true
+        },
+        "distinct": {
+          "iou": 0.6459,
+          "closest": 8,
+          "limit": 0.7,
+          "too_close_to_earlier": [],
+          "pass": true
+        }
+      }
+    },
+    {
+      "number": 2,
+      "name": "Hilbert",
+      "slug": "hilbert",
+      "file": "Branding/probe/marks/hilbert.py",
+      "sha256": "9531811576fcfbfb832aa4a9eae3b02a0883d4480149f40e3db5ffd21ef6e38b",
+      "size_class": "line",
+      "pieces_declared": {
+        "168": 1,
+        "66": 1
+      },
+      "glow": [
+        0.0,
+        0.0
+      ],
+      "status": "pass",
+      "failed": [],
+      "gates": {
+        "size": {
+          "target": 1.06,
+          "long_side": 1.0591,
+          "bbox": [
+            -0.5295,
+            -0.5295,
+            0.5295,
+            0.5295
+          ],
+          "before": {
+            "bbox": [
+              -0.5364,
+              -0.5364,
+              0.5364,
+              0.5364
+            ],
+            "long_side": 1.0727,
+            "bbox_plate_units": [
+              -0.5364,
+              -0.5364,
+              0.5364,
+              0.5364
+            ]
+          },
+          "scale": 0.9881,
+          "pass": true
+        },
+        "pieces_168": {
+          "count": 1,
+          "expected": 1,
+          "fragments": 0,
+          "smallest_share": 1.0,
+          "pass": true
+        },
+        "pieces_66": {
+          "count": 1,
+          "expected": 1,
+          "fragments": 0,
+          "smallest_share": 1.0,
+          "pass": true
+        },
+        "feature_66": {
+          "pieces_at_264": 1,
+          "after_opening": 1,
+          "after_closing": 1,
+          "advisory_7px_disc": {
+            "after_opening": 1,
+            "after_closing": 1,
+            "unchanged": true
+          },
+          "pass": true
+        },
+        "beam": {
+          "iou": 0.3873,
+          "limit": 0.85,
+          "mirrored": false,
+          "rotation": 225,
+          "pass": true
+        },
+        "radial": {
+          "max_ratio": 0.2633,
+          "at_k": 4,
+          "limit": 0.45,
+          "pass": true
+        },
+        "grid": {
+          "pieces": 1,
+          "most_alike": 1,
+          "limit": 4,
+          "pass": true
+        },
+        "contrast": {
+          "ratio": 4.164,
+          "limit": 3.0,
+          "pale_end": [
+            209,
+            195,
+            255
+          ],
+          "plate_top": "#5A3FD6",
+          "advisory_by_tone": {
+            "1.000": 4.164
+          },
+          "pass": true
+        },
+        "distinct": {
+          "iou": 0.4297,
+          "closest": 1,
+          "limit": 0.7,
+          "too_close_to_earlier": [],
+          "pass": true
+        }
+      }
+    },
+    {
+      "number": 3,
+      "name": "Arch",
+      "slug": "arch",
+      "file": "Branding/probe/marks/arch.py",
+      "sha256": "108a6b4df1a0e941d8ce0b17d933e5161d6e629d2f51df4cd6d306257f70cdd7",
+      "size_class": "tile",
+      "pieces_declared": {
+        "168": 1,
+        "66": 1
+      },
+      "glow": [
+        0.0,
+        -0.22
+      ],
+      "status": "pass",
+      "failed": [],
+      "gates": {
+        "size": {
+          "target": 0.92,
+          "long_side": 0.9205,
+          "bbox": [
+            -0.3818,
+            -0.4568,
+            0.3818,
+            0.4636
+          ],
+          "before": {
+            "bbox": [
+              -0.3795,
+              -0.4545,
+              0.3795,
+              0.4614
+            ],
+            "long_side": 0.9159,
+            "bbox_plate_units": [
+              -0.3795,
+              -0.4545,
+              0.3795,
+              0.4614
+            ]
+          },
+          "scale": 1.0045,
+          "pass": true
+        },
+        "pieces_168": {
+          "count": 1,
+          "expected": 1,
+          "fragments": 0,
+          "smallest_share": 1.0,
+          "pass": true
+        },
+        "pieces_66": {
+          "count": 1,
+          "expected": 1,
+          "fragments": 0,
+          "smallest_share": 1.0,
+          "pass": true
+        },
+        "feature_66": {
+          "pieces_at_264": 1,
+          "after_opening": 1,
+          "after_closing": 1,
+          "advisory_7px_disc": {
+            "after_opening": 1,
+            "after_closing": 1,
+            "unchanged": true
+          },
+          "pass": true
+        },
+        "beam": {
+          "iou": 0.5402,
+          "limit": 0.85,
+          "mirrored": false,
+          "rotation": 230,
+          "pass": true
+        },
+        "radial": {
+          "max_ratio": 0.2063,
+          "at_k": 4,
+          "limit": 0.45,
+          "pass": true
+        },
+        "grid": {
+          "pieces": 1,
+          "most_alike": 1,
+          "limit": 4,
+          "pass": true
+        },
+        "contrast": {
+          "ratio": 4.4359,
+          "limit": 3.0,
+          "pale_end": [
+            215,
+            203,
+            255
+          ],
+          "plate_top": "#5A3FD6",
+          "advisory_by_tone": {
+            "1.000": 4.4359
+          },
+          "pass": true
+        },
+        "distinct": {
+          "iou": 0.6316,
+          "closest": 1,
+          "limit": 0.7,
+          "too_close_to_earlier": [],
+          "pass": true
+        }
+      }
+    },
+    {
+      "number": 4,
+      "name": "Knot",
+      "slug": "knot",
+      "file": "Branding/probe/marks/knot.py",
+      "sha256": "a603015225d9558747a62f9cb7ac923d991f18cf677eaf0713b0136b2a517d45",
+      "size_class": "line",
+      "pieces_declared": {
+        "168": 7,
+        "66": 7
+      },
+      "glow": [
+        0.0,
+        0.0
+      ],
+      "status": "pass",
+      "failed": [],
+      "gates": {
+        "size": {
+          "target": 1.06,
+          "long_side": 1.0591,
+          "bbox": [
+            -0.5295,
+            -0.4114,
+            0.5295,
+            0.4114
+          ],
+          "before": {
+            "bbox": [
+              -0.5341,
+              -0.4159,
+              0.5341,
+              0.4159
+            ],
+            "long_side": 1.0682,
+            "bbox_plate_units": [
+              -0.5341,
+              -0.4159,
+              0.5341,
+              0.4159
+            ]
+          },
+          "scale": 0.9923,
+          "pass": true
+        },
+        "pieces_168": {
+          "count": 7,
+          "expected": 7,
+          "fragments": 0,
+          "smallest_share": 0.0889,
+          "pass": true
+        },
+        "pieces_66": {
+          "count": 7,
+          "expected": 7,
+          "fragments": 0,
+          "smallest_share": 0.0809,
+          "pass": true
+        },
+        "feature_66": {
+          "pieces_at_264": 7,
+          "after_opening": 7,
+          "after_closing": 7,
+          "advisory_7px_disc": {
+            "after_opening": 7,
+            "after_closing": 7,
+            "unchanged": true
+          },
+          "pass": true
+        },
+        "beam": {
+          "iou": 0.1723,
+          "limit": 0.85,
+          "mirrored": false,
+          "rotation": 125,
+          "pass": true
+        },
+        "radial": {
+          "max_ratio": 0.2766,
+          "at_k": 4,
+          "limit": 0.45,
+          "pass": true
+        },
+        "grid": {
+          "pieces": 7,
+          "most_alike": 1,
+          "limit": 4,
+          "pass": true
+        },
+        "contrast": {
+          "ratio": 4.285,
+          "limit": 3.0,
+          "pale_end": [
+            212,
+            199,
+            255
+          ],
+          "plate_top": "#5A3FD6",
+          "advisory_by_tone": {
+            "1.000": 4.285
+          },
+          "pass": true
+        },
+        "distinct": {
+          "iou": 0.2722,
+          "closest": 2,
+          "limit": 0.7,
+          "too_close_to_earlier": [],
+          "pass": true
+        }
+      }
+    },
+    {
+      "number": 5,
+      "name": "Morph",
+      "slug": "morph",
+      "file": "Branding/probe/marks/morph.py",
+      "sha256": "cbe6c298ac3a10f2a6e1ecea85f6242b257439f7de159d384e2fabb9f7899331",
+      "size_class": "tile",
+      "pieces_declared": {
+        "168": 3,
+        "66": 3
+      },
+      "glow": [
+        0.0,
+        0.0
+      ],
+      "status": "pass",
+      "failed": [],
+      "gates": {
+        "size": {
+          "target": 0.92,
+          "long_side": 0.9182,
+          "bbox": [
+            -0.4591,
+            -0.4591,
+            0.4591,
+            0.4591
+          ],
+          "before": {
+            "bbox": [
+              -0.4614,
+              -0.4614,
+              0.4614,
+              0.4614
+            ],
+            "long_side": 0.9227,
+            "bbox_plate_units": [
+              -0.4591,
+              -0.4614,
+              0.4614,
+              0.4591
+            ]
+          },
+          "scale": 0.997,
+          "pass": true
+        },
+        "pieces_168": {
+          "count": 3,
+          "expected": 3,
+          "fragments": 0,
+          "smallest_share": 0.1803,
+          "pass": true
+        },
+        "pieces_66": {
+          "count": 3,
+          "expected": 3,
+          "fragments": 0,
+          "smallest_share": 0.1824,
+          "pass": true
+        },
+        "feature_66": {
+          "pieces_at_264": 3,
+          "after_opening": 3,
+          "after_closing": 3,
+          "advisory_7px_disc": {
+            "after_opening": 3,
+            "after_closing": 1,
+            "unchanged": false
+          },
+          "pass": true
+        },
+        "beam": {
+          "iou": 0.6884,
+          "limit": 0.85,
+          "mirrored": false,
+          "rotation": 45,
+          "pass": true
+        },
+        "radial": {
+          "max_ratio": 0.0811,
+          "at_k": 7,
+          "limit": 0.45,
+          "pass": true
+        },
+        "grid": {
+          "pieces": 3,
+          "most_alike": 1,
+          "limit": 4,
+          "pass": true
+        },
+        "contrast": {
+          "ratio": 4.6724,
+          "limit": 3.0,
+          "pale_end": [
+            219,
+            209,
+            255
+          ],
+          "plate_top": "#5A3FD6",
+          "advisory_by_tone": {
+            "0.549": 2.5052,
+            "0.749": 3.3517,
+            "1.000": 4.6724
+          },
+          "pass": true
+        },
+        "distinct": {
+          "iou": 0.5818,
+          "closest": 8,
+          "limit": 0.7,
+          "too_close_to_earlier": [],
+          "pass": true
+        }
+      }
+    },
+    {
+      "number": 6,
+      "name": "Beyond",
+      "slug": "beyond",
+      "file": "Branding/probe/marks/beyond.py",
+      "sha256": "2cf266660c4272b0e1b5af4de69690edd1091ab6c9b6229b486e44b4d65eb3e5",
+      "size_class": "line",
+      "pieces_declared": {
+        "168": 2,
+        "66": 2
+      },
+      "glow": [
+        0.0,
+        0.0
+      ],
+      "status": "pass",
+      "failed": [],
+      "gates": {
+        "size": {
+          "target": 1.06,
+          "long_side": 1.0591,
+          "bbox": [
+            -0.3886,
+            -0.2795,
+            0.6705,
+            0.2795
+          ],
+          "before": {
+            "bbox": [
+              -0.4136,
+              -0.2977,
+              0.7114,
+              0.2977
+            ],
+            "long_side": 1.125,
+            "bbox_plate_units": [
+              -0.4136,
+              -0.2977,
+              0.7114,
+              0.2977
+            ]
+          },
+          "scale": 0.9422,
+          "pass": true
+        },
+        "pieces_168": {
+          "count": 2,
+          "expected": 2,
+          "fragments": 0,
+          "smallest_share": 0.0658,
+          "pass": true
+        },
+        "pieces_66": {
+          "count": 2,
+          "expected": 2,
+          "fragments": 0,
+          "smallest_share": 0.0762,
+          "pass": true
+        },
+        "feature_66": {
+          "pieces_at_264": 2,
+          "after_opening": 2,
+          "after_closing": 2,
+          "advisory_7px_disc": {
+            "after_opening": 2,
+            "after_closing": 2,
+            "unchanged": true
+          },
+          "pass": true
+        },
+        "beam": {
+          "iou": 0.5825,
+          "limit": 0.85,
+          "mirrored": false,
+          "rotation": 175,
+          "pass": true
+        },
+        "radial": {
+          "max_ratio": 0.0788,
+          "at_k": 6,
+          "limit": 0.45,
+          "pass": true
+        },
+        "grid": {
+          "pieces": 2,
+          "most_alike": 1,
+          "limit": 4,
+          "pass": true
+        },
+        "contrast": {
+          "ratio": 4.65,
+          "limit": 3.0,
+          "pale_end": [
+            219,
+            208,
+            255
+          ],
+          "plate_top": "#5A3FD6",
+          "advisory_by_tone": {
+            "1.000": 4.65
+          },
+          "pass": true
+        },
+        "distinct": {
+          "iou": 0.5824,
+          "closest": 8,
+          "limit": 0.7,
+          "too_close_to_earlier": [],
+          "pass": true
+        }
+      }
+    },
+    {
+      "number": 7,
+      "name": "Maze",
+      "slug": "maze",
+      "file": "Branding/probe/marks/maze.py",
+      "sha256": "12e51e9143e53636f2133255316d7ba30ad8491b305f84c66d04efd6cd58eacf",
+      "size_class": "line",
+      "pieces_declared": {
+        "168": 1,
+        "66": 1
+      },
+      "glow": [
+        0.0,
+        0.0
+      ],
+      "status": "pass",
+      "failed": [],
+      "gates": {
+        "size": {
+          "target": 1.06,
+          "long_side": 1.0591,
+          "bbox": [
+            -0.5295,
+            -0.5295,
+            0.5295,
+            0.5295
+          ],
+          "before": {
+            "bbox": [
+              -0.4909,
+              -0.4909,
+              0.4909,
+              0.4909
+            ],
+            "long_side": 0.9818,
+            "bbox_plate_units": [
+              -0.4909,
+              -0.4909,
+              0.4909,
+              0.4909
+            ]
+          },
+          "scale": 1.0796,
+          "pass": true
+        },
+        "pieces_168": {
+          "count": 1,
+          "expected": 1,
+          "fragments": 0,
+          "smallest_share": 1.0,
+          "pass": true
+        },
+        "pieces_66": {
+          "count": 1,
+          "expected": 1,
+          "fragments": 0,
+          "smallest_share": 1.0,
+          "pass": true
+        },
+        "feature_66": {
+          "pieces_at_264": 1,
+          "after_opening": 1,
+          "after_closing": 1,
+          "advisory_7px_disc": {
+            "after_opening": 1,
+            "after_closing": 1,
+            "unchanged": true
+          },
+          "pass": true
+        },
+        "beam": {
+          "iou": 0.3243,
+          "limit": 0.85,
+          "mirrored": false,
+          "rotation": 240,
+          "pass": true
+        },
+        "radial": {
+          "max_ratio": 0.1827,
+          "at_k": 4,
+          "limit": 0.45,
+          "pass": true
+        },
+        "grid": {
+          "pieces": 1,
+          "most_alike": 1,
+          "limit": 4,
+          "pass": true
+        },
+        "contrast": {
+          "ratio": 4.1379,
+          "limit": 3.0,
+          "pale_end": [
+            208,
+            194,
+            255
+          ],
+          "plate_top": "#5A3FD6",
+          "advisory_by_tone": {
+            "1.000": 4.1379
+          },
+          "pass": true
+        },
+        "distinct": {
+          "iou": 0.3874,
+          "closest": 2,
+          "limit": 0.7,
+          "too_close_to_earlier": [],
+          "pass": true
+        }
+      }
+    },
+    {
+      "number": 8,
+      "name": "Peel",
+      "slug": "peel",
+      "file": "Branding/probe/marks/peel.py",
+      "sha256": "a8410839d31e0545c485b468ef1cae99632e0ac4e3d29239fee7dbb2d055d0fa",
+      "size_class": "tile",
+      "pieces_declared": {
+        "168": 2,
+        "66": 2
+      },
+      "glow": [
+        0.0,
+        0.0
+      ],
+      "status": "pass",
+      "failed": [],
+      "gates": {
+        "size": {
+          "target": 0.92,
+          "long_side": 0.9182,
+          "bbox": [
+            -0.4205,
+            -0.4591,
+            0.4182,
+            0.4591
+          ],
+          "before": {
+            "bbox": [
+              -0.4205,
+              -0.4614,
+              0.4205,
+              0.4614
+            ],
+            "long_side": 0.9227,
+            "bbox_plate_units": [
+              -0.4205,
+              -0.4614,
+              0.4205,
+              0.4614
+            ]
+          },
+          "scale": 0.997,
+          "pass": true
+        },
+        "pieces_168": {
+          "count": 2,
+          "expected": 2,
+          "fragments": 0,
+          "smallest_share": 0.1898,
+          "pass": true
+        },
+        "pieces_66": {
+          "count": 2,
+          "expected": 2,
+          "fragments": 0,
+          "smallest_share": 0.1966,
+          "pass": true
+        },
+        "feature_66": {
+          "pieces_at_264": 2,
+          "after_opening": 2,
+          "after_closing": 2,
+          "advisory_7px_disc": {
+            "after_opening": 2,
+            "after_closing": 1,
+            "unchanged": false
+          },
+          "pass": true
+        },
+        "beam": {
+          "iou": 0.6937,
+          "limit": 0.85,
+          "mirrored": false,
+          "rotation": 300,
+          "pass": true
+        },
+        "radial": {
+          "max_ratio": 0.1107,
+          "at_k": 4,
+          "limit": 0.45,
+          "pass": true
+        },
+        "grid": {
+          "pieces": 2,
+          "most_alike": 1,
+          "limit": 4,
+          "pass": true
+        },
+        "contrast": {
+          "ratio": 4.4072,
+          "limit": 3.0,
+          "pale_end": [
+            214,
+            202,
+            255
+          ],
+          "plate_top": "#5A3FD6",
+          "advisory_by_tone": {
+            "0.600": 2.6555,
+            "1.000": 4.4072
+          },
+          "pass": true
+        },
+        "distinct": {
+          "iou": 0.6459,
+          "closest": 1,
+          "limit": 0.7,
+          "too_close_to_earlier": [],
+          "pass": true
+        }
+      }
+    },
+    {
+      "number": 9,
+      "name": "Monoline P",
+      "slug": "monoline_p",
+      "file": "Branding/probe/marks/monoline_p.py",
+      "sha256": "30dede0cb962db9c35e76e5144ed05efd3c9b6d195f1d3a0ef78d558d541130b",
+      "size_class": "line",
+      "pieces_declared": {
+        "168": 1,
+        "66": 1
+      },
+      "glow": [
+        0.0,
+        0.0
+      ],
+      "status": "pass",
+      "failed": [],
+      "gates": {
+        "size": {
+          "target": 1.06,
+          "long_side": 1.0614,
+          "bbox": [
+            -0.2023,
+            -0.6205,
+            0.3,
+            0.4409
+          ],
+          "before": {
+            "bbox": [
+              -0.2023,
+              -0.6205,
+              0.3023,
+              0.4409
+            ],
+            "long_side": 1.0614,
+            "bbox_plate_units": [
+              -0.2023,
+              -0.6205,
+              0.3023,
+              0.4409
+            ]
+          },
+          "scale": 0.9987,
+          "pass": true
+        },
+        "pieces_168": {
+          "count": 1,
+          "expected": 1,
+          "fragments": 0,
+          "smallest_share": 1.0,
+          "pass": true
+        },
+        "pieces_66": {
+          "count": 1,
+          "expected": 1,
+          "fragments": 0,
+          "smallest_share": 1.0,
+          "pass": true
+        },
+        "feature_66": {
+          "pieces_at_264": 1,
+          "after_opening": 1,
+          "after_closing": 1,
+          "advisory_7px_disc": {
+            "after_opening": 1,
+            "after_closing": 1,
+            "unchanged": true
+          },
+          "pass": true
+        },
+        "beam": {
+          "iou": 0.6099,
+          "limit": 0.85,
+          "mirrored": false,
+          "rotation": 285,
+          "pass": true
+        },
+        "radial": {
+          "max_ratio": 0.2329,
+          "at_k": 5,
+          "limit": 0.45,
+          "pass": true
+        },
+        "grid": {
+          "pieces": 1,
+          "most_alike": 1,
+          "limit": 4,
+          "pass": true
+        },
+        "contrast": {
+          "ratio": 4.4057,
+          "limit": 3.0,
+          "pale_end": [
+            214,
+            202,
+            255
+          ],
+          "plate_top": "#5A3FD6",
+          "advisory_by_tone": {
+            "1.000": 4.4057
+          },
+          "pass": true
+        },
+        "distinct": {
+          "iou": 0.5479,
+          "closest": 6,
+          "limit": 0.7,
+          "too_close_to_earlier": [],
+          "pass": true
+        }
+      }
+    }
+  ],
+  "distinct_pairs": [
+    {
+      "a": 1,
+      "b": 2,
+      "iou": 0.4297,
+      "mirrored": false,
+      "rotation": 80
+    },
+    {
+      "a": 1,
+      "b": 3,
+      "iou": 0.6316,
+      "mirrored": false,
+      "rotation": 175
+    },
+    {
+      "a": 2,
+      "b": 3,
+      "iou": 0.4053,
+      "mirrored": false,
+      "rotation": 0
+    },
+    {
+      "a": 1,
+      "b": 4,
+      "iou": 0.1995,
+      "mirrored": false,
+      "rotation": 165
+    },
+    {
+      "a": 2,
+      "b": 4,
+      "iou": 0.2722,
+      "mirrored": false,
+      "rotation": 85
+    },
+    {
+      "a": 3,
+      "b": 4,
+      "iou": 0.1992,
+      "mirrored": false,
+      "rotation": 65
+    },
+    {
+      "a": 1,
+      "b": 5,
+      "iou": 0.5213,
+      "mirrored": true,
+      "rotation": 75
+    },
+    {
+      "a": 2,
+      "b": 5,
+      "iou": 0.3761,
+      "mirrored": false,
+      "rotation": 80
+    },
+    {
+      "a": 3,
+      "b": 5,
+      "iou": 0.4931,
+      "mirrored": false,
+      "rotation": 160
+    },
+    {
+      "a": 4,
+      "b": 5,
+      "iou": 0.1973,
+      "mirrored": true,
+      "rotation": 45
+    },
+    {
+      "a": 1,
+      "b": 6,
+      "iou": 0.5133,
+      "mirrored": false,
+      "rotation": 165
+    },
+    {
+      "a": 2,
+      "b": 6,
+      "iou": 0.397,
+      "mirrored": false,
+      "rotation": 35
+    },
+    {
+      "a": 3,
+      "b": 6,
+      "iou": 0.485,
+      "mirrored": false,
+      "rotation": 25
+    },
+    {
+      "a": 4,
+      "b": 6,
+      "iou": 0.2025,
+      "mirrored": true,
+      "rotation": 135
+    },
+    {
+      "a": 5,
+      "b": 6,
+      "iou": 0.5336,
+      "mirrored": false,
+      "rotation": 145
+    },
+    {
+      "a": 1,
+      "b": 7,
+      "iou": 0.3468,
+      "mirrored": false,
+      "rotation": 50
+    },
+    {
+      "a": 2,
+      "b": 7,
+      "iou": 0.3874,
+      "mirrored": false,
+      "rotation": 180
+    },
+    {
+      "a": 3,
+      "b": 7,
+      "iou": 0.3158,
+      "mirrored": false,
+      "rotation": 25
+    },
+    {
+      "a": 4,
+      "b": 7,
+      "iou": 0.2433,
+      "mirrored": false,
+      "rotation": 0
+    },
+    {
+      "a": 5,
+      "b": 7,
+      "iou": 0.3186,
+      "mirrored": false,
+      "rotation": 180
+    },
+    {
+      "a": 6,
+      "b": 7,
+      "iou": 0.3362,
+      "mirrored": false,
+      "rotation": 320
+    },
+    {
+      "a": 1,
+      "b": 8,
+      "iou": 0.6459,
+      "mirrored": false,
+      "rotation": 80
+    },
+    {
+      "a": 2,
+      "b": 8,
+      "iou": 0.423,
+      "mirrored": false,
+      "rotation": 265
+    },
+    {
+      "a": 3,
+      "b": 8,
+      "iou": 0.6115,
+      "mirrored": false,
+      "rotation": 350
+    },
+    {
+      "a": 4,
+      "b": 8,
+      "iou": 0.1748,
+      "mirrored": false,
+      "rotation": 170
+    },
+    {
+      "a": 5,
+      "b": 8,
+      "iou": 0.5818,
+      "mirrored": false,
+      "rotation": 275
+    },
+    {
+      "a": 6,
+      "b": 8,
+      "iou": 0.5824,
+      "mirrored": false,
+      "rotation": 290
+    },
+    {
+      "a": 7,
+      "b": 8,
+      "iou": 0.3386,
+      "mirrored": false,
+      "rotation": 5
+    },
+    {
+      "a": 1,
+      "b": 9,
+      "iou": 0.4555,
+      "mirrored": true,
+      "rotation": 45
+    },
+    {
+      "a": 2,
+      "b": 9,
+      "iou": 0.3762,
+      "mirrored": false,
+      "rotation": 305
+    },
+    {
+      "a": 3,
+      "b": 9,
+      "iou": 0.4706,
+      "mirrored": false,
+      "rotation": 335
+    },
+    {
+      "a": 4,
+      "b": 9,
+      "iou": 0.2007,
+      "mirrored": false,
+      "rotation": 65
+    },
+    {
+      "a": 5,
+      "b": 9,
+      "iou": 0.5297,
+      "mirrored": true,
+      "rotation": 150
+    },
+    {
+      "a": 6,
+      "b": 9,
+      "iou": 0.5479,
+      "mirrored": true,
+      "rotation": 275
+    },
+    {
+      "a": 7,
+      "b": 9,
+      "iou": 0.307,
+      "mirrored": false,
+      "rotation": 245
+    },
+    {
+      "a": 8,
+      "b": 9,
+      "iou": 0.5453,
+      "mirrored": false,
+      "rotation": 345
+    }
+  ],
+  "palette_contrast": {
+    "Violet": 3.9802,
+    "Ocean": 3.552,
+    "Rose": 4.3391,
+    "Emerald": 3.7256,
+    "Graphite": 5.7689
+  },
+  "home": {
+    "screenshot": "docs/test-logs/2026-10-11-home-brand-icon.png",
+    "sha256": "cf6939aa42519b5834f328fef7e46a1c9b4643a04511837dae1e201e985e997a",
+    "dock": {
+      "box": [
+        2223,
+        1894,
+        2391,
+        2062
+      ],
+      "size": 168,
+      "size_check": "168 px, 168 +- 1 expected",
+      "mask_n_used": 4.4,
+      "mask_n_fitted": 4.4281,
+      "crop": [
+        1937,
+        1854,
+        2648,
+        2096
+      ]
+    },
+    "top_row": [
+      {
+        "box": [
+          458,
+          217,
+          626,
+          390
+        ],
+        "beam_iou": 0.6096,
+        "beam_rotation": 45,
+        "bright_pieces": 1,
+        "plate": [
+          26,
+          66,
+          184
+        ]
+      },
+      {
+        "box": [
+          882,
+          218,
+          1048,
+          384
+        ],
+        "beam_iou": 0.358,
+        "beam_rotation": 340,
+        "bright_pieces": 28,
+        "plate": [
+          81,
+          19,
+          68
+        ]
+      },
+      {
+        "box": [
+          1304,
+          217,
+          1472,
+          385
+        ],
+        "beam_iou": 0.353,
+        "beam_rotation": 290,
+        "bright_pieces": 47,
+        "plate": [
+          76,
+          81,
+          70
+        ]
+      },
+      {
+        "box": [
+          1727,
+          217,
+          1895,
+          385
+        ],
+        "beam_iou": 0.6397,
+        "beam_rotation": 265,
+        "bright_pieces": 23,
+        "plate": [
+          79,
+          42,
+          40
+        ]
+      },
+      {
+        "box": [
+          2150,
+          217,
+          2318,
+          385
+        ],
+        "beam_iou": 0.9897,
+        "beam_rotation": 315,
+        "bright_pieces": 2,
+        "plate": [
+          33,
+          62,
+          117
+        ]
+      },
+      {
+        "box": [
+          2573,
+          217,
+          2741,
+          385
+        ],
+        "beam_iou": 0.6783,
+        "beam_rotation": 50,
+        "bright_pieces": 4,
+        "plate": [
+          37,
+          57,
+          92
+        ]
+      }
+    ],
+    "wifibar": {
+      "index": 4,
+      "box": [
+        2150,
+        217,
+        2318,
+        385
+      ],
+      "beam_iou": 0.9897,
+      "neighbour_box": [
+        2573,
+        217,
+        2741,
+        385
+      ],
+      "crop": [
+        2090,
+        180,
+        2801,
+        422
+      ]
+    }
+  },
+  "palettes_strip": {
+    "candidate": 1,
+    "note": ""
+  },
+  "outputs": {
+    "01-pad_stroke-440.png": "42b56bfd3d048870fe8fc400648437a7e2f6c3b6cde3aa5a1e1238a5a38b37b3",
+    "01-pad_stroke-168.png": "5a898ef5672d521f15a5fa47f6e01aec2f91e97bae41532538f964cbe11f2da3",
+    "01-pad_stroke-110.png": "1ceba49e6c670ff160b352dae0eeddd6022930ec00259f2035c088f3e54c79c2",
+    "01-pad_stroke-66.png": "ebef12ad1c89603be6eaea1d03835b6f54f92bd26b4d3c82dada70fab4259a75",
+    "01-pad_stroke-dock.png": "619718ce842530d335b7bc9a3ee7445eaa6ad9f6ad17e745d16fc8a2b44710ee",
+    "02-hilbert-440.png": "9ff9c97d874f868aecc226ee9bc8c47353793cc35aed86bc9bcc0dc6c8f50130",
+    "02-hilbert-168.png": "11e5c4ff4ed169336300002e7293750c31171c1075e4c4db227534ada25022b5",
+    "02-hilbert-110.png": "7711ae3600b90f7a8a7c694fc8ae3fc3b8c4f254206c467981f3181b5229d156",
+    "02-hilbert-66.png": "177b671b5cc4674c121c911ea96437fcec8f3632df124d33ef31ddb2b9c6c081",
+    "02-hilbert-dock.png": "5a8db3e3f36b288306f2c0992683f83a41f0c0bd13a71e1425d09b11eb3f43f2",
+    "03-arch-440.png": "508c9edd91fd2b5c0ae843baf1ef6a5a0f25237cd52d202a2382ea6c639f90a2",
+    "03-arch-168.png": "7056f5461ca9bec86ef1101c6f4af2175415893cb2739d3bafe70fe850bcc575",
+    "03-arch-110.png": "007392912ea3a966c70e4a405c49fc6ec8ac294bc118e27690cd836537fd3e29",
+    "03-arch-66.png": "2b1de9fd50afca219eaac9ce80414fe567624a013a97c598079d15f5b495cd17",
+    "03-arch-dock.png": "39fddc73542b303d4da46f1e879cb440b19ba4c3abfb53cfd75bab4b9df7a312",
+    "04-knot-440.png": "755fae2fed8659afb03654f5ae2df30e024f83bfde5ddfc7130ff771eb95490c",
+    "04-knot-168.png": "a347e2416679bad2ba3d8bcc72c10dcee408ec788a6d162e5162ae40083cc60d",
+    "04-knot-110.png": "4bfaed3c93ed37afeb1e1ec6f166c7f3fd5433251ec42bb5cd51661409931ba5",
+    "04-knot-66.png": "d36060970eb821a375129344bd7d513bd63a43a6134cf6cf19cf85991910d4d5",
+    "04-knot-dock.png": "7145728cadea1f06fccf80a31c849688ec7439cc3d56713ed4734b648477d218",
+    "05-morph-440.png": "e8cb1948427dff0b8c44dfd0da7b64b8735b094c780738b986f1e622789a9bbc",
+    "05-morph-168.png": "5bd3e648abfb111232fdc3b58c783fac1272491e198372693bae9ec151eafe52",
+    "05-morph-110.png": "ab9d1a60d8c2a341a82df89ac522bb41bc3311c6f94e39e661ec6e0ad5f6c45b",
+    "05-morph-66.png": "ea1c7123cac9dbf822477097a2d114378db693ba8822f2f2b2b0aaf9a96f7ec7",
+    "05-morph-dock.png": "94349cb6fc1ab4b00bdf087bea4d8cc4b4086db88ccb5137ef61a616cfae274b",
+    "06-beyond-440.png": "982908d366c6938c4f5eaea29778530be647dd0e07021c06ffe4411d6f891cb6",
+    "06-beyond-168.png": "5dade7f30c2f7b244529cf2bfbeb00ff352b067ff3a5663a56fe21ae7b9bac3a",
+    "06-beyond-110.png": "e337359336de1637701736cd27be2d9de98c8a9c2077ed571913f46a7032cc04",
+    "06-beyond-66.png": "6337c5dcacb413cbf3f0e2730b04e1dc730b4230d54ab5e53a62d6a7c7816cc0",
+    "06-beyond-dock.png": "d08f7bfdc607bebd116133da1bffc14ac75ce90558c2b884919e91cacecb6bc3",
+    "07-maze-440.png": "6894ecf59bbe655944104f77d05d1473ca134033dfb4606ac9549596c036e442",
+    "07-maze-168.png": "47c91057d74b2d8201df8c99f5455dd9ceac5e4d5adeddcde43c94b958c536d4",
+    "07-maze-110.png": "0730adea266adde7e63a6b851347295b367619c6cab8b6ebd47c26dc3012fccd",
+    "07-maze-66.png": "24c21f521a0151de07014aa10cadb7db1f14f0511f81739360bec05e231251e1",
+    "07-maze-dock.png": "310396f1b7e24b202907bb501ad7e5695b1695c85a6fed08522eaadf29dbef46",
+    "08-peel-440.png": "e30057031543b6a00f348d67be7c308fdec3d86c9275dd5a31e1aa5ae24d66a3",
+    "08-peel-168.png": "33b50cf2716a518cb9927bd3ad82a0099d3259f29cd9141128c2769393f06010",
+    "08-peel-110.png": "1546fed67add1c2d757101b8e0979520a02c5e7b930d0242bb3a7a8a4650b3d7",
+    "08-peel-66.png": "14ecf57a4d18f34c0941025f8359f04cddd0c8eabbcf25964f60761d8a0587c3",
+    "08-peel-dock.png": "66c9b50268135bc947a596a57e58435e7c3d8058e686578ccc240b6a252bc94f",
+    "09-monoline_p-440.png": "cfcfa972abf83ceab754a00c89806736835ea60c8bb9728ecbc8c194e42f9766",
+    "09-monoline_p-168.png": "2f5589b490b3baf0497bc2cf8344f48da51c504620d1d1567c56c47514758462",
+    "09-monoline_p-110.png": "dc7c9c32819b5c5b1006e45acd9887ac89d6470062078c2bd2248015f37aea2f",
+    "09-monoline_p-66.png": "6093da3d22b9100f21ccbb5b31b848dbc9dec93f2331c75d8b91e881ad0be36e",
+    "09-monoline_p-dock.png": "26d3685d60ca8262b668b628bce8bb8dbbc86e0eea88254c457ed61fc5e6d345",
+    "sheet.png": "412251a907a8d33cc495cc238e5a3e7e0bd7bb784fe4cd24ab60b307214fdeaa",
+    "dock.png": "216ce6a8828647538166e6376309711c66814773548149d3f5db778a5280cf29",
+    "palettes.png": "ee730bf007198dc91b08db5aa4c276c22a3404203dc55bed67584c5a2e1e5972"
+  }
+}

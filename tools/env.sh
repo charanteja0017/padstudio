@@ -54,6 +54,8 @@ pad_require_device() {
   # Fields are tab-separated; wireless-debugging serials contain spaces ("adb-… (2)._adb-tls-connect._tcp").
   count="$(adb devices | awk -F'\t' 'NR > 1 && $2 == "device"' | wc -l | tr -d ' ')"
   if [[ "$count" == "1" ]]; then
+    # Pin it: adb's mDNS auto-connect can add duplicate transports to the same tablet mid-script.
+    export ANDROID_SERIAL="$(adb devices | awk -F'\t' 'NR > 1 && $2 == "device" { print $1; exit }')"
     return 0
   fi
   if [[ "$count" == "0" ]]; then
@@ -70,6 +72,18 @@ Then re-run this script. `adb devices` should list the tablet as "device".
 EOF
     adb devices | sed -n '2,$p' | grep -v '^$' | sed 's/^/  seen: /' >&2 || true
     return 1
+  fi
+  # Toggling wireless debugging leaves several mDNS transports to the SAME tablet. If every transport
+  # reports one ro.serialno, pick the first and carry on; only genuinely different devices need a choice.
+  local serials first
+  serials="$(adb devices | awk -F'\t' 'NR > 1 && $2 == "device" { print $1 }' | while IFS= read -r s; do
+    adb -s "$s" shell getprop ro.serialno </dev/null 2>/dev/null | tr -d '\r'
+  done | sort -u)"
+  if [[ -n "$serials" && "$(printf '%s\n' "$serials" | wc -l | tr -d ' ')" == "1" ]]; then
+    first="$(adb devices | awk -F'\t' 'NR > 1 && $2 == "device" { print $1; exit }')"
+    export ANDROID_SERIAL="$first"
+    echo "Several adb transports reach the same tablet ($serials); using: $first" >&2
+    return 0
   fi
   echo "More than one device connected; set ANDROID_SERIAL to choose one:" >&2
   adb devices -l | sed -n '2,$p' >&2

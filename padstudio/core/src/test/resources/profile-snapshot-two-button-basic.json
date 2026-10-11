@@ -1,0 +1,1672 @@
+{
+    "keymap_db_version": 25,
+    "app_version": 286,
+    "keymap_list": [
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "fb2fcfdd-a7ae-3f27-b1c2-0643cc63925b",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "INTERACT_UI_ELEMENT",
+                    "data": "Shutter",
+                    "extras": [
+                        {
+                            "id": "extra_accessibility_node_action",
+                            "data": "CLICK"
+                        },
+                        {
+                            "id": "extra_accessibility_package_name",
+                            "data": "com.android.camera"
+                        },
+                        {
+                            "id": "extra_accessibility_view_resource_id",
+                            "data": "com.android.camera:id/shutter_button"
+                        },
+                        {
+                            "id": "extra_accessibility_actions",
+                            "data": "16"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "cacda3e9-efda-341f-a4d5-f2fcaeb5f406"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.android.camera"
+                        }
+                    ],
+                    "uid": "546dfd5d-9c53-3809-a13a-01c81b19d5fe",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "788459ae-84ab-383c-b20d-89e659012121",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Upper button press → Shutter (Camera)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "1648587f-4fe8-3919-a23d-9006ad1ec330",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "TAP_COORDINATE",
+                    "data": "1068,2900",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Shutter (portrait)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "2136,3200"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "e3f2fcf4-3414-336e-9efe-24a7c0dc05f5"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "c81d8ea6-447d-3d94-8da3-4119893ab389",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_portrait",
+                    "extras": [],
+                    "uid": "0dda41ef-1850-3ed0-9077-a08d3aaebdb2",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "5a60990e-4d8c-301f-bc83-acfc434a3f6b",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Upper button press → Shutter (Pixel Camera) [portrait]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "49565d47-3adb-3f31-ae1d-55653d2df207",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "TAP_COORDINATE",
+                    "data": "3000,1068",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Shutter (landscape)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "3200,2136"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "3b51f9b6-924e-3bbc-9ffe-e8443b9b3a63"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "bcc2ef06-fd55-3840-9f1e-e5e1b1b707e5",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_landscape",
+                    "extras": [],
+                    "uid": "d13b90af-a91c-3ab3-abfb-0fc03b8addb3",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "1e401a70-80bf-3055-bf72-6178ba26ffd2",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Upper button press → Shutter (Pixel Camera) [landscape]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "bafc9b4f-2207-335c-b7ec-af9ad25c14ba",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "INTERACT_UI_ELEMENT",
+                    "data": "Shutter",
+                    "extras": [
+                        {
+                            "id": "extra_accessibility_node_action",
+                            "data": "CLICK"
+                        },
+                        {
+                            "id": "extra_accessibility_package_name",
+                            "data": "com.android.camera"
+                        },
+                        {
+                            "id": "extra_accessibility_view_resource_id",
+                            "data": "com.android.camera:id/shutter_button"
+                        },
+                        {
+                            "id": "extra_accessibility_actions",
+                            "data": "16"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "00c356d5-d215-376d-bec9-09aafbd047d3"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.android.camera"
+                        }
+                    ],
+                    "uid": "77cff080-7745-3c58-9115-d7ef5dc3ec34",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "ab9d1d35-a839-362d-862c-9b6289c34eb4",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Lower button press → Shutter (Camera)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "f1f26c1e-e7db-38fd-8873-96740c91c044",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "TAP_COORDINATE",
+                    "data": "1068,2900",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Shutter (portrait)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "2136,3200"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "47c24c20-95ad-3807-a49a-29cde301be0e"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "08075d60-65dc-3e6d-9874-67ef7b73c6ab",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_portrait",
+                    "extras": [],
+                    "uid": "6b138be5-9375-31fc-90bc-d6b52a760bea",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "567fc413-3c45-337a-ab9e-dc26271ef130",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Lower button press → Shutter (Pixel Camera) [portrait]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "3d773caa-615b-3927-b2e7-4dcd5cec091a",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "TAP_COORDINATE",
+                    "data": "3000,1068",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Shutter (landscape)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "3200,2136"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "17837499-b2ca-3c22-b204-45b1b698613d"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "e713b276-1249-392b-9978-d26d6f4b9104",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_landscape",
+                    "extras": [],
+                    "uid": "a59fe6cf-677b-30fa-9040-00716943d735",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "7a33a5d2-72a5-34cd-85bf-5aefe15706f8",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Lower button press → Shutter (Pixel Camera) [landscape]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "718b5c31-8efb-3cba-bfe2-8467cd60ff0d",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SWIPE_COORDINATE",
+                    "data": "1815,1600,320,1600,1,200",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Next page (flip)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "2136,3200"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "de76dfb7-b2b5-3b8f-8a7c-08e4afc26e79"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "org.readera"
+                        }
+                    ],
+                    "uid": "a9f585a3-c946-3772-8350-86f5c93a0e93",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_portrait",
+                    "extras": [],
+                    "uid": "7cbab2ae-a5aa-3275-bd1c-dd70ceb77b06",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "2a3e46b3-17ab-382c-a794-bf51d7425b0f",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Upper button press → Next page (ReadEra) [portrait]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "8fa2b917-d179-3001-a038-abc615c78371",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SWIPE_COORDINATE",
+                    "data": "2720,1068,480,1068,1,200",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Next page (flip)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "3200,2136"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "7b007ed5-664a-3c48-86ca-8fa17d6f8f42"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "org.readera"
+                        }
+                    ],
+                    "uid": "a9ea514a-993e-3bd1-96b1-e50db337fc54",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_landscape",
+                    "extras": [],
+                    "uid": "4bdf3438-fd4e-3a20-be10-abdcee728228",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "85b86d1c-fdfb-3943-b37f-2cce29ac96e4",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Upper button press → Next page (ReadEra) [landscape]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "1ea8d824-03c1-3d85-9f3a-9e87112a87a2",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SWIPE_COORDINATE",
+                    "data": "1068,2560,1068,800,1,450",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Next page (scroll down)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "2136,3200"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "bab1be91-2b7a-3b92-ac9a-2419068eab01"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.apps.docs"
+                        }
+                    ],
+                    "uid": "6471b576-6fd8-344d-8963-7101fa5674f0",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_portrait",
+                    "extras": [],
+                    "uid": "33dd9523-e622-3f4c-bbb4-b93016e00e15",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "cd0440f5-6f09-3ad7-a3ec-92fb97d3a1e0",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Upper button press → Next page (Drive) [portrait]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "3f050992-fa24-3e13-ab64-01c291a15e20",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SWIPE_COORDINATE",
+                    "data": "1600,1708,1600,534,1,450",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Next page (scroll down)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "3200,2136"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "9726a527-0ddd-3545-b912-ca50d8b3d870"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.apps.docs"
+                        }
+                    ],
+                    "uid": "f08802ab-35c3-377e-9d8a-91708dd7b29a",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_landscape",
+                    "extras": [],
+                    "uid": "eaa82473-0d6e-3050-abfd-d9f602b8ed71",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "1e07b633-2068-3fde-b4ca-77c1b5c502c3",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Upper button press → Next page (Drive) [landscape]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "dd45ac8a-2efd-3c14-9f9d-3ff91329dbbd",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SWIPE_COORDINATE",
+                    "data": "320,1600,1815,1600,1,200",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Previous page (flip)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "2136,3200"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "8ffcb62e-58fe-346b-b85b-45e84cc129c0"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "org.readera"
+                        }
+                    ],
+                    "uid": "bf320b87-300b-3491-a042-b233489e6eea",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_portrait",
+                    "extras": [],
+                    "uid": "1ebec04a-7d19-30ad-8bf0-91e180c2b127",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "d08d3689-3457-3c11-be5a-7a7dbea14312",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Lower button press → Previous page (ReadEra) [portrait]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "d8589782-a03f-3452-a040-aff8e6d47f9a",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SWIPE_COORDINATE",
+                    "data": "480,1068,2720,1068,1,200",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Previous page (flip)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "3200,2136"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "dc5eeff3-9901-3803-bce8-409cf70748d4"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "org.readera"
+                        }
+                    ],
+                    "uid": "f6238c92-f6c5-3d5e-9b29-b39d1b869e71",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_landscape",
+                    "extras": [],
+                    "uid": "c57ab9dd-8c7c-35e1-89e2-31c0f6634006",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "553bd659-6a2a-3a18-a5a9-cafef2b0bdfd",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Lower button press → Previous page (ReadEra) [landscape]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "04bd303a-2156-3ff4-80bd-81f6a42e3045",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SWIPE_COORDINATE",
+                    "data": "1068,800,1068,2560,1,450",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Previous page (scroll up)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "2136,3200"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "ead5295a-009b-3722-97c0-7e5e4b80ca2d"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.apps.docs"
+                        }
+                    ],
+                    "uid": "ed92b58e-4fa1-3116-908e-315c88eabe4a",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_portrait",
+                    "extras": [],
+                    "uid": "8b168f41-c26a-384a-8e6c-b73c13375c0f",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "4dce250e-47c2-322e-9703-69d60f71a75e",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Lower button press → Previous page (Drive) [portrait]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "266f36a2-9ae7-3274-954c-536d15643b1b",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SWIPE_COORDINATE",
+                    "data": "1600,534,1600,1708,1,450",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Previous page (scroll up)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "3200,2136"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "1f2338b4-118e-3dcf-ba56-46994767468d"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.apps.docs"
+                        }
+                    ],
+                    "uid": "11c73609-51db-3eac-a412-6502be27a6fb",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_landscape",
+                    "extras": [],
+                    "uid": "14fcde92-2df5-32fc-8e2d-7b06d9d4c524",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "11d9ba60-643d-308e-b0ec-7a589ad24c8b",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Lower button press → Previous page (Drive) [landscape]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "211a49cf-a074-3f32-8448-327f3f283a25",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "INTERACT_UI_ELEMENT",
+                    "data": "Undo",
+                    "extras": [
+                        {
+                            "id": "extra_accessibility_node_action",
+                            "data": "CLICK"
+                        },
+                        {
+                            "id": "extra_accessibility_package_name",
+                            "data": "com.google.android.keep"
+                        },
+                        {
+                            "id": "extra_accessibility_view_resource_id",
+                            "data": "com.google.android.keep:id/undo"
+                        },
+                        {
+                            "id": "extra_accessibility_actions",
+                            "data": "16"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "4f09a10d-0447-3a19-a195-357c238e8ff4"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.keep"
+                        }
+                    ],
+                    "uid": "393a67b8-3644-3ee2-8aa2-fa8faac05f9d",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "89885640-b8c6-3bd5-b8e9-c50cc2e65010",
+            "group_uid": "20abcd15-342a-3ff5-9a35-a94311f57157",
+            "name": "Other notes · Upper button press → Undo (Keep Notes)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "5d6b839d-6d62-3bdf-a786-6333f20cc4b3",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "INTERACT_UI_ELEMENT",
+                    "data": "Redo",
+                    "extras": [
+                        {
+                            "id": "extra_accessibility_node_action",
+                            "data": "CLICK"
+                        },
+                        {
+                            "id": "extra_accessibility_package_name",
+                            "data": "com.google.android.keep"
+                        },
+                        {
+                            "id": "extra_accessibility_view_resource_id",
+                            "data": "com.google.android.keep:id/redo"
+                        },
+                        {
+                            "id": "extra_accessibility_actions",
+                            "data": "16"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "756a64d1-8c87-3ba9-87ca-d7d02d2fe656"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.keep"
+                        }
+                    ],
+                    "uid": "ad213e3f-3a48-3ae3-962d-be036510dd61",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "3fd243e2-2433-36e8-a81e-a8e515650c0c",
+            "group_uid": "20abcd15-342a-3ff5-9a35-a94311f57157",
+            "name": "Other notes · Lower button press → Redo (Keep Notes)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "65f32679-fa5d-39b9-94ee-c428a8ece60b",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "play_pause_media",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "5c71ddc4-62b2-3c14-8b2a-01296ea0cb8c"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "c7a4dcd3-a768-3f01-9149-3d56e29cf104",
+            "group_uid": "7c7e220b-a008-323b-be12-0aa333732b94",
+            "name": "Video & music · Upper button press → Play/pause"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "a0db19dd-862c-3fa1-96ff-383a239d281a",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "go_back",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "bb4558c6-ca9a-3159-8b38-23d71fdc06a2"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "101a3f50-7a25-3221-965c-87634fcdcee4",
+            "group_uid": "7c7e220b-a008-323b-be12-0aa333732b94",
+            "name": "Video & music · Lower button press → Back"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "4c34918a-c401-31c8-94de-305e7fd4cd93",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "INTENT",
+                    "data": "#Intent;component=com.charan.padstudio/com.charan.padstudio.home.LibraryActivity;end",
+                    "extras": [
+                        {
+                            "id": "extra_intent_description",
+                            "data": "PadStudio app library"
+                        },
+                        {
+                            "id": "extra_intent_target",
+                            "data": "ACTIVITY"
+                        },
+                        {
+                            "id": "extra_intent_extras",
+                            "data": "[]"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "531d4218-d02b-37b4-9c17-f5fe3e1eecb0"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "506c3792-d9a4-3d13-8134-b24fb7adff7e",
+            "group_uid": "5cd50f6b-884f-3bbb-85e1-78bb41f535bf",
+            "name": "Home screen · Upper button press → Open app library"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "967f7c70-381a-3afb-90fa-efc757f5b72c",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "APP",
+                    "data": "com.miui.creation",
+                    "extras": [
+                        {
+                            "id": "extra_app_name",
+                            "data": "Mi Canvas"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "65db9a3c-5e77-30ef-90f9-94631a48b223"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "2e1ffbcd-39b8-3950-9286-d009e312a8bd",
+            "group_uid": "5cd50f6b-884f-3bbb-85e1-78bb41f535bf",
+            "name": "Home screen · Lower button press → Open notes app"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 2,
+                        "flags": 0,
+                        "uid": "b551a824-bc15-3a24-b8a5-bfeb95760cf3",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "APP",
+                    "data": "com.android.camera",
+                    "extras": [
+                        {
+                            "id": "extra_app_name",
+                            "data": "Camera"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "3b86ba94-c4ef-3d62-9fc0-2841aa41066f"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "472f71ab-ae83-3749-ba4f-66b7eca3d83c",
+            "group_uid": "5cd50f6b-884f-3bbb-85e1-78bb41f535bf",
+            "name": "Home screen · Upper button double press → Open camera"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "cdf4fc33-f44b-3366-8482-4c96437a9213",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "screenshot",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "218018f7-738f-3cde-ae43-19d6cf87377a"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "e6f73941-cc9d-3728-a4ca-ca2578374945",
+            "group_uid": "be8228aa-8209-3a94-ac05-4740d14f8471",
+            "name": "Everywhere else · Upper button press → Screenshot"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 0,
+                        "flags": 0,
+                        "uid": "539d8ef0-84e1-323b-b6bb-0d2459d21f48",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "go_back",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "4cf45fd3-795f-3abb-9cd8-bf942f2d95bc"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "4b475823-57db-31f2-84c3-4c3758b9d890",
+            "group_uid": "be8228aa-8209-3a94-ac05-4740d14f8471",
+            "name": "Everywhere else · Lower button press → Back"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 92,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 2,
+                        "flags": 0,
+                        "uid": "01000f22-c8f4-368c-99b3-44b363bc4d12",
+                        "scanCode": 104
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "APP",
+                    "data": "com.android.camera",
+                    "extras": [
+                        {
+                            "id": "extra_app_name",
+                            "data": "Camera"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "f2ee0c5d-13f3-36be-9426-1eac57433d23"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "2a4664d9-03cb-3049-9f05-a93d72a0137c",
+            "group_uid": "be8228aa-8209-3a94-ac05-4740d14f8471",
+            "name": "Everywhere else · Upper button double press → Open camera"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 93,
+                        "deviceId": "0123456789abcdef0123456789abcdef01234567",
+                        "deviceName": "Xiaomi Smart Pen",
+                        "clickType": 2,
+                        "flags": 0,
+                        "uid": "0e318f8a-79d2-3f54-8377-6313580c8453",
+                        "scanCode": 109
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "open_recents",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "84415fd3-ea13-3c66-9175-236ac6c8132b"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "957afd76-ab76-3001-97d8-ceea070db69d",
+            "group_uid": "be8228aa-8209-3a94-ac05-4740d14f8471",
+            "name": "Everywhere else · Lower button double press → Recents"
+        }
+    ],
+    "groups": [
+        {
+            "uid": "742512f6-5d54-3005-8362-919ed108b07b",
+            "name": "PadStudio Pen",
+            "constraints": [],
+            "constraint_mode": 1
+        },
+        {
+            "uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera",
+            "constraints": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.android.camera"
+                        }
+                    ],
+                    "uid": "4774e63d-6ded-3cdd-bcea-cfae6a2b2927",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "net.sourceforge.opencamera"
+                        }
+                    ],
+                    "uid": "1834b9eb-bffd-3280-ad45-7d6a2873daff",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "07ca5a3e-e9cc-3845-bd16-627567c2508e",
+                    "isNot": false
+                }
+            ],
+            "constraint_mode": 0,
+            "parent_uid": "742512f6-5d54-3005-8362-919ed108b07b"
+        },
+        {
+            "uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF",
+            "constraints": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "org.readera"
+                        }
+                    ],
+                    "uid": "c6106f5b-1e1c-3b9c-9f17-f3d5f0f30274",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.apps.docs"
+                        }
+                    ],
+                    "uid": "e8cb9e5b-c8fb-308d-84c3-44f9f39d63a8",
+                    "isNot": false
+                }
+            ],
+            "constraint_mode": 0,
+            "parent_uid": "742512f6-5d54-3005-8362-919ed108b07b"
+        },
+        {
+            "uid": "20abcd15-342a-3ff5-9a35-a94311f57157",
+            "name": "Other notes",
+            "constraints": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.keep"
+                        }
+                    ],
+                    "uid": "a132f693-375e-3e4e-b051-c77697ae71fe",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.miui.notes"
+                        }
+                    ],
+                    "uid": "58221f6f-d500-3671-a46b-bea477f5e2fa",
+                    "isNot": false
+                }
+            ],
+            "constraint_mode": 0,
+            "parent_uid": "742512f6-5d54-3005-8362-919ed108b07b"
+        },
+        {
+            "uid": "7c7e220b-a008-323b-be12-0aa333732b94",
+            "name": "Video & music",
+            "constraints": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.youtube"
+                        }
+                    ],
+                    "uid": "e262cce9-31b3-36b8-a3b1-0982b810ba35",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.spotify.music"
+                        }
+                    ],
+                    "uid": "89965926-7f24-3127-9d00-e00f03e18a4c",
+                    "isNot": false
+                }
+            ],
+            "constraint_mode": 0,
+            "parent_uid": "742512f6-5d54-3005-8362-919ed108b07b"
+        },
+        {
+            "uid": "5cd50f6b-884f-3bbb-85e1-78bb41f535bf",
+            "name": "Home screen",
+            "constraints": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.miui.home"
+                        }
+                    ],
+                    "uid": "55886a90-6383-39e6-b3ff-e7c7f0625529",
+                    "isNot": false
+                }
+            ],
+            "constraint_mode": 0,
+            "parent_uid": "742512f6-5d54-3005-8362-919ed108b07b"
+        },
+        {
+            "uid": "be8228aa-8209-3a94-ac05-4740d14f8471",
+            "name": "Everywhere else",
+            "constraints": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.android.camera"
+                        }
+                    ],
+                    "uid": "2f20e506-6af6-3f21-9f40-cfea7bc1cb1d",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "net.sourceforge.opencamera"
+                        }
+                    ],
+                    "uid": "5ce9a05b-d26b-3371-b622-1be0bd1c29b0",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "ae55d15f-f670-33f9-b7a2-378c9216d409",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "org.readera"
+                        }
+                    ],
+                    "uid": "f7d9dd9b-fb08-3d67-9868-58e3dbcf4981",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.apps.docs"
+                        }
+                    ],
+                    "uid": "41e4a71e-6a8e-389e-9299-10ad24533b23",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.miui.creation"
+                        }
+                    ],
+                    "uid": "8f709304-255f-3316-b0cc-2a523f8ec100",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.example.notewise"
+                        }
+                    ],
+                    "uid": "805e895d-1b5e-3a29-8823-6fa2f5ca0bea",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.keep"
+                        }
+                    ],
+                    "uid": "b2675969-8224-36f4-914d-caa30a5435e7",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.miui.notes"
+                        }
+                    ],
+                    "uid": "392f839d-6e0a-30e9-81ad-e3946e0e5067",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.youtube"
+                        }
+                    ],
+                    "uid": "27dd4b36-9e03-3e4d-8119-81d6f8d1850c",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.spotify.music"
+                        }
+                    ],
+                    "uid": "9cd0356f-1697-32ca-938c-b1d38ba96654",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.miui.home"
+                        }
+                    ],
+                    "uid": "60138967-786d-3f43-a998-6078b507abc0",
+                    "isNot": true
+                }
+            ],
+            "constraint_mode": 1,
+            "parent_uid": "742512f6-5d54-3005-8362-919ed108b07b"
+        }
+    ]
+}

@@ -1,0 +1,460 @@
+<section class="mock" data-screen="setup" aria-label="Setup screen">
+<style>
+/* Setup (plan §10 "Setup"), drawn in the owner's reference style (docs/redesign/reference-today.png):
+   expanded rail with the mark and wordmark, a large title, a top-right outlined action, 24 dp cards with a
+   hairline edge on a navy-violet canvas, category icons in list rows. Shared parts come from kit.css; the
+   classes below (m-setup-*) only extend it where the reference differs. Colours are mixed from the token
+   roles, so every palette and both themes follow. Status copy follows plan §7: the HyperOS check can't be
+   read by an app, so it is "Check by hand" and is not counted as ready. */
+.m-setup-frame {
+  --m-setup-canvas: color-mix(in oklab, var(--surface-container-lowest) 94%, var(--primary-container));
+  --m-setup-card: color-mix(in oklab, var(--surface-container-low) 95%, var(--primary-container));
+  --m-setup-line: color-mix(in oklab, var(--outline-variant) 80%, transparent);
+  --m-setup-attn: var(--warn-ink);
+  --m-setup-hand: var(--outline);
+  background: var(--m-setup-canvas);
+}
+.m-setup-frame[data-theme="light"] {
+  --m-setup-canvas: color-mix(in oklab, var(--background) 95%, var(--primary-container));
+  --m-setup-card: var(--surface-container-lowest);
+}
+
+/* ---- expanded rail (about 216 dp, as in the reference) */
+.m-setup-rail {
+  flex: none;
+  width: 216px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 12px calc(var(--nav-h, 16px) + 8px);
+  box-shadow: inset -1px 0 0 var(--m-setup-line);
+  overflow: hidden auto;
+  scrollbar-width: none;
+}
+.m-setup-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 12px 0 16px;
+  margin-bottom: 12px;
+  color: var(--on-surface);
+}
+.m-setup-brand__mark { --sym-size: 28px; color: var(--primary); }
+/* The wordmark belongs to the logo lockup: it follows the text size up to 23 dp (its size at 125 %), then
+   stops, so at 200 % it never breaks mid-word in the 216 dp rail. */
+.m-setup-brand__word {
+  min-width: 0;
+  font-size: min(var(--t-title-size, 20px), 23px);
+  line-height: min(var(--t-title-line, 28px), 32px);
+  font-weight: var(--w-medium);
+  white-space: nowrap;
+}
+.m-setup-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 16px;
+  border-radius: var(--r-m);
+  color: var(--on-surface);
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-line);
+  font-weight: var(--w-medium);
+  text-align: left;
+}
+.m-setup-nav > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.m-setup-nav .sym { color: var(--on-surface-variant); }
+.m-setup-nav:hover { background-color: var(--state-hover); }
+.m-setup-nav[aria-current="page"] { background-color: var(--secondary-container); color: var(--on-secondary-container); }
+.m-setup-nav[aria-current="page"] .sym { color: inherit; }
+.m-setup-nav--quiet { color: var(--on-surface-variant); font-weight: var(--w-regular); }
+.m-setup-rail__foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; padding-top: 12px; }
+.m-setup-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 4px 8px 4px 16px;
+  font-size: var(--t-label-size);
+  line-height: var(--t-label-line);
+  color: var(--on-surface-variant);
+}
+/* The dot sits on the first line when the status wraps (it does at 125 % with Bold text). */
+.m-setup-status__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: calc((var(--t-label-line, 18px) - 10px) / 2);
+  border-radius: 50%;
+  background: var(--good-ink);
+}
+
+/* ---- page */
+.m-setup-main { padding-top: 12px; }
+.m-setup-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.m-setup-title {
+  font-size: var(--t-display-size);
+  line-height: var(--t-display-line);
+  font-weight: var(--w-medium);
+  color: var(--on-surface);
+}
+.m-setup-sub { font-size: var(--t-body-size); line-height: var(--t-body-line); color: var(--on-surface-variant); }
+/* Buttons keep the kit's 48 dp target; the reference draws them as rounded rectangles, not pills. */
+.m-setup-btn::before { border-radius: var(--r-s); }
+.m-setup-action { flex: none; margin-top: 4px; padding: 12px 20px 12px 16px; color: var(--on-surface); }
+.m-setup-action::before { inset: 0; border-radius: var(--r-m); }
+.m-setup-action .sym { color: var(--primary); }
+
+.m-setup-grid { display: grid; grid-template-columns: minmax(0, 1fr) 344px; gap: 16px; align-items: start; }
+.m-setup-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.m-setup-card {
+  min-width: 0;
+  padding: 20px;
+  border-radius: var(--r-l);
+  background: var(--m-setup-card);
+  box-shadow: inset 0 0 0 1px var(--m-setup-line);
+  color: var(--on-surface);
+}
+.m-setup-card__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 12px; }
+.m-setup-card__title { font-size: var(--t-title-size); line-height: var(--t-title-line); font-weight: var(--w-medium); color: var(--on-surface); }
+.m-setup-card__meta { font-size: var(--t-label-size); line-height: var(--t-label-line); color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+
+/* Category tile: a symbol on a tonal superellipse, the same shape as the app icons beside it. */
+.m-setup-cat {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  -webkit-mask: var(--kit-squircle) center / 100% 100% no-repeat;
+  mask: var(--kit-squircle) center / 100% 100% no-repeat;
+}
+.m-setup-cat--home { background: var(--secondary-container); color: var(--on-secondary-container); }
+.m-setup-cat--looks { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+.m-setup-cat--dev { background: var(--surface-container-highest); color: var(--on-surface-variant); }
+.m-setup-check .app-icon { --size: 40px; }
+
+/* ---- a check: icon | name + pill | one sentence | Fix */
+.m-setup-checks { margin-top: 4px; }
+.m-setup-check {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-areas: "icon name pill" "icon text text" ". fix fix";
+  column-gap: 16px;
+  padding: 12px 0;
+}
+.m-setup-check + .m-setup-check { box-shadow: inset 0 1px 0 var(--m-setup-line); }
+.m-setup-check__icon { grid-area: icon; align-self: center; }
+.m-setup-check__name {
+  grid-area: name;
+  align-self: center;
+  min-width: 0;
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-line);
+  font-weight: var(--w-medium);
+  overflow-wrap: anywhere;
+}
+.m-setup-check__pill { grid-area: pill; align-self: center; justify-self: end; }
+.m-setup-check__text {
+  grid-area: text;
+  min-width: 0;
+  margin-top: 2px;
+  font-size: var(--t-label-size);
+  line-height: var(--t-label-line);
+  color: var(--on-surface-variant);
+}
+.m-setup-check__fix { grid-area: fix; justify-self: start; margin-top: 6px; }
+/* At 200 % text the pill moves under the name, so names keep their width. */
+.m-setup-frame[data-fontscale="2"] .m-setup-check {
+  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-areas: "icon name" "icon pill" "icon text" ". fix";
+}
+.m-setup-frame[data-fontscale="2"] .m-setup-check__pill { justify-self: start; margin-top: 4px; }
+
+/* ---- summary: a ring of eight segments, one per check */
+.m-setup-sum { display: flex; align-items: center; gap: 16px; }
+.m-setup-ring {
+  position: relative;
+  isolation: isolate;
+  flex: none;
+  width: 96px;
+  height: 96px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+}
+.m-setup-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 50%;
+  background: conic-gradient(
+    transparent 0 2deg,
+    var(--primary) 2deg 43deg, transparent 43deg 47deg,
+    var(--primary) 47deg 88deg, transparent 88deg 92deg,
+    var(--primary) 92deg 133deg, transparent 133deg 137deg,
+    var(--primary) 137deg 178deg, transparent 178deg 182deg,
+    var(--primary) 182deg 223deg, transparent 223deg 227deg,
+    var(--primary) 227deg 268deg, transparent 268deg 272deg,
+    var(--m-setup-attn) 272deg 313deg, transparent 313deg 317deg,
+    var(--m-setup-hand) 317deg 358deg, transparent 358deg 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 calc(100% - 7.5px));
+}
+.m-setup-ring__n {
+  font-size: var(--t-headline-size);
+  line-height: var(--t-headline-line);
+  font-weight: var(--w-regular);
+  font-variant-numeric: tabular-nums;
+  color: var(--on-surface);
+}
+.m-setup-ring__of { margin-top: -4px; font-size: var(--t-label-size); line-height: var(--t-label-line); color: var(--on-surface-variant); }
+.m-setup-sum__text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.m-setup-legend { display: flex; flex-direction: column; font-size: var(--t-label-size); line-height: var(--t-label-line); color: var(--on-surface-variant); }
+.m-setup-legend > li { display: flex; align-items: flex-start; gap: 8px; }
+.m-setup-key {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: calc((var(--t-label-line, 18px) - 10px) / 2);
+  border-radius: 50%;
+  background: var(--primary);
+}
+.m-setup-key--attn { background: var(--m-setup-attn); }
+.m-setup-key--hand { background: var(--m-setup-hand); }
+.m-setup-next {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 12px;
+  margin-top: 16px;
+  padding: 14px 16px 6px;
+  border-radius: var(--r-m);
+  background: color-mix(in oklab, var(--warn) 12%, transparent);
+}
+.m-setup-next > .sym { color: var(--m-setup-attn); margin-top: 2px; }
+.m-setup-next__name { font-size: var(--t-body-size); line-height: var(--t-body-line); font-weight: var(--w-medium); }
+.m-setup-next__text { font-size: var(--t-label-size); line-height: var(--t-label-line); color: var(--on-surface-variant); }
+.m-setup-next > .btn { grid-column: 2; justify-self: start; margin-top: 6px; }
+
+/* ---- list rows for Developer and About (the reference's rows: icon, two lines, chevron) */
+.m-setup-rows { margin-top: 8px; }
+.m-setup-rows > li + li { box-shadow: inset 0 1px 0 var(--m-setup-line); }
+.m-setup-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 72px;
+  padding: 12px 0;
+  color: var(--on-surface);
+  text-align: left;
+}
+button.m-setup-row { margin-inline: -8px; width: calc(100% + 16px); padding-inline: 8px; border-radius: var(--r-m); }
+button.m-setup-row:hover { background-color: var(--state-hover); }
+.m-setup-row > .sym:last-child { color: var(--on-surface-variant); }
+.m-setup-row__text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.m-setup-row__name { font-size: var(--t-body-size); line-height: var(--t-body-line); font-weight: var(--w-medium); }
+.m-setup-row__sub { font-size: var(--t-label-size); line-height: var(--t-label-line); color: var(--on-surface-variant); }
+.m-setup-details { margin-top: 8px; background: color-mix(in oklab, var(--surface-container-high) 70%, transparent); }
+.m-setup-details .disclosure__body p + p { margin-top: 8px; }
+
+/* ---- About */
+.m-setup-lead { margin-top: 4px; font-size: var(--t-label-size); line-height: var(--t-label-line); color: var(--on-surface-variant); }
+.m-setup-credits { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; font-size: var(--t-label-size); line-height: var(--t-label-line); color: var(--on-surface-variant); }
+.m-setup-credits > li { padding-left: 14px; position: relative; }
+.m-setup-credits > li::before { content: ""; position: absolute; left: 0; top: calc(var(--t-label-line, 18px) / 2 - 2px); width: 4px; height: 4px; border-radius: 50%; background: var(--primary); }
+.m-setup-credit { color: var(--on-surface); font-weight: var(--w-medium); }
+</style>
+
+<div class="mock-frame m-setup-frame" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+  <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+  <div class="mock-app">
+
+    <nav class="m-setup-rail" aria-label="PadStudio">
+      <div class="m-setup-brand">
+        <span class="sym m-setup-brand__mark" data-icon="pen" role="img" aria-label="PadStudio logo (not picked yet)"></span>
+        <span class="m-setup-brand__word">PadStudio</span>
+      </div>
+      <button type="button" class="m-setup-nav"><span class="sym" data-icon="today"></span><span>Today</span></button>
+      <button type="button" class="m-setup-nav"><span class="sym" data-icon="pen"></span><span>Pen</span></button>
+      <button type="button" class="m-setup-nav"><span class="sym" data-icon="home"></span><span>Home</span></button>
+      <button type="button" class="m-setup-nav"><span class="sym" data-icon="looks"></span><span>Looks</span></button>
+      <button type="button" class="m-setup-nav" aria-current="page"><span class="sym sym--fill" data-icon="setup"></span><span>Setup</span></button>
+      <div class="m-setup-rail__foot">
+        <p class="m-setup-status"><span class="m-setup-status__dot" aria-hidden="true"></span><span>Key Mapper is listening</span></p>
+        <button type="button" class="m-setup-nav m-setup-nav--quiet"><span class="sym" data-icon="settings"></span><span>Settings</span></button>
+      </div>
+    </nav>
+
+    <main class="mock-content m-setup-main">
+      <div class="mock-content__inner">
+        <header class="m-setup-head">
+          <div>
+            <h2 class="m-setup-title">Setup</h2>
+            <p class="m-setup-sub">Eight checks for your pen, home screen and looks.</p>
+          </div>
+          <button type="button" class="btn btn--outlined m-setup-action"><span class="sym" data-icon="refresh"></span>Check again</button>
+        </header>
+
+        <div class="m-setup-grid">
+          <div class="m-setup-col">
+
+            <section class="m-setup-card" aria-labelledby="m-setup-pen">
+              <div class="m-setup-card__head"><h3 class="m-setup-card__title" id="m-setup-pen">Pen</h3><span class="m-setup-card__meta">4 of 5 ready</span></div>
+              <ul class="m-setup-checks">
+                <li class="m-setup-check">
+                  <span class="m-setup-check__icon app-icon"><img src="assets/icons/key-mapper.png" alt=""></span>
+                  <span class="m-setup-check__name">Key Mapper installed</span>
+                  <span class="status-pill m-setup-check__pill" data-state="good"><span class="sym" data-icon="ok"></span>Ready</span>
+                  <p class="m-setup-check__text">Version 4.6.1 runs your pen’s buttons.</p>
+                </li>
+                <li class="m-setup-check">
+                  <span class="m-setup-check__icon m-setup-cat"><span class="sym" data-icon="pen"></span></span>
+                  <span class="m-setup-check__name">Key Mapper can see the pen</span>
+                  <span class="status-pill m-setup-check__pill" data-state="good"><span class="sym" data-icon="ok"></span>Ready</span>
+                  <p class="m-setup-check__text">Its accessibility service is turned on.</p>
+                </li>
+                <li class="m-setup-check">
+                  <span class="m-setup-check__icon m-setup-cat"><span class="sym" data-icon="send"></span></span>
+                  <span class="m-setup-check__name">Pen profile is current</span>
+                  <span class="status-pill m-setup-check__pill" data-state="good"><span class="sym" data-icon="ok"></span>Ready</span>
+                  <p class="m-setup-check__text">Sent to Key Mapper 14:05, with no changes since.</p>
+                </li>
+                <li class="m-setup-check">
+                  <span class="m-setup-check__icon m-setup-cat"><span class="sym" data-icon="hyperos"></span></span>
+                  <span class="m-setup-check__name">HyperOS keeps Key Mapper running</span>
+                  <span class="status-pill m-setup-check__pill" data-state="unknown"><span class="sym" data-icon="help"></span>Check by hand</span>
+                  <p class="m-setup-check__text">PadStudio can’t check this, so turn on Autostart, set Battery saver to No restrictions and lock Key Mapper in Recents.</p>
+                  <button type="button" class="btn btn--tonal m-setup-btn m-setup-check__fix"><span class="sym" data-icon="open"></span>Open Key Mapper’s app info</button>
+                </li>
+                <li class="m-setup-check">
+                  <span class="m-setup-check__icon m-setup-cat"><span class="sym" data-icon="info"></span></span>
+                  <span class="m-setup-check__name">Device facts imported</span>
+                  <span class="status-pill m-setup-check__pill" data-state="good"><span class="sym" data-icon="ok"></span>Ready</span>
+                  <p class="m-setup-check__text">PadStudio knows your camera’s shutter button and the pen’s four controls.</p>
+                </li>
+              </ul>
+            </section>
+
+            <section class="m-setup-card" aria-labelledby="m-setup-home">
+              <div class="m-setup-card__head"><h3 class="m-setup-card__title" id="m-setup-home">Home</h3><span class="m-setup-card__meta">1 of 1 ready</span></div>
+              <ul class="m-setup-checks">
+                <li class="m-setup-check">
+                  <span class="m-setup-check__icon m-setup-cat m-setup-cat--home"><span class="sym" data-icon="widgets"></span></span>
+                  <span class="m-setup-check__name">Group widgets on the home screen</span>
+                  <span class="status-pill m-setup-check__pill" data-state="good"><span class="sym" data-icon="ok"></span>Ready</span>
+                  <p class="m-setup-check__text">2 placed on your home screen.</p>
+                </li>
+              </ul>
+            </section>
+
+            <section class="m-setup-card" aria-labelledby="m-setup-looks">
+              <div class="m-setup-card__head"><h3 class="m-setup-card__title" id="m-setup-looks">Looks</h3><span class="m-setup-card__meta">1 of 2 ready</span></div>
+              <ul class="m-setup-checks">
+                <li class="m-setup-check">
+                  <span class="m-setup-check__icon m-setup-cat m-setup-cat--looks"><span class="sym" data-icon="looks"></span></span>
+                  <span class="m-setup-check__name">Themed icon source</span>
+                  <span class="status-pill m-setup-check__pill" data-state="good"><span class="sym" data-icon="ok"></span>Ready</span>
+                  <p class="m-setup-check__text">Lawnicons is installed and supplies themed icons.</p>
+                </li>
+                <li class="m-setup-check">
+                  <span class="m-setup-check__icon m-setup-cat m-setup-cat--looks"><span class="sym" data-icon="wallpaper"></span></span>
+                  <span class="m-setup-check__name">PadStudio wallpaper</span>
+                  <span class="status-pill m-setup-check__pill" data-state="warn"><span class="sym" data-icon="warning"></span>Needs attention</span>
+                  <p class="m-setup-check__text">Not applied yet, and it’s optional: pick one in Looks for Home, Lock or both.</p>
+                  <button type="button" class="btn btn--tonal m-setup-btn m-setup-check__fix"><span class="sym" data-icon="looks"></span>Open Looks</button>
+                </li>
+              </ul>
+            </section>
+
+          </div>
+          <div class="m-setup-col">
+
+            <section class="m-setup-card" aria-labelledby="m-setup-sum">
+              <div class="m-setup-sum">
+                <div class="m-setup-ring" role="img" aria-label="Ring of eight checks: 6 ready, 1 needs attention, 1 to check by hand">
+                  <span class="m-setup-ring__n" aria-hidden="true">6</span><span class="m-setup-ring__of" aria-hidden="true">of 8</span>
+                </div>
+                <div class="m-setup-sum__text">
+                  <h3 class="m-setup-card__title" id="m-setup-sum">6 of 8 ready</h3>
+                  <ul class="m-setup-legend">
+                    <li><span class="m-setup-key" aria-hidden="true"></span>6 ready</li>
+                    <li><span class="m-setup-key m-setup-key--attn" aria-hidden="true"></span>1 needs attention</li>
+                    <li><span class="m-setup-key m-setup-key--hand" aria-hidden="true"></span>1 to check by hand</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="m-setup-next">
+                <span class="sym" data-icon="warning" aria-hidden="true"></span>
+                <div>
+                  <p class="m-setup-next__name">PadStudio wallpaper</p>
+                  <p class="m-setup-next__text">Not applied yet.</p>
+                </div>
+                <button type="button" class="btn btn--filled m-setup-btn"><span class="sym" data-icon="looks"></span>Open Looks</button>
+              </div>
+            </section>
+
+            <section class="m-setup-card" aria-labelledby="m-setup-dev">
+              <h3 class="m-setup-card__title" id="m-setup-dev">Developer</h3>
+              <ul class="m-setup-rows">
+                <li>
+                  <button type="button" class="m-setup-row">
+                    <span class="m-setup-cat m-setup-cat--dev"><span class="sym" data-icon="test_pen"></span></span>
+                    <span class="m-setup-row__text"><span class="m-setup-row__name">Pen probe</span><span class="m-setup-row__sub">Shows every key and pen event as it arrives.</span></span>
+                    <span class="sym" data-icon="chevron"></span>
+                  </button>
+                </li>
+                <li>
+                  <div class="m-setup-row">
+                    <span class="m-setup-cat m-setup-cat--dev"><span class="sym" data-icon="info"></span></span>
+                    <span class="m-setup-row__text"><span class="m-setup-row__name">Device facts</span><span class="m-setup-row__sub">Run the facts script on your computer to refresh.</span></span>
+                  </div>
+                </li>
+              </ul>
+              <details class="disclosure m-setup-details">
+                <summary><span class="sym" data-icon="code"></span>Developer details</summary>
+                <div class="disclosure__body">
+                  <p>With the tablet connected over adb, tools/facts.sh rebuilds docs/device/device-facts.json from the newest probe run and pushes it to files/device-facts.json.</p>
+                  <p>Pen: Xiaomi Focus Pen Pro Keyboard, Expert. Squeeze KEY_F19 · slide up KEY_KP9 · slide down KEY_KP3 · double tap KEY_KPENTER.</p>
+                  <p>Key Mapper: io.github.sds100.keymapper 4.6.1-foss (286).</p>
+                  <p>Profile cdbc98bc0674, sent 14:05; matches the current plan.</p>
+                </div>
+              </details>
+            </section>
+
+            <section class="m-setup-card" aria-labelledby="m-setup-about">
+              <h3 class="m-setup-card__title" id="m-setup-about">About</h3>
+              <p class="m-setup-lead">PadStudio 0.1 is free software under GPL-3.0. It builds on:</p>
+              <ul class="m-setup-credits">
+                <li><span class="m-setup-credit">Key Mapper</span> (GPL-3.0) runs the pen’s buttons from PadStudio’s profiles.</li>
+                <li><span class="m-setup-credit">Lawnchair’s flowerpot</span> (GPL-3.0-or-later) sorts apps into groups; its icon-pack handling guided PadStudio’s.</li>
+                <li><span class="m-setup-credit">FocusPen Pro X</span> (GPL-3.0-only) showed how HyperOS reports pen gestures.</li>
+                <li><span class="m-setup-credit">Lawnicons</span> (Apache-2.0) and <span class="m-setup-credit">Arcticons</span> (GPL-3.0, CC BY-SA 4.0) supply themed icons.</li>
+                <li><span class="m-setup-credit">Material Symbols</span> (Apache-2.0): the icons.</li>
+                <li><span class="m-setup-credit">model-viewer</span> (Apache-2.0): the live 3D pen in this preview.</li>
+              </ul>
+              <ul class="m-setup-rows">
+                <li>
+                  <button type="button" class="m-setup-row">
+                    <span class="m-setup-cat m-setup-cat--dev"><span class="sym" data-icon="code"></span></span>
+                    <span class="m-setup-row__text"><span class="m-setup-row__name">Open-source licences</span><span class="m-setup-row__sub">Each library and its licence.</span></span>
+                    <span class="sym" data-icon="chevron"></span>
+                  </button>
+                </li>
+              </ul>
+            </section>
+
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+  <div class="mock-handle" aria-hidden="true"></div>
+</div>
+</section>

@@ -30,10 +30,13 @@ for d in "$RAW_ROOT"/2*/; do
 done
 
 OUT="$PAD_ROOT/docs/device/device-facts.json"
+# HyperOS's home-screen grid as recorded by gate G5 (docs/decisions/ADR-005-home-grid.md), when present.
+home_args=()
+[[ -f "$PAD_ROOT/docs/device/home-grid.json" ]] && home_args=(--home-grid "$PAD_ROOT/docs/device/home-grid.json")
 python3 -I "$PAD_ROOT/tools/lib/make_facts.py" --probe "$probe" "${camera_args[@]}" \
   --device "Xiaomi Focus Pen Pro Keyboard" \
   --control pinch=KEY_F19 --control slide_up=KEY_KP9 --control slide_down=KEY_KP3 --control double_tap=KEY_KPENTER \
-  --kind FOCUS_PEN_PRO --mode EXPERT --out "$OUT"
+  --kind FOCUS_PEN_PRO --mode EXPERT ${home_args[@]+"${home_args[@]}"} --out "$OUT"
 
 if (( PUSH )); then
   pad_require_device

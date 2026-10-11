@@ -23,3 +23,7 @@ docs/device/raw/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Redesign tooling (plan §14)
+**/node_modules/
+Branding/probe/out/

@@ -1,0 +1,1294 @@
+{
+    "keymap_db_version": 25,
+    "app_version": 286,
+    "keymap_list": [
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 0,
+                        "scanCode": 189,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "fb62278b-2380-33ea-b3d1-b60ffa623fc1"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "KEY_EVENT",
+                    "data": "25",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "00c669ba-15ab-31e8-ae4f-7dc353e0c844"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.android.camera"
+                        }
+                    ],
+                    "uid": "ac15b248-31ea-37bc-8ed4-6c4d232a1a89",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "2b940a83-9df5-388f-9e5a-09ac81b0dfc8",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Squeeze press → Shutter (Camera)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 0,
+                        "scanCode": 189,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "12ee3350-295b-367d-9d52-dae2e6815f9a"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "KEY_EVENT",
+                    "data": "27",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "d11f1cf6-5538-381b-8414-8c414eb34888"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "net.sourceforge.opencamera"
+                        }
+                    ],
+                    "uid": "2efd6dd5-1df4-3355-9c34-7c8ff3a809fb",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "e37118d4-51cb-3850-a6a0-f062be6b97c9",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Squeeze press → Shutter (Open Camera)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 0,
+                        "scanCode": 189,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "79790cd1-227e-3a0d-8f02-42242a981afc"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "TAP_COORDINATE",
+                    "data": "1068,2900",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Shutter (portrait)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "2136,3200"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "886ab5e0-c781-3d98-b6f8-6cbb0faaa65b"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "45a72f41-4514-39e8-a87a-faedb38f8efb",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_portrait",
+                    "extras": [],
+                    "uid": "ae202584-9192-36fe-a4b1-e6fb90e6ac1d",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "ff0065bc-acf6-3857-8f22-28c5d0ecd01c",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Squeeze press → Shutter (Pixel Camera) [portrait]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 0,
+                        "scanCode": 189,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "95949a98-f3e9-3578-9772-484897f1b576"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "TAP_COORDINATE",
+                    "data": "3000,1068",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Shutter (landscape)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "3200,2136"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "6d348f64-55de-3341-ac95-27b37e180d0f"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "147aee28-0590-397b-8fc8-a541b1468112",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_landscape",
+                    "extras": [],
+                    "uid": "a51b99e3-0cfa-38dc-b413-4d2bf87fc50d",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "ff6f8972-c6ed-30ad-a02c-f75878360a91",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Squeeze press → Shutter (Pixel Camera) [landscape]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 160,
+                        "scanCode": 96,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "9fa348ea-6086-34a9-9d8a-91d04526c119"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "KEY_EVENT",
+                    "data": "25",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "e4683ef7-0d54-3a1c-94ca-a28e5d25be7a"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.android.camera"
+                        }
+                    ],
+                    "uid": "7ba44fba-cad6-3dc7-9815-b7c3fa52b56b",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "c986ba66-1bc4-3163-a0d5-e4026fa08f73",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Double tap → Shutter (Camera)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 160,
+                        "scanCode": 96,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "9a837408-74c0-37ed-8b44-567248179ff6"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "KEY_EVENT",
+                    "data": "27",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "27281993-523d-3e19-84b2-e46e100b6cef"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "net.sourceforge.opencamera"
+                        }
+                    ],
+                    "uid": "b36fb9c6-8b6b-339b-9293-77083360ba14",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "55a9b08f-9563-3351-a384-c24b92678206",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Double tap → Shutter (Open Camera)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 160,
+                        "scanCode": 96,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "a98f9903-2613-386a-9147-0f7251617258"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "TAP_COORDINATE",
+                    "data": "1068,2900",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Shutter (portrait)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "2136,3200"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "a8a2b0bc-719a-300c-a896-9938f338551f"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "c344fd1f-4dd3-3334-83b8-6b648921234c",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_portrait",
+                    "extras": [],
+                    "uid": "dd9bc8a1-c687-3710-a202-33539fd6716c",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "d1cd5b0a-8e20-36e8-8d33-de10c9ce874a",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Double tap → Shutter (Pixel Camera) [portrait]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 160,
+                        "scanCode": 96,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "e93868f7-4592-30b7-b2c2-78b4ac9f733b"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "TAP_COORDINATE",
+                    "data": "3000,1068",
+                    "extras": [
+                        {
+                            "id": "extra_coordinate_description",
+                            "data": "Shutter (landscape)"
+                        },
+                        {
+                            "id": "extra_screen_resolution",
+                            "data": "3200,2136"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "a33a336b-8541-3a46-a7bb-976caa2304b4"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "1c8a66f0-8a7f-3750-b30e-2a6a8997f79a",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_orientation_landscape",
+                    "extras": [],
+                    "uid": "b33f828d-37cf-3a8a-9f9f-e195f9a08856",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "0e98f197-ed9a-37f3-b740-b5ffd0c44f3a",
+            "group_uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera · Double tap → Shutter (Pixel Camera) [landscape]"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 197,
+                        "scanCode": 197,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "4c1fa521-9260-3f92-aef4-1a6c0065232c"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "KEY_EVENT",
+                    "data": "93",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "287c5f94-f353-3ef0-bdb9-ec07df995779"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "org.readera"
+                        }
+                    ],
+                    "uid": "6f19837f-1363-3e4b-9438-59725bccef9a",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "1545ac7d-345c-3b53-bbad-2385edf71a87",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Slide down press → Next page (ReadEra)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 197,
+                        "scanCode": 197,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "ca45baef-173c-3e49-8dae-59a95e67e9b9"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "KEY_EVENT",
+                    "data": "93",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "6750b7a1-e223-3740-9c82-edb4d79eff4d"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.apps.docs"
+                        }
+                    ],
+                    "uid": "74331a62-dff7-33b3-b086-ae041ff32d54",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "ca71ed11-6d4e-3ad0-b37b-8b3b0c249573",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Slide down press → Next page (Drive)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 196,
+                        "scanCode": 196,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "bf43e034-119a-3292-b0e7-d362b7bbd89a"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "KEY_EVENT",
+                    "data": "92",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "784d6850-8d2c-3f9d-a64a-e757e8d3c2b2"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "org.readera"
+                        }
+                    ],
+                    "uid": "d1060d0f-74a4-3535-ab42-e5a5de5996a4",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "d1a8cf37-836d-3648-a95f-d53c157df859",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Slide up press → Previous page (ReadEra)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 196,
+                        "scanCode": 196,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "68d7d8ee-5a62-3366-8ef6-d99b7dc856be"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "KEY_EVENT",
+                    "data": "92",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "2737f643-2b67-36a1-b55a-c139cb72f2b9"
+                }
+            ],
+            "constraintList": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.apps.docs"
+                        }
+                    ],
+                    "uid": "7d1de396-c561-3743-92b1-0013abce5099",
+                    "isNot": false
+                }
+            ],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "cf8fb22f-9c61-3733-af94-54be3ddcd465",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Slide up press → Previous page (Drive)"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 160,
+                        "scanCode": 96,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "d7b7b113-5992-3b1d-bc2e-d974dac923b7"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "go_last_app",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "727b0e9f-ff3e-3ab5-9e43-2fb28b86bc81"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "c4a35766-0279-39cc-a818-95bc87892d30",
+            "group_uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF · Double tap → Last app"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 0,
+                        "scanCode": 189,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "53a38076-ab90-31fc-8c64-06a92b460f5c"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "play_pause_media",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "e06bbf34-2dd2-3cf9-8c56-4d00c7f45a1d"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "eaa808db-1cf2-3012-8293-2c0f86231623",
+            "group_uid": "7c7e220b-a008-323b-be12-0aa333732b94",
+            "name": "Video & music · Squeeze press → Play/pause"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 160,
+                        "scanCode": 96,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "0fd180bb-5ee2-3c68-83ea-c9105600f0bc"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "next_track",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "08d42afd-c0b2-3ea0-9e6c-3f45292eb630"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "2b26c50f-379c-365d-90eb-0297d742e63a",
+            "group_uid": "7c7e220b-a008-323b-be12-0aa333732b94",
+            "name": "Video & music · Double tap → Next track"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 0,
+                        "scanCode": 189,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "fe7da357-090d-33b9-b0df-f27f9c5448cb"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "INTENT",
+                    "data": "#Intent;component=com.charan.padstudio/com.charan.padstudio.home.LibraryActivity;end",
+                    "extras": [
+                        {
+                            "id": "extra_intent_description",
+                            "data": "PadStudio app library"
+                        },
+                        {
+                            "id": "extra_intent_target",
+                            "data": "ACTIVITY"
+                        },
+                        {
+                            "id": "extra_intent_extras",
+                            "data": "[]"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "9bde9e4d-82b1-357f-94ae-5a0ff52a52bc"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "55432e08-16e5-384c-86aa-14ce36ab6e52",
+            "group_uid": "5cd50f6b-884f-3bbb-85e1-78bb41f535bf",
+            "name": "Home screen · Squeeze press → Open app library"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 0,
+                        "scanCode": 189,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 2,
+                        "flags": 2,
+                        "uid": "01c8f889-43c6-3163-9edb-067bcf724c47"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "APP",
+                    "data": "com.android.camera",
+                    "extras": [
+                        {
+                            "id": "extra_app_name",
+                            "data": "Camera"
+                        }
+                    ],
+                    "flags": 0,
+                    "uid": "d4d98d84-04a1-3650-8396-1b51739227ec"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "f91e456d-cbc1-35a3-a6b0-7f3037377005",
+            "group_uid": "5cd50f6b-884f-3bbb-85e1-78bb41f535bf",
+            "name": "Home screen · Squeeze double press → Open camera"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 160,
+                        "scanCode": 96,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "485619a0-39a7-3d13-ad60-cadf6e285527"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "go_last_app",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "c3d16a9d-d42b-3c87-9675-7266f2c7d839"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "b75c0ec6-c6a9-346f-a94d-0aa3497c7200",
+            "group_uid": "5cd50f6b-884f-3bbb-85e1-78bb41f535bf",
+            "name": "Home screen · Double tap → Last app"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 0,
+                        "scanCode": 189,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 2,
+                        "flags": 2,
+                        "uid": "2f342249-a824-3d33-be87-c3690b51810e"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "screenshot",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "7aa2f59c-968f-3493-b32e-e230c0201a59"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "9ebb8ee7-1f9c-3f63-82d4-9092b045bed4",
+            "group_uid": "be8228aa-8209-3a94-ac05-4740d14f8471",
+            "name": "Everywhere else · Squeeze double press → Screenshot"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 0,
+                        "scanCode": 189,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "7e9b6c79-a7a4-3109-8454-550b0b2e9650"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "go_back",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "cfb503f0-87f6-33a6-9379-f05883445284"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "b1fe20d2-31e5-3ae2-a4b4-e1096f51f196",
+            "group_uid": "be8228aa-8209-3a94-ac05-4740d14f8471",
+            "name": "Everywhere else · Squeeze press → Back"
+        },
+        {
+            "id": 0,
+            "trigger": {
+                "keys": [
+                    {
+                        "keyCode": 160,
+                        "scanCode": 96,
+                        "deviceName": "Xiaomi Focus Pen Pro",
+                        "deviceBus": 5,
+                        "deviceVendor": 34,
+                        "deviceProduct": 20609,
+                        "clickType": 0,
+                        "flags": 2,
+                        "uid": "58d9eb71-cc31-3890-a538-7978eb6eac4c"
+                    }
+                ],
+                "extras": [],
+                "mode": 2,
+                "flags": 0
+            },
+            "actionList": [
+                {
+                    "type": "SYSTEM_ACTION",
+                    "data": "go_last_app",
+                    "extras": [],
+                    "flags": 0,
+                    "uid": "847a1285-eb12-3a02-9875-99923bec1252"
+                }
+            ],
+            "constraintList": [],
+            "constraintMode": 1,
+            "constraintGroups": [],
+            "flags": 0,
+            "isEnabled": true,
+            "uid": "25c6c109-136a-3316-8acb-cbf470629091",
+            "group_uid": "be8228aa-8209-3a94-ac05-4740d14f8471",
+            "name": "Everywhere else · Double tap → Last app"
+        }
+    ],
+    "groups": [
+        {
+            "uid": "742512f6-5d54-3005-8362-919ed108b07b",
+            "name": "PadStudio Pen",
+            "constraints": [],
+            "constraint_mode": 1
+        },
+        {
+            "uid": "222689a1-c6bb-364b-a2d4-ddc8bd4d7502",
+            "name": "Camera",
+            "constraints": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.android.camera"
+                        }
+                    ],
+                    "uid": "4774e63d-6ded-3cdd-bcea-cfae6a2b2927",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "net.sourceforge.opencamera"
+                        }
+                    ],
+                    "uid": "1834b9eb-bffd-3280-ad45-7d6a2873daff",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "07ca5a3e-e9cc-3845-bd16-627567c2508e",
+                    "isNot": false
+                }
+            ],
+            "constraint_mode": 0,
+            "parent_uid": "742512f6-5d54-3005-8362-919ed108b07b"
+        },
+        {
+            "uid": "942d2bea-2f68-3b86-ab73-9e383dbd911f",
+            "name": "Reading & PDF",
+            "constraints": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "org.readera"
+                        }
+                    ],
+                    "uid": "c6106f5b-1e1c-3b9c-9f17-f3d5f0f30274",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.apps.docs"
+                        }
+                    ],
+                    "uid": "e8cb9e5b-c8fb-308d-84c3-44f9f39d63a8",
+                    "isNot": false
+                }
+            ],
+            "constraint_mode": 0,
+            "parent_uid": "742512f6-5d54-3005-8362-919ed108b07b"
+        },
+        {
+            "uid": "7c7e220b-a008-323b-be12-0aa333732b94",
+            "name": "Video & music",
+            "constraints": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.youtube"
+                        }
+                    ],
+                    "uid": "e262cce9-31b3-36b8-a3b1-0982b810ba35",
+                    "isNot": false
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.spotify.music"
+                        }
+                    ],
+                    "uid": "89965926-7f24-3127-9d00-e00f03e18a4c",
+                    "isNot": false
+                }
+            ],
+            "constraint_mode": 0,
+            "parent_uid": "742512f6-5d54-3005-8362-919ed108b07b"
+        },
+        {
+            "uid": "5cd50f6b-884f-3bbb-85e1-78bb41f535bf",
+            "name": "Home screen",
+            "constraints": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.miui.home"
+                        }
+                    ],
+                    "uid": "55886a90-6383-39e6-b3ff-e7c7f0625529",
+                    "isNot": false
+                }
+            ],
+            "constraint_mode": 0,
+            "parent_uid": "742512f6-5d54-3005-8362-919ed108b07b"
+        },
+        {
+            "uid": "be8228aa-8209-3a94-ac05-4740d14f8471",
+            "name": "Everywhere else",
+            "constraints": [
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.android.camera"
+                        }
+                    ],
+                    "uid": "2f20e506-6af6-3f21-9f40-cfea7bc1cb1d",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "net.sourceforge.opencamera"
+                        }
+                    ],
+                    "uid": "5ce9a05b-d26b-3371-b622-1be0bd1c29b0",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.GoogleCamera"
+                        }
+                    ],
+                    "uid": "ae55d15f-f670-33f9-b7a2-378c9216d409",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "org.readera"
+                        }
+                    ],
+                    "uid": "f7d9dd9b-fb08-3d67-9868-58e3dbcf4981",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.apps.docs"
+                        }
+                    ],
+                    "uid": "41e4a71e-6a8e-389e-9299-10ad24533b23",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.miui.creation"
+                        }
+                    ],
+                    "uid": "8f709304-255f-3316-b0cc-2a523f8ec100",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.example.notewise"
+                        }
+                    ],
+                    "uid": "805e895d-1b5e-3a29-8823-6fa2f5ca0bea",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.keep"
+                        }
+                    ],
+                    "uid": "b2675969-8224-36f4-914d-caa30a5435e7",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.miui.notes"
+                        }
+                    ],
+                    "uid": "392f839d-6e0a-30e9-81ad-e3946e0e5067",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.google.android.youtube"
+                        }
+                    ],
+                    "uid": "27dd4b36-9e03-3e4d-8119-81d6f8d1850c",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.spotify.music"
+                        }
+                    ],
+                    "uid": "9cd0356f-1697-32ca-938c-b1d38ba96654",
+                    "isNot": true
+                },
+                {
+                    "type": "constraint_app_foreground",
+                    "extras": [
+                        {
+                            "id": "extra_package_name",
+                            "data": "com.miui.home"
+                        }
+                    ],
+                    "uid": "60138967-786d-3f43-a998-6078b507abc0",
+                    "isNot": true
+                }
+            ],
+            "constraint_mode": 1,
+            "parent_uid": "742512f6-5d54-3005-8362-919ed108b07b"
+        }
+    ]
+}

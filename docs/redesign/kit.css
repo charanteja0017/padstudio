@@ -1,0 +1,1299 @@
+/*
+ * PadStudio 2 preview: the mock-up kit (docs/redesign/BRIEF.md). Shared components for the mock frames.
+ *
+ * Load order: tokens.css, kit.css, your page's own CSS; then scripts fontscale.js and frame.js.
+ * kit.html shows every component in a frame, with its markup.
+ *
+ * Colours: only the token variables from tokens.css (Material 3 role names, plus --good --warn --bad).
+ * Sizes: dp, and 1 dp = 1 px inside a frame. Text uses the type-role variables --t-<role>-size and
+ *   --t-<role>-line, which fontscale.js rewrites for the chosen font scale. Text that the app sizes in sp
+ *   must use those variables, never a fixed px size; icons, shapes and spacing are dp and stay fixed.
+ * Weights: var(--w-regular) 400 and var(--w-medium) 500 only; [data-bold="on"] adds 300 (Bold text).
+ *
+ * Scope: each rule is scoped with :where(.mock-frame, .mock-switches, .kit). :where() adds no
+ *   specificity, so your m-<screen>- classes (loaded after kit.css) win ties, and nothing leaks into
+ *   the page. To use components in page chrome, put class "kit" and data-mock-themed on a container.
+ *
+ * Touch targets: every interactive component's box is at least 48 × 48 dp. Where Material draws a
+ *   smaller shape (40 dp buttons, 32 dp chips, the 32 dp switch track), the shape is a ::before layer
+ *   inside the 48 dp box, as Compose's minimumInteractiveComponentSize() lays it out.
+ * Focus: :focus-visible (or the class is-focused, for still pictures) draws a 3 dp ring in --secondary,
+ *   2 dp outside the visible shape.
+ *
+ * Components
+ *   frame       .mock-frame > .mock-status, .mock-app, .mock-handle       .mock-content, .stack, .row
+ *   type        .t-display .t-headline .t-title .t-body .t-label .t-label-small, .readout, .muted
+ *   navigation  .rail (__mark __item __indicator __label __status), .navbar (__item __indicator __label)
+ *   containers  .card (--high --hero --tonal --outlined), .section-label, .list > .list-row, .disclosure
+ *   actions     .btn (--filled --tonal --outlined --text), .icon-btn (--tonal --filled), .seg > .seg__btn,
+ *               .chip (--filter --assist), .switch > .switch__thumb, .binding (--add)
+ *   status      .status-pill[data-state=good|warn|bad|unknown] (icon + words, never colour alone), .ring
+ *   apps        .app-icon (--initial), .app-stack (+ .app-stack__more)
+ *   overlays    .scrim, .sheet (--side --bottom --frosted), .dialog, .snackbar (--floating)
+ *   inputs      .search > .search__input
+ *   widget      .widget > .widget__header (.widget__pill .widget__note) + .widget__grid > .widget__cell
+ *   icons       .sym[data-icon="<slot>"]: the Material Symbol of that slot (assets/symbols/<slot>.svg) as a
+ *               mask in currentColor; the <slot>_fill.svg variant shows for .sym--fill, the selected rail /
+ *               navbar item and a chosen list row. The SVGs are inlined below as data URIs, because Chrome
+ *               refuses mask-image file URLs on file:// pages (CORS, origin "null"), which would blank every
+ *               icon in local renders and in the offline copy.
+ */
+
+/* ======================================================================================== constants */
+
+:root {
+  /* My own shapes (not Material Symbols): a check for selected chips and segments. */
+  --kit-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4.5 12.5l5 5L19.5 7' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  /* The HyperOS icon mask: superellipse |x|^4.4 + |y|^4.4 = 1 (BRIEF), 128 points, at most 0.021 px off at 168 px. */
+  --kit-squircle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M100 50L99.97 37.3L99.89 32.6L99.75 29.1L99.56 26.21L99.31 23.72L99.01 21.5L98.65 19.51L98.23 17.69L97.76 16.02L97.22 14.48L96.63 13.05L95.98 11.72L95.26 10.49L94.48 9.34L93.63 8.28L92.71 7.29L91.72 6.37L90.66 5.52L89.51 4.74L88.28 4.02L86.95 3.37L85.52 2.78L83.98 2.24L82.31 1.77L80.49 1.35L78.5 0.99L76.28 0.69L73.79 0.44L70.9 0.25L67.4 0.11L62.7 0.03L50 0L37.3 0.03L32.6 0.11L29.1 0.25L26.21 0.44L23.72 0.69L21.5 0.99L19.51 1.35L17.69 1.77L16.02 2.24L14.48 2.78L13.05 3.37L11.72 4.02L10.49 4.74L9.34 5.52L8.28 6.37L7.29 7.29L6.37 8.28L5.52 9.34L4.74 10.49L4.02 11.72L3.37 13.05L2.78 14.48L2.24 16.02L1.77 17.69L1.35 19.51L0.99 21.5L0.69 23.72L0.44 26.21L0.25 29.1L0.11 32.6L0.03 37.3L0 50L0.03 62.7L0.11 67.4L0.25 70.9L0.44 73.79L0.69 76.28L0.99 78.5L1.35 80.49L1.77 82.31L2.24 83.98L2.78 85.52L3.37 86.95L4.02 88.28L4.74 89.51L5.52 90.66L6.37 91.72L7.29 92.71L8.28 93.63L9.34 94.48L10.49 95.26L11.72 95.98L13.05 96.63L14.48 97.22L16.02 97.76L17.69 98.23L19.51 98.65L21.5 99.01L23.72 99.31L26.21 99.56L29.1 99.75L32.6 99.89L37.3 99.97L50 100L62.7 99.97L67.4 99.89L70.9 99.75L73.79 99.56L76.28 99.31L78.5 99.01L80.49 98.65L82.31 98.23L83.98 97.76L85.52 97.22L86.95 96.63L88.28 95.98L89.51 95.26L90.66 94.48L91.72 93.63L92.71 92.71L93.63 91.72L94.48 90.66L95.26 89.51L95.98 88.28L96.63 86.95L97.22 85.52L97.76 83.98L98.23 82.31L98.65 80.49L99.01 78.5L99.31 76.28L99.56 73.79L99.75 70.9L99.89 67.4L99.97 62.7Z'/%3E%3C/svg%3E");
+}
+
+:where(.mock-frame, .mock-switches, .kit) {
+  --font-ui: "Roboto Flex", Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+  /* State layers (Material: hover 8 %, focus and press 10 %), in the content colour. */
+  --state-hover: color-mix(in srgb, currentColor 8%, transparent);
+  --state-press: color-mix(in srgb, currentColor 10%, transparent);
+  /* Status inks. --good and --warn are fixed colours that are too light on light surfaces for a
+     3:1 icon, so light schemes darken them here; dark schemes use them as they are. */
+  --good-ink: var(--good);
+  --warn-ink: var(--warn);
+  --bad-ink: var(--bad);
+}
+
+:where(.mock-frame, .mock-switches, .kit)[data-theme="light"],
+:where(.mock-frame, .mock-switches, .kit) [data-theme="light"] {
+  --good-ink: color-mix(in oklab, var(--good) 62%, #000);
+  --warn-ink: color-mix(in oklab, var(--warn) 55%, #000);
+}
+
+/* ======================================================================================== the frame */
+
+.mock-frame {
+  /* Measured on docs/test-logs/2026-10-11-padstudio-user-now.png (3200 × 2136 px, 440 dpi = 2.75 px/dp):
+     app content starts 90 px = 32.7 dp below the top and ends 44 px = 16 dp above the bottom; the gesture
+     handle is 797 px = 290 dp wide, 10 px = 3.6 dp thick, 17 px = 6 dp above the bottom edge; the clock's
+     glyphs span 12.4–25.5 dp from the top (13 dp including the comma), consistent with about 14 dp text, 19 dp from the left. */
+  --status-h: 33px;
+  --nav-h: 16px;
+  position: relative;
+  /* inline-block: frame.js gives back the space the scale frees with negative margins, and an inline-level
+     box's margins never collapse through its parent, so the parent's own box ends where the frame does. */
+  display: inline-block;
+  vertical-align: top;
+  box-sizing: border-box;
+  flex: none;
+  width: 1164px;
+  height: 777px;
+  overflow: hidden;
+  contain: layout paint;
+  transform-origin: 0 0;
+  border-radius: 12px; /* decorative screen corners, not measured */
+  box-shadow: 0 0 0 1px var(--outline-variant);
+  background: var(--background);
+  color: var(--on-background);
+  font-family: var(--font-ui);
+  font-size: var(--t-body-size, 16px);
+  line-height: var(--t-body-line, 24px);
+  font-weight: var(--w-regular, 400);
+  font-synthesis: none;
+  text-align: left;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.mock-frame[data-orientation="portrait"] { width: 777px; height: 1164px; }
+
+/* Bold text (system setting font_weight_adjustment = 300): every weight renders 300 heavier. */
+.mock-frame[data-bold="on"] { --w-regular: 700; --w-medium: 800; --w-semibold: 900; }
+
+.mock-frame *, .mock-frame *::before, .mock-frame *::after,
+.mock-switches *, .mock-switches *::before, .mock-switches *::after,
+.kit *, .kit *::before, .kit *::after { box-sizing: border-box; }
+
+:where(.mock-frame, .mock-switches, .kit) :where(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, dd, figure, blockquote) { margin: 0; }
+:where(.mock-frame, .kit) :where(h1, h2, h3, h4, h5, h6) { font-size: inherit; line-height: inherit; font-weight: inherit; }
+:where(.mock-frame, .mock-switches, .kit) :where(ul, ol) { padding: 0; list-style: none; }
+:where(.mock-frame, .mock-switches, .kit) :where(button, input, select, textarea) {
+  font: inherit; color: inherit; letter-spacing: inherit; margin: 0;
+}
+:where(.mock-frame, .mock-switches, .kit) :where(button) {
+  background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; -webkit-tap-highlight-color: transparent;
+}
+:where(.mock-frame, .kit) :where(a) { color: inherit; text-decoration: none; }
+:where(.mock-frame, .kit) :where(img) { display: block; max-width: 100%; }
+
+/* Status bar strip (decorative, aria-hidden). HyperOS draws it at a fixed size: it doesn't follow the
+   text-size setting (measured ≈14 dp text with font scale 1.25 on the tablet). */
+:where(.mock-frame) .mock-status {
+  position: absolute;
+  z-index: 30;
+  inset: 0 0 auto 0;
+  height: var(--status-h);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 21px 0 19px;
+  font-size: 14px;
+  line-height: 16px;
+  font-weight: var(--w-medium, 500);
+  font-variant-numeric: tabular-nums;
+  color: var(--on-surface);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+:where(.mock-frame) .mock-status__icons { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
+:where(.mock-frame) .mock-status__wifi {
+  width: 18px; height: 14px;
+  background: radial-gradient(circle at 50% 100%, currentColor 0 13.5px, transparent 14px);
+  clip-path: polygon(50% 100%, 0 8%, 100% 8%);
+}
+:where(.mock-frame) .mock-status__battery {
+  --level: 68%;
+  position: relative; width: 24px; height: 12px; border-radius: 4px;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+  background: linear-gradient(90deg, currentColor 0 var(--level), transparent 0) 3px 3px / calc(100% - 6px) 6px no-repeat;
+}
+:where(.mock-frame) .mock-status__battery::after {
+  content: ""; position: absolute; right: -3.5px; top: 4px; width: 2px; height: 4px; border-radius: 0 1px 1px 0; background: currentColor;
+}
+
+/* Gesture handle (decorative). */
+:where(.mock-frame) .mock-handle {
+  position: absolute; z-index: 30; left: 50%; bottom: 6px;
+  width: 290px; height: 4px; margin-left: -145px; border-radius: 2px;
+  background: var(--on-surface); opacity: .85; pointer-events: none;
+}
+
+/* The app's window: below the status bar, to the bottom edge (content keeps clear of --nav-h). */
+:where(.mock-frame) .mock-app {
+  position: absolute;
+  inset: var(--status-h) 0 0 0;
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* A scrolling content pane next to the rail: 24 dp gutters, at most 1040 dp of content (plan §10). */
+:where(.mock-frame) .mock-content {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding: 24px var(--s-gutter, 24px) calc(var(--nav-h) + 24px);
+}
+:where(.mock-frame) .mock-content::-webkit-scrollbar { display: none; }
+:where(.mock-frame) .mock-content__inner { max-width: 1040px; }
+
+/* ======================================================================================== layout and type */
+
+:where(.mock-frame, .mock-switches, .kit) .stack { display: flex; flex-direction: column; gap: var(--gap, 12px); min-width: 0; }
+:where(.mock-frame, .mock-switches, .kit) .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap, 12px); min-width: 0; }
+:where(.mock-frame, .mock-switches, .kit) .grow { flex: 1 1 0; min-width: 0; }
+:where(.mock-frame, .mock-switches, .kit) .muted { color: var(--on-surface-variant); }
+
+:where(.mock-frame, .mock-switches, .kit) .t-display {
+  font-size: var(--t-display-size, 36px); line-height: var(--t-display-line, 44px); font-weight: var(--w-regular, 400);
+}
+:where(.mock-frame, .mock-switches, .kit) .t-headline {
+  font-size: var(--t-headline-size, 28px); line-height: var(--t-headline-line, 36px); font-weight: var(--w-regular, 400);
+}
+:where(.mock-frame, .mock-switches, .kit) .t-title {
+  font-size: var(--t-title-size, 20px); line-height: var(--t-title-line, 28px); font-weight: var(--w-medium, 500);
+}
+:where(.mock-frame, .mock-switches, .kit) .t-body {
+  font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); font-weight: var(--w-regular, 400);
+}
+:where(.mock-frame, .mock-switches, .kit) .t-label {
+  font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); font-weight: var(--w-medium, 500);
+}
+:where(.mock-frame, .mock-switches, .kit) .t-label-small {
+  font-size: var(--t-label-small-size, 11px); line-height: var(--t-label-small-line, 16px); font-weight: var(--w-medium, 500);
+}
+
+/* Big numeric readout (WiFiBar style): display size, regular weight, figures of equal width. */
+:where(.mock-frame, .kit) .readout {
+  font-size: var(--t-display-size, 36px);
+  line-height: var(--t-display-line, 44px);
+  font-weight: var(--w-regular, 400);
+  font-variant-numeric: tabular-nums;
+  color: var(--on-surface);
+}
+:where(.mock-frame, .kit) .readout__unit {
+  font-size: var(--t-title-size, 20px); line-height: var(--t-title-line, 28px); color: var(--on-surface-variant); margin-left: 4px;
+}
+
+/* Section label: title size in primary (WiFiBar style). */
+:where(.mock-frame, .kit) .section-label {
+  color: var(--primary);
+  font-size: var(--t-title-size, 20px);
+  line-height: var(--t-title-line, 28px);
+  font-weight: var(--w-medium, 500);
+}
+
+/* ======================================================================================== icons */
+
+:where(.mock-frame, .mock-switches, .kit) .sym {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+  width: var(--sym-size, 24px);
+  height: var(--sym-size, 24px);
+  background-color: currentColor;
+  /* An unknown icon name shows a small dot rather than a solid square. */
+  -webkit-mask: var(--sym-o, radial-gradient(circle, #000 0 22%, transparent 24%)) center / contain no-repeat;
+  mask: var(--sym-o, radial-gradient(circle, #000 0 22%, transparent 24%)) center / contain no-repeat;
+}
+:where(.mock-frame, .mock-switches, .kit) .sym--16 { --sym-size: 16px; }
+:where(.mock-frame, .mock-switches, .kit) .sym--18 { --sym-size: 18px; }
+:where(.mock-frame, .mock-switches, .kit) .sym--20 { --sym-size: 20px; }
+:where(.mock-frame, .mock-switches, .kit) .sym--32 { --sym-size: 32px; }
+:where(.mock-frame, .mock-switches, .kit) .sym--40 { --sym-size: 40px; }
+/* Filled means selected or active (BRIEF). */
+:where(.mock-frame, .mock-switches, .kit) :is(.sym--fill, .rail__item[aria-current="page"] .sym, .navbar__item[aria-current="page"] .sym):not(.sym--outline) {
+  -webkit-mask-image: var(--sym-f, var(--sym-o));
+  mask-image: var(--sym-f, var(--sym-o));
+}
+
+/* One rule per slot in assets/symbols (slot names: tools/lib/fetch_symbols.py). The --kit-squircle path and
+   the block below are generated; after the symbols change, regenerate from the repo root with
+     sed -n '/^@generator-begin$/,/^@generator-end$/p' docs/redesign/kit.css | sed '1d;$d' | node - docs/redesign
+@generator-begin
+const fs = require("fs"), path = require("path");
+const dir = process.argv[2] || "docs/redesign", cssPath = path.join(dir, "kit.css"), symDir = path.join(dir, "assets/symbols");
+let css = fs.readFileSync(cssPath, "utf8");
+const e = 2 / 4.4, pts = [];
+for (let i = 0; i < 128; i++) {
+  const t = Math.PI * i / 64, c = Math.cos(t), s = Math.sin(t);
+  pts.push([50 + 50 * Math.sign(c) * Math.abs(c) ** e, 50 - 50 * Math.sign(s) * Math.abs(s) ** e]);
+}
+const r2 = (v) => String(Math.round(v * 100) / 100);
+const sq = "M" + pts.map((p) => r2(p[0]) + " " + r2(p[1])).join("L") + "Z";
+const sqRe = /(--kit-squircle: url\("data:image\/svg\+xml,%3Csvg xmlns='http:\/\/www\.w3\.org\/2000\/svg' viewBox='0 0 100 100'%3E%3Cpath d=')[^']+/;
+if (!sqRe.test(css)) throw new Error("--kit-squircle not found");
+css = css.replace(sqRe, (_, a) => a + sq);
+const files = fs.readdirSync(symDir).filter((f) => f.endsWith(".svg"));
+const uri = (f) => {
+  const m = fs.readFileSync(path.join(symDir, f), "utf8").match(/^<svg [^>]*viewBox="0 -960 960 960"[^>]*><path d="([^"]+)"\/><\/svg>\s*$/);
+  if (!m) throw new Error(f + ": expected one path on viewBox 0 -960 960 960");
+  const d = m[1].replace(/[^A-Za-z0-9.,\- ]/g, encodeURIComponent);
+  return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='${d}'/%3E%3C/svg%3E")`;
+};
+const rules = files.filter((f) => !f.endsWith("_fill.svg")).sort().map((f) => {
+  const s = f.slice(0, -4), fill = files.includes(s + "_fill.svg") ? ` --sym-f: ${uri(s + "_fill.svg")};` : "";
+  return `:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="${s}"] { --sym-o: ${uri(f)};${fill} }`;
+});
+rules.push(`:root { --kit-expand-more: ${uri("expand_more.svg")}; }`);
+const blockRe = /(\/\* @symbols:begin \(generated\) \*\/\n)[\s\S]*?(\/\* @symbols:end \*\/)/;
+if (!blockRe.test(css)) throw new Error("@symbols markers not found");
+css = css.replace(blockRe, (_, a, b) => a + rules.join("\n") + "\n" + b);
+fs.writeFileSync(cssPath, css);
+console.log(`kit.css: ${rules.length - 1} symbol rules, squircle ${pts.length} points`);
+@generator-end
+*/
+/* @symbols:begin (generated) */
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="add"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M440-440H240q-17 0-28.5-11.5T200-480q0-17 11.5-28.5T240-520h200v-200q0-17 11.5-28.5T480-760q17 0 28.5 11.5T520-720v200h200q17 0 28.5 11.5T760-480q0 17-11.5 28.5T720-440H520v200q0 17-11.5 28.5T480-200q-17 0-28.5-11.5T440-240v-200Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M440-440H240q-17 0-28.5-11.5T200-480q0-17 11.5-28.5T240-520h200v-200q0-17 11.5-28.5T480-760q17 0 28.5 11.5T520-720v200h200q17 0 28.5 11.5T760-480q0 17-11.5 28.5T720-440H520v200q0 17-11.5 28.5T480-200q-17 0-28.5-11.5T440-240v-200Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="assistant"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M452 -68 360 -160H200q-33 0 -56.52 -23.48Q120 -207 120 -240V-800q0 -33 23.48 -56.52Q167 -880 200 -880h560q33 0 56.52 23.48Q840 -833 840 -800v560q0 33 -23.48 56.52Q793 -160 760 -160h-160l-92 92q-12 12 -28 12 -16 0 -28 -12ZM200 -240h192l88 88 88 -88H760V-800H200v560ZM200 -800v560V-800Zm342 342 97 -44q12 -5 12 -18t-12 -18l-97 -44 -44 -97q-5 -12 -18 -12t-18 12l-44 97 -97 44q-12 5 -12 18t12 18l97 44 44 97q5 12 18 12t18 -12Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M452 -68 360 -160H200q-33 0 -56.52 -23.48Q120 -207 120 -240V-800q0 -33 23.48 -56.52Q167 -880 200 -880h560q33 0 56.52 23.48Q840 -833 840 -800v560q0 33 -23.48 56.52Q793 -160 760 -160h-160l-92 92q-11 11 -28 11 -17 0 -28 -11Zm90 -390 97 -44q12 -5 12 -18t-12 -18l-97 -44 -44 -97q-5 -12 -18 -12t-18 12l-44 97 -97 44q-12 5 -12 18t12 18l97 44 44 97q5 12 18 12t18 -12Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="back"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m313-440 196 196q12 12 11.5 28T508-188q-12 11-28 11.5T452-188L188-452q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l264-264q11-11 27.5-11t28.5 11q12 12 12 28.5T508-715L313-520h447q17 0 28.5 11.5T800-480q0 17-11.5 28.5T760-440H313Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m313-440 196 196q12 12 11.5 28T508-188q-12 11-28 11.5T452-188L188-452q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l264-264q11-11 27.5-11t28.5 11q12 12 12 28.5T508-715L313-520h447q17 0 28.5 11.5T800-480q0 17-11.5 28.5T760-440H313Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="chevron"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M504-480 348-636q-11-11-11-28t11-28q11-11 28-11t28 11l184 184q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L404-268q-11 11-28 11t-28-11q-11-11-11-28t11-28l156-156Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M504-480 348-636q-11-11-11-28t11-28q11-11 28-11t28 11l184 184q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L404-268q-11 11-28 11t-28-11q-11-11-11-28t11-28l156-156Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="close"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-424 284-228q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536-480l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-424Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-424 284-228q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536-480l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-424Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="code"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m193-479 155 155q11 11 11 28t-11 28q-11 11-28 11t-28-11L108-452q-6-6-8.5-13T97-480q0-8 2.5-15t8.5-13l184-184q12-12 28.5-12t28.5 12q12 12 12 28.5T349-635L193-479Zm574-2L612-636q-11-11-11-28t11-28q11-11 28-11t28 11l184 184q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L668-268q-12 12-28 11.5T612-269q-12-12-12-28.5t12-28.5l155-155Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m193-479 155 155q11 11 11 28t-11 28q-11 11-28 11t-28-11L108-452q-6-6-8.5-13T97-480q0-8 2.5-15t8.5-13l184-184q12-12 28.5-12t28.5 12q12 12 12 28.5T349-635L193-479Zm574-2L612-636q-11-11-11-28t11-28q11-11 28-11t28 11l184 184q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L668-268q-12 12-28 11.5T612-269q-12-12-12-28.5t12-28.5l155-155Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="dark"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-120q-151 0-255.5-104.5T120-480q0-138 90-239.5T440-838q13-2 23 3.5t16 14.5q6 9 6.5 21t-7.5 23q-17 26-25.5 55t-8.5 61q0 90 63 153t153 63q31 0 61.5-9t54.5-25q11-7 22.5-6.5T819-479q10 5 15.5 15t3.5 24q-14 138-117.5 229T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-120q-151 0-255.5-104.5T120-480q0-138 90-239.5T440-838q13-2 23 3.5t16 14.5q6 9 6.5 21t-7.5 23q-17 26-25.5 55t-8.5 61q0 90 63 153t153 63q31 0 61.5-9t54.5-25q11-7 22.5-6.5T819-479q10 5 15.5 15t3.5 24q-14 138-117.5 229T480-120Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="dnd"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M320-440h320q17 0 28.5-11.5T680-480q0-17-11.5-28.5T640-520H320q-17 0-28.5 11.5T280-480q0 17 11.5 28.5T320-440ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M320-440h320q17 0 28.5-11.5T680-480q0-17-11.5-28.5T640-520H320q-17 0-28.5 11.5T280-480q0 17 11.5 28.5T320-440ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="double_tap"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M419-80q-28 0-52.5-12T325-126L124-381q-8-9-7-21.5t9-20.5q20-21 48-25t52 11l74 45v-328q0-17 11.5-28.5T340-760q17 0 29 11.5t12 28.5v400q0 23-20.5 34.5T320-286l-36-22 104 133q6 7 14 11t17 4h221q33 0 56.5-23.5T720-240v-160q0-17-11.5-28.5T680-440H501q-17 0-28.5-11.5T461-480q0-17 11.5-28.5T501-520h179q50 0 85 35t35 85v160q0 66-47 113T640-80H419Zm83-260Zm-23-260q-17 0-28.5-11.5T439-640q0-2 5-20 8-14 12-28.5t4-31.5q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 17 4 31.5t12 28.5q3 5 4 10t1 10q0 17-11 28.5T202-600q-11 0-20.5-6T167-621q-13-22-20-47t-7-52q0-83 58.5-141.5T340-920q83 0 141.5 58.5T540-720q0 27-7 52t-20 47q-5 9-14 15t-20 6Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M419-80q-28 0-52.5-12T325-126L124-381q-8-9-7-21.5t9-20.5q20-21 48-25t52 11l74 45v-328q0-17 11.5-28.5T340-760q17 0 29 11.5t12 28.5v200h299q50 0 85 35t35 85v160q0 66-47 113T640-80H419Zm60-520q-17 0-28.5-11.5T439-640q0-2 5-20 8-14 12-28.5t4-31.5q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 17 4 31.5t12 28.5q3 5 4 10t1 10q0 17-11 28.5T202-600q-11 0-20.5-6T167-621q-13-22-20-47t-7-52q0-83 58.5-141.5T340-920q83 0 141.5 58.5T540-720q0 27-7 52t-20 47q-5 9-14 15t-20 6Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="edit"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-200h57l391-391-57-57-391 391v57Zm-40 80q-17 0-28.5-11.5T120-160v-97q0-16 6-30.5t17-25.5l505-504q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L313-143q-11 11-25.5 17t-30.5 6h-97Zm600-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M160-120q-17 0-28.5-11.5T120-160v-97q0-16 6-30.5t17-25.5l505-504q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L313-143q-11 11-25.5 17t-30.5 6h-97Zm544-528 56-56-56-56-56 56 56 56Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="error"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm0-160q17 0 28.5-11.5T520-480v-160q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640v160q0 17 11.5 28.5T480-440Zm0 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-280q17 0 28.5-11.5T520-320q0-17-11.5-28.5T480-360q-17 0-28.5 11.5T440-320q0 17 11.5 28.5T480-280Zm0-160q17 0 28.5-11.5T520-480v-160q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640v160q0 17 11.5 28.5T480-440Zm0 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="expand_less"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-529 324-373q-11 11-28 11t-28-11q-11-11-11-28t11-28l184-184q6-6 13-8.5t15-2.5q8 0 15 2.5t13 8.5l184 184q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-529Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-529 324-373q-11 11-28 11t-28-11q-11-11-11-28t11-28l184-184q6-6 13-8.5t15-2.5q8 0 15 2.5t13 8.5l184 184q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-529Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="expand_more"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-362q-8 0-15-2.5t-13-8.5L268-557q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-373q-6 6-13 8.5t-15 2.5Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-362q-8 0-15-2.5t-13-8.5L268-557q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-373q-6 6-13 8.5t-15 2.5Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="fit_warn"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M680-360h-80q-17 0-28.5 11.5T560-320q0 17 11.5 28.5T600-280h120q17 0 28.5-11.5T760-320v-120q0-17-11.5-28.5T720-480q-17 0-28.5 11.5T680-440v80ZM280-600h80q17 0 28.5-11.5T400-640q0-17-11.5-28.5T360-680H240q-17 0-28.5 11.5T200-640v120q0 17 11.5 28.5T240-480q17 0 28.5-11.5T280-520v-80ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm0-80h640v-480H160v480Zm0 0v-480 480Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M680-360h-80q-17 0-28.5 11.5T560-320q0 17 11.5 28.5T600-280h120q17 0 28.5-11.5T760-320v-120q0-17-11.5-28.5T720-480q-17 0-28.5 11.5T680-440v80ZM280-600h80q17 0 28.5-11.5T400-640q0-17-11.5-28.5T360-680H240q-17 0-28.5 11.5T200-640v120q0 17 11.5 28.5T240-480q17 0 28.5-11.5T280-520v-80ZM160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="flashlight"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M320-160v-360l-67-100q-7-10-10-21t-3-23v-136q0-33 23.5-56.5T320-880h320q33 0 56.5 23.5T720-800v136q0 12-3 23t-10 21l-67 100v360q0 33-23.5 56.5T560-80H400q-33 0-56.5-23.5T320-160Zm160-180q-25 0-42.5-17.5T420-400q0-25 17.5-42.5T480-460q25 0 42.5 17.5T540-400q0 25-17.5 42.5T480-340ZM320-760h320v-40H320v40Zm320 80H320v16l80 120v384h160v-384l80-120v-16ZM480-480Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M240-760v-40q0-33 23.5-56.5T320-880h320q33 0 56.5 23.5T720-800v40H240Zm240 420q25 0 42.5-17.5T540-400q0-25-17.5-42.5T480-460q-25 0-42.5 17.5T420-400q0 25 17.5 42.5T480-340ZM320-160v-360l-67-100q-7-10-10-21t-3-23v-16h480v16q0 12-3 23t-10 21l-67 100v360q0 33-23.5 56.5T560-80H400q-33 0-56.5-23.5T320-160Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="grid"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-520q-33 0-56.5-23.5T120-600v-160q0-33 23.5-56.5T200-840h160q33 0 56.5 23.5T440-760v160q0 33-23.5 56.5T360-520H200Zm0 400q-33 0-56.5-23.5T120-200v-160q0-33 23.5-56.5T200-440h160q33 0 56.5 23.5T440-360v160q0 33-23.5 56.5T360-120H200Zm400-400q-33 0-56.5-23.5T520-600v-160q0-33 23.5-56.5T600-840h160q33 0 56.5 23.5T840-760v160q0 33-23.5 56.5T760-520H600Zm0 400q-33 0-56.5-23.5T520-200v-160q0-33 23.5-56.5T600-440h160q33 0 56.5 23.5T840-360v160q0 33-23.5 56.5T760-120H600ZM200-600h160v-160H200v160Zm400 0h160v-160H600v160Zm0 400h160v-160H600v160Zm-400 0h160v-160H200v160Zm400-400Zm0 240Zm-240 0Zm0-240Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-520q-33 0-56.5-23.5T120-600v-160q0-33 23.5-56.5T200-840h160q33 0 56.5 23.5T440-760v160q0 33-23.5 56.5T360-520H200Zm0 400q-33 0-56.5-23.5T120-200v-160q0-33 23.5-56.5T200-440h160q33 0 56.5 23.5T440-360v160q0 33-23.5 56.5T360-120H200Zm400-400q-33 0-56.5-23.5T520-600v-160q0-33 23.5-56.5T600-840h160q33 0 56.5 23.5T840-760v160q0 33-23.5 56.5T760-520H600Zm0 400q-33 0-56.5-23.5T520-200v-160q0-33 23.5-56.5T600-440h160q33 0 56.5 23.5T840-360v160q0 33-23.5 56.5T760-120H600Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="help"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M478-240q21 0 35.5-14.5T528-290q0-21-14.5-35.5T478-340q-21 0-35.5 14.5T428-290q0 21 14.5 35.5T478-240Zm2 160q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Zm4-172q25 0 43.5 16t18.5 40q0 22-13.5 39T502-525q-23 20-40.5 44T444-427q0 14 10.5 23.5T479-394q15 0 25.5-10t13.5-25q4-21 18-37.5t30-31.5q23-22 39.5-48t16.5-58q0-51-41.5-83.5T484-720q-38 0-72.5 16T359-655q-7 12-4.5 25.5T368-609q14 8 29 5t25-17q11-15 27.5-23t34.5-8Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M478-240q21 0 35.5-14.5T528-290q0-21-14.5-35.5T478-340q-21 0-35.5 14.5T428-290q0 21 14.5 35.5T478-240Zm2 160q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm4-572q25 0 43.5 16t18.5 40q0 22-13.5 39T502-525q-23 20-40.5 44T444-427q0 14 10.5 23.5T479-394q15 0 25.5-10t13.5-25q4-21 18-37.5t30-31.5q23-22 39.5-48t16.5-58q0-51-41.5-83.5T484-720q-38 0-72.5 16T359-655q-7 12-4.5 25.5T368-609q14 8 29 5t25-17q11-15 27.5-23t34.5-8Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="home"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M240-160q-33 0-56.5-23.5T160-240q0-33 23.5-56.5T240-320q33 0 56.5 23.5T320-240q0 33-23.5 56.5T240-160Zm240 0q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm240 0q-33 0-56.5-23.5T640-240q0-33 23.5-56.5T720-320q33 0 56.5 23.5T800-240q0 33-23.5 56.5T720-160ZM240-400q-33 0-56.5-23.5T160-480q0-33 23.5-56.5T240-560q33 0 56.5 23.5T320-480q0 33-23.5 56.5T240-400Zm240 0q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm240 0q-33 0-56.5-23.5T640-480q0-33 23.5-56.5T720-560q33 0 56.5 23.5T800-480q0 33-23.5 56.5T720-400ZM240-640q-33 0-56.5-23.5T160-720q0-33 23.5-56.5T240-800q33 0 56.5 23.5T320-720q0 33-23.5 56.5T240-640Zm240 0q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Zm240 0q-33 0-56.5-23.5T640-720q0-33 23.5-56.5T720-800q33 0 56.5 23.5T800-720q0 33-23.5 56.5T720-640Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M240-160q-33 0-56.5-23.5T160-240q0-33 23.5-56.5T240-320q33 0 56.5 23.5T320-240q0 33-23.5 56.5T240-160Zm240 0q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm240 0q-33 0-56.5-23.5T640-240q0-33 23.5-56.5T720-320q33 0 56.5 23.5T800-240q0 33-23.5 56.5T720-160ZM240-400q-33 0-56.5-23.5T160-480q0-33 23.5-56.5T240-560q33 0 56.5 23.5T320-480q0 33-23.5 56.5T240-400Zm240 0q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm240 0q-33 0-56.5-23.5T640-480q0-33 23.5-56.5T720-560q33 0 56.5 23.5T800-480q0 33-23.5 56.5T720-400ZM240-640q-33 0-56.5-23.5T160-720q0-33 23.5-56.5T240-800q33 0 56.5 23.5T320-720q0 33-23.5 56.5T240-640Zm240 0q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Zm240 0q-33 0-56.5-23.5T640-720q0-33 23.5-56.5T720-800q33 0 56.5 23.5T800-720q0 33-23.5 56.5T720-640Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="home_action"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M240-200h120v-200q0-17 11.5-28.5T400-440h160q17 0 28.5 11.5T600-400v200h120v-360L480-740 240-560v360Zm-80 0v-360q0-19 8.5-36t23.5-28l240-180q21-16 48-16t48 16l240 180q15 11 23.5 28t8.5 36v360q0 33-23.5 56.5T720-120H560q-17 0-28.5-11.5T520-160v-200h-80v200q0 17-11.5 28.5T400-120H240q-33 0-56.5-23.5T160-200Zm320-270Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M160-200v-360q0-19 8.5-36t23.5-28l240-180q21-16 48-16t48 16l240 180q15 11 23.5 28t8.5 36v360q0 33-23.5 56.5T720-120H600q-17 0-28.5-11.5T560-160v-200q0-17-11.5-28.5T520-400h-80q-17 0-28.5 11.5T400-360v200q0 17-11.5 28.5T360-120H240q-33 0-56.5-23.5T160-200Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="hyperos"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M420-160h120q8 0 14-6t6-14q0-8-6-14t-14-6H420q-8 0-14 6t-6 14q0 8 6 14t14 6ZM280-40q-33 0-56.5-23.5T200-120v-720q0-33 23.5-56.5T280-920h400q33 0 56.5 23.5T760-840v720q0 33-23.5 56.5T680-40H280Zm0-200v120h400v-120H280Zm0-80h400v-400H280v400Zm0-480h400v-40H280v40Zm0 560v120-120Zm0-560v-40 40Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M420-160h120q8 0 14-6t6-14q0-8-6-14t-14-6H420q-8 0-14 6t-6 14q0 8 6 14t14 6ZM280-40q-33 0-56.5-23.5T200-120v-720q0-33 23.5-56.5T280-920h400q33 0 56.5 23.5T760-840v720q0 33-23.5 56.5T680-40H280Zm0-280h400v-400H280v400Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="info"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-280q17 0 28.5-11.5T520-320v-160q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480v160q0 17 11.5 28.5T480-280Zm0-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-280q17 0 28.5-11.5T520-320v-160q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480v160q0 17 11.5 28.5T480-280Zm0-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Zm0 520q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="keyboard"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M160-200q-33 0-56.5-23.5T80-280v-400q0-33 23.5-56.5T160-760h640q33 0 56.5 23.5T880-680v400q0 33-23.5 56.5T800-200H160Zm0-80h640v-400H160v400Zm200-40h240q17 0 28.5-11.5T640-360q0-17-11.5-28.5T600-400H360q-17 0-28.5 11.5T320-360q0 17 11.5 28.5T360-320Zm-200 40v-400 400Zm80-280q17 0 28.5-11.5T280-600q0-17-11.5-28.5T240-640q-17 0-28.5 11.5T200-600q0 17 11.5 28.5T240-560Zm120 0q17 0 28.5-11.5T400-600q0-17-11.5-28.5T360-640q-17 0-28.5 11.5T320-600q0 17 11.5 28.5T360-560Zm120 0q17 0 28.5-11.5T520-600q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600q0 17 11.5 28.5T480-560Zm120 0q17 0 28.5-11.5T640-600q0-17-11.5-28.5T600-640q-17 0-28.5 11.5T560-600q0 17 11.5 28.5T600-560Zm120 0q17 0 28.5-11.5T760-600q0-17-11.5-28.5T720-640q-17 0-28.5 11.5T680-600q0 17 11.5 28.5T720-560ZM240-440q17 0 28.5-11.5T280-480q0-17-11.5-28.5T240-520q-17 0-28.5 11.5T200-480q0 17 11.5 28.5T240-440Zm120 0q17 0 28.5-11.5T400-480q0-17-11.5-28.5T360-520q-17 0-28.5 11.5T320-480q0 17 11.5 28.5T360-440Zm120 0q17 0 28.5-11.5T520-480q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480q0 17 11.5 28.5T480-440Zm120 0q17 0 28.5-11.5T640-480q0-17-11.5-28.5T600-520q-17 0-28.5 11.5T560-480q0 17 11.5 28.5T600-440Zm120 0q17 0 28.5-11.5T760-480q0-17-11.5-28.5T720-520q-17 0-28.5 11.5T680-480q0 17 11.5 28.5T720-440Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M160-200q-33 0-56.5-23.5T80-280v-400q0-33 23.5-56.5T160-760h640q33 0 56.5 23.5T880-680v400q0 33-23.5 56.5T800-200H160Zm200-120h240q17 0 28.5-11.5T640-360q0-17-11.5-28.5T600-400H360q-17 0-28.5 11.5T320-360q0 17 11.5 28.5T360-320ZM240-560q17 0 28.5-11.5T280-600q0-17-11.5-28.5T240-640q-17 0-28.5 11.5T200-600q0 17 11.5 28.5T240-560Zm120 0q17 0 28.5-11.5T400-600q0-17-11.5-28.5T360-640q-17 0-28.5 11.5T320-600q0 17 11.5 28.5T360-560Zm120 0q17 0 28.5-11.5T520-600q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600q0 17 11.5 28.5T480-560Zm120 0q17 0 28.5-11.5T640-600q0-17-11.5-28.5T600-640q-17 0-28.5 11.5T560-600q0 17 11.5 28.5T600-560Zm120 0q17 0 28.5-11.5T760-600q0-17-11.5-28.5T720-640q-17 0-28.5 11.5T680-600q0 17 11.5 28.5T720-560ZM240-440q17 0 28.5-11.5T280-480q0-17-11.5-28.5T240-520q-17 0-28.5 11.5T200-480q0 17 11.5 28.5T240-440Zm120 0q17 0 28.5-11.5T400-480q0-17-11.5-28.5T360-520q-17 0-28.5 11.5T320-480q0 17 11.5 28.5T360-440Zm120 0q17 0 28.5-11.5T520-480q0-17-11.5-28.5T480-520q-17 0-28.5 11.5T440-480q0 17 11.5 28.5T480-440Zm120 0q17 0 28.5-11.5T640-480q0-17-11.5-28.5T600-520q-17 0-28.5 11.5T560-480q0 17 11.5 28.5T600-440Zm120 0q17 0 28.5-11.5T760-480q0-17-11.5-28.5T720-520q-17 0-28.5 11.5T680-480q0 17 11.5 28.5T720-440Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="last_app"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m233-320 75 75q11 11 11 27.5T308-189q-12 12-28.5 12T251-189L108-332q-6-6-8.5-13T97-360q0-8 2.5-15t8.5-13l144-144q12-12 28-11.5t28 12.5q11 12 11.5 28T308-475l-75 75h247q17 0 28.5 11.5T520-360q0 17-11.5 28.5T480-320H233Zm494-240H480q-17 0-28.5-11.5T440-600q0-17 11.5-28.5T480-640h247l-75-75q-11-11-11-27.5t11-28.5q12-12 28.5-12t28.5 12l143 143q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L708-428q-12 12-28 11.5T652-429q-11-12-11.5-28t11.5-28l75-75Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m233-320 75 75q11 11 11 27.5T308-189q-12 12-28.5 12T251-189L108-332q-6-6-8.5-13T97-360q0-8 2.5-15t8.5-13l144-144q12-12 28-11.5t28 12.5q11 12 11.5 28T308-475l-75 75h247q17 0 28.5 11.5T520-360q0 17-11.5 28.5T480-320H233Zm494-240H480q-17 0-28.5-11.5T440-600q0-17 11.5-28.5T480-640h247l-75-75q-11-11-11-27.5t11-28.5q12-12 28.5-12t28.5 12l143 143q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L708-428q-12 12-28 11.5T652-429q-11-12-11.5-28t11.5-28l75-75Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="library"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-520q-33 0-56.5-23.5T120-600v-160q0-33 23.5-56.5T200-840h160q33 0 56.5 23.5T440-760v160q0 33-23.5 56.5T360-520H200Zm0 400q-33 0-56.5-23.5T120-200v-160q0-33 23.5-56.5T200-440h160q33 0 56.5 23.5T440-360v160q0 33-23.5 56.5T360-120H200Zm400-400q-33 0-56.5-23.5T520-600v-160q0-33 23.5-56.5T600-840h160q33 0 56.5 23.5T840-760v160q0 33-23.5 56.5T760-520H600Zm0 400q-33 0-56.5-23.5T520-200v-160q0-33 23.5-56.5T600-440h160q33 0 56.5 23.5T840-360v160q0 33-23.5 56.5T760-120H600ZM200-600h160v-160H200v160Zm400 0h160v-160H600v160Zm0 400h160v-160H600v160Zm-400 0h160v-160H200v160Zm400-400Zm0 240Zm-240 0Zm0-240Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-520q-33 0-56.5-23.5T120-600v-160q0-33 23.5-56.5T200-840h160q33 0 56.5 23.5T440-760v160q0 33-23.5 56.5T360-520H200Zm0 400q-33 0-56.5-23.5T120-200v-160q0-33 23.5-56.5T200-440h160q33 0 56.5 23.5T440-360v160q0 33-23.5 56.5T360-120H200Zm400-400q-33 0-56.5-23.5T520-600v-160q0-33 23.5-56.5T600-840h160q33 0 56.5 23.5T840-760v160q0 33-23.5 56.5T760-520H600Zm0 400q-33 0-56.5-23.5T520-200v-160q0-33 23.5-56.5T600-440h160q33 0 56.5 23.5T840-360v160q0 33-23.5 56.5T760-120H600Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="light"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-360q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM80-440q-17 0-28.5-11.5T40-480q0-17 11.5-28.5T80-520h80q17 0 28.5 11.5T200-480q0 17-11.5 28.5T160-440H80Zm720 0q-17 0-28.5-11.5T760-480q0-17 11.5-28.5T800-520h80q17 0 28.5 11.5T920-480q0 17-11.5 28.5T880-440h-80ZM480-760q-17 0-28.5-11.5T440-800v-80q0-17 11.5-28.5T480-920q17 0 28.5 11.5T520-880v80q0 17-11.5 28.5T480-760Zm0 720q-17 0-28.5-11.5T440-80v-80q0-17 11.5-28.5T480-200q17 0 28.5 11.5T520-160v80q0 17-11.5 28.5T480-40ZM226-678l-43-42q-12-11-11.5-28t11.5-29q12-12 29-12t28 12l42 43q11 12 11 28t-11 28q-11 12-27.5 11.5T226-678Zm494 495-42-43q-11-12-11-28.5t11-27.5q11-12 27.5-11.5T734-282l43 42q12 11 11.5 28T777-183q-12 12-29 12t-28-12Zm-42-495q-12-11-11.5-27.5T678-734l42-43q11-12 28-11.5t29 11.5q12 12 12 29t-12 28l-43 42q-12 11-28 11t-28-11ZM183-183q-12-12-12-29t12-28l43-42q12-11 28.5-11t27.5 11q12 11 11.5 27.5T282-226l-42 43q-11 12-28 11.5T183-183Zm297-297Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-280q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM80-440q-17 0-28.5-11.5T40-480q0-17 11.5-28.5T80-520h80q17 0 28.5 11.5T200-480q0 17-11.5 28.5T160-440H80Zm720 0q-17 0-28.5-11.5T760-480q0-17 11.5-28.5T800-520h80q17 0 28.5 11.5T920-480q0 17-11.5 28.5T880-440h-80ZM480-760q-17 0-28.5-11.5T440-800v-80q0-17 11.5-28.5T480-920q17 0 28.5 11.5T520-880v80q0 17-11.5 28.5T480-760Zm0 720q-17 0-28.5-11.5T440-80v-80q0-17 11.5-28.5T480-200q17 0 28.5 11.5T520-160v80q0 17-11.5 28.5T480-40ZM226-678l-43-42q-12-11-11.5-28t11.5-29q12-12 29-12t28 12l42 43q11 12 11 28t-11 28q-11 12-27.5 11.5T226-678Zm494 495-42-43q-11-12-11-28.5t11-27.5q11-12 27.5-11.5T734-282l43 42q12 11 11.5 28T777-183q-12 12-29 12t-28-12Zm-42-495q-12-11-11.5-27.5T678-734l42-43q11-12 28-11.5t29 11.5q12 12 12 29t-12 28l-43 42q-12 11-28 11t-28-11ZM183-183q-12-12-12-29t12-28l43-42q12-11 28.5-11t27.5 11q12 11 11.5 27.5T282-226l-42 43q-11 12-28 11.5T183-183Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="lock"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm0-80h480v-400H240v400Zm240-120q33 0 56.5-23.5T560-360q0-33-23.5-56.5T480-440q-33 0-56.5 23.5T400-360q0 33 23.5 56.5T480-280ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80ZM240-160v-400 400Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm240-200q33 0 56.5-23.5T560-360q0-33-23.5-56.5T480-440q-33 0-56.5 23.5T400-360q0 33 23.5 56.5T480-280ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="looks"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-83 32.5-156t88-127Q256-817 330-848.5T488-880q80 0 151 27.5t124.5 76q53.5 48.5 85 115T880-518q0 115-70 176.5T640-280h-74q-9 0-12.5 5t-3.5 11q0 12 15 34.5t15 51.5q0 50-27.5 74T480-80Zm0-400Zm-220 40q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17Zm120-160q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17Zm200 0q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17Zm120 160q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17ZM480-160q9 0 14.5-5t5.5-13q0-14-15-33t-15-57q0-42 29-67t71-25h70q66 0 113-38.5T800-518q0-121-92.5-201.5T488-800q-136 0-232 93t-96 227q0 133 93.5 226.5T480-160Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-83 32.5-156t88-127Q256-817 330-848.5T488-880q80 0 151 27.5t124.5 76q53.5 48.5 85 115T880-518q0 115-70 176.5T640-280h-74q-9 0-12.5 5t-3.5 11q0 12 15 34.5t15 51.5q0 50-27.5 74T480-80ZM260-440q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17Zm120-160q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17Zm200 0q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17Zm120 160q26 0 43-17t17-43q0-26-17-43t-43-17q-26 0-43 17t-17 43q0 26 17 43t43 17Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="more"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="names_hidden"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M607-627q29 29 42.5 66t9.5 76q0 15-11 25.5T622-449q-15 0-25.5-10.5T586-485q5-26-3-50t-25-41q-17-17-41-26t-51-4q-15 0-25.5-11T430-643q0-15 10.5-25.5T466-679q38-4 75 9.5t66 42.5Zm-127-93q-19 0-37 1.5t-36 5.5q-17 3-30.5-5T358-742q-5-16 3.5-31t24.5-18q23-5 46.5-7t47.5-2q137 0 250.5 72T904-534q4 8 6 16.5t2 17.5q0 9-1.5 17.5T905-466q-18 40-44.5 75T802-327q-12 11-28 9t-26-16q-10-14-8.5-30.5T753-392q24-23 44-50t35-58q-50-101-144.5-160.5T480-720Zm0 520q-134 0-245-72.5T60-463q-5-8-7.5-17.5T50-500q0-10 2-19t7-18q20-40 46.5-76.5T166-680l-83-84q-11-12-10.5-28.5T84-820q11-11 28-11t28 11l680 680q11 11 11.5 27.5T820-84q-11 11-28 11t-28-11L624-222q-35 11-71 16.5t-73 5.5ZM222-624q-29 26-53 57t-41 67q50 101 144.5 160.5T480-280q20 0 39-2.5t39-5.5l-36-38q-11 3-21 4.5t-21 1.5q-75 0-127.5-52.5T300-500q0-11 1.5-21t4.5-21l-84-82Zm319 93Zm-151 75Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M764-84 624-222q-35 11-71 16.5t-73 5.5q-134 0-245-72T61-462q-5-9-7.5-18.5T51-500q0-10 2.5-19.5T61-538q22-39 47-76t58-66l-83-84q-11-11-11-27.5T84-820q11-11 28-11t28 11l680 680q11 11 11.5 27.5T820-84q-11 11-28 11t-28-11ZM480-320q11 0 21-1t20-4L305-541q-3 10-4 20t-1 21q0 75 52.5 127.5T480-320Zm0-480q134 0 245.5 72.5T900-537q5 8 7.5 17.5T910-500q0 10-2 19.5t-7 17.5q-19 37-42.5 70T806-331q-14 14-33 13t-33-15l-80-80q-7-7-9-16.5t1-19.5q4-13 6-25t2-26q0-75-52.5-127.5T480-680q-14 0-26 2t-25 6q-10 3-20 1t-17-9l-33-33q-19-19-12.5-44t31.5-32q25-5 50.5-8t51.5-3Zm79 226q11 13 18.5 28.5T587-513q1 8-6 11t-13-3l-82-82q-6-6-2.5-13t11.5-7q19 2 35 10.5t29 22.5Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="next_page"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M579-480 285-774q-15-15-14.5-35.5T286-845q15-15 35.5-15t35.5 15l307 308q12 12 18 27t6 30q0 15-6 30t-18 27L356-115q-15 15-35 14.5T286-116q-15-15-15-35.5t15-35.5l293-293Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M579-480 285-774q-15-15-14.5-35.5T286-845q15-15 35.5-15t35.5 15l307 308q12 12 18 27t6 30q0 15-6 30t-18 27L356-115q-15 15-35 14.5T286-116q-15-15-15-35.5t15-35.5l293-293Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="next_track"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M660-280v-400q0-17 11.5-28.5T700-720q17 0 28.5 11.5T740-680v400q0 17-11.5 28.5T700-240q-17 0-28.5-11.5T660-280Zm-440-35v-330q0-18 12-29t28-11q5 0 11 1t11 5l248 166q9 6 13.5 14.5T548-480q0 10-4.5 18.5T530-447L282-281q-5 4-11 5t-11 1q-16 0-28-11t-12-29Zm80-165Zm0 90 136-90-136-90v180Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M660-280v-400q0-17 11.5-28.5T700-720q17 0 28.5 11.5T740-680v400q0 17-11.5 28.5T700-240q-17 0-28.5-11.5T660-280Zm-440-35v-330q0-18 12-29t28-11q5 0 11 1t11 5l248 166q9 6 13.5 14.5T548-480q0 10-4.5 18.5T530-447L282-281q-5 4-11 5t-11 1q-16 0-28-11t-12-29Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="notifications"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-200q-17 0-28.5-11.5T160-240q0-17 11.5-28.5T200-280h40v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h40q17 0 28.5 11.5T800-240q0 17-11.5 28.5T760-200H200Zm280-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-200q-17 0-28.5-11.5T160-240q0-17 11.5-28.5T200-280h40v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h40q17 0 28.5 11.5T800-240q0 17-11.5 28.5T760-200H200ZM480-80q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="ok"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m424-408-86-86q-11-11-28-11t-28 11q-11 11-11 28t11 28l114 114q12 12 28 12t28-12l226-226q11-11 11-28t-11-28q-11-11-28-11t-28 11L424-408Zm56 328q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m424-408-86-86q-11-11-28-11t-28 11q-11 11-11 28t11 28l114 114q12 12 28 12t28-12l226-226q11-11 11-28t-11-28q-11-11-28-11t-28 11L424-408Zm56 328q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="open"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h240q17 0 28.5 11.5T480-800q0 17-11.5 28.5T440-760H200v560h560v-240q0-17 11.5-28.5T800-480q17 0 28.5 11.5T840-440v240q0 33-23.5 56.5T760-120H200Zm560-584L416-360q-11 11-28 11t-28-11q-11-11-11-28t11-28l344-344H600q-17 0-28.5-11.5T560-800q0-17 11.5-28.5T600-840h200q17 0 28.5 11.5T840-800v200q0 17-11.5 28.5T800-560q-17 0-28.5-11.5T760-600v-104Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h240q17 0 28.5 11.5T480-800q0 17-11.5 28.5T440-760H200v560h560v-240q0-17 11.5-28.5T800-480q17 0 28.5 11.5T840-440v240q0 33-23.5 56.5T760-120H200Zm560-584L416-360q-11 11-28 11t-28-11q-11-11-11-28t11-28l344-344H600q-17 0-28.5-11.5T560-800q0-17 11.5-28.5T600-840h200q17 0 28.5 11.5T840-800v200q0 17-11.5 28.5T800-560q-17 0-28.5-11.5T760-600v-104Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="open_camera"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M440-440ZM120-120q-33 0-56.5-23.5T40-200v-480q0-33 23.5-56.5T120-760h126l50-54q11-12 26.5-19t32.5-7h165q17 0 28.5 11.5T560-800q0 17-11.5 28.5T520-760H355l-73 80H120v480h640v-320q0-17 11.5-28.5T800-560q17 0 28.5 11.5T840-520v320q0 33-23.5 56.5T760-120H120Zm640-640h-40q-17 0-28.5-11.5T680-800q0-17 11.5-28.5T720-840h40v-40q0-17 11.5-28.5T800-920q17 0 28.5 11.5T840-880v40h40q17 0 28.5 11.5T920-800q0 17-11.5 28.5T880-760h-40v40q0 17-11.5 28.5T800-680q-17 0-28.5-11.5T760-720v-40ZM440-260q75 0 127.5-52.5T620-440q0-75-52.5-127.5T440-620q-75 0-127.5 52.5T260-440q0 75 52.5 127.5T440-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M800-680q-17 0-28.5-11.5T760-720v-40h-40q-17 0-28.5-11.5T680-800q0-17 11.5-28.5T720-840h40v-40q0-17 11.5-28.5T800-920q17 0 28.5 11.5T840-880v40h40q17 0 28.5 11.5T920-800q0 17-11.5 28.5T880-760h-40v40q0 17-11.5 28.5T800-680ZM440-260q75 0 127.5-52.5T620-440q0-75-52.5-127.5T440-620q-75 0-127.5 52.5T260-440q0 75 52.5 127.5T440-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM120-120q-33 0-56.5-23.5T40-200v-480q0-33 23.5-56.5T120-760h126l50-54q11-12 26.5-19t32.5-7h205q17 0 28.5 11.5T600-800v60q0 25 17.5 42.5T660-680h20v20q0 25 17.5 42.5T740-600h60q17 0 28.5 11.5T840-560v360q0 33-23.5 56.5T760-120H120Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="open_notes"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-400q-17 0-28.5-11.5T160-440q0-17 11.5-28.5T200-480h200q17 0 28.5 11.5T440-440q0 17-11.5 28.5T400-400H200Zm0-160q-17 0-28.5-11.5T160-600q0-17 11.5-28.5T200-640h360q17 0 28.5 11.5T600-600q0 17-11.5 28.5T560-560H200Zm0-160q-17 0-28.5-11.5T160-760q0-17 11.5-28.5T200-800h360q17 0 28.5 11.5T600-760q0 17-11.5 28.5T560-720H200Zm320 520v-66q0-8 3-15.5t9-13.5l209-208q9-9 20-13t22-4q12 0 23 4.5t20 13.5l37 37q8 9 12.5 20t4.5 22q0 11-4 22.5T863-380L655-172q-6 6-13.5 9t-15.5 3h-66q-17 0-28.5-11.5T520-200Zm300-223-37-37 37 37ZM580-220h38l121-122-18-19-19-18-122 121v38Zm141-141-19-18 37 37-18-19Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-400q-17 0-28.5-11.5T160-440q0-17 11.5-28.5T200-480h200q17 0 28.5 11.5T440-440q0 17-11.5 28.5T400-400H200Zm0-160q-17 0-28.5-11.5T160-600q0-17 11.5-28.5T200-640h360q17 0 28.5 11.5T600-600q0 17-11.5 28.5T560-560H200Zm0-160q-17 0-28.5-11.5T160-760q0-17 11.5-28.5T200-800h360q17 0 28.5 11.5T600-760q0 17-11.5 28.5T560-720H200Zm320 520v-66q0-8 3-15.5t9-13.5l209-208q9-9 20-13t22-4q12 0 23 4.5t20 13.5l37 37q8 9 12.5 20t4.5 22q0 11-4 22.5T863-380L655-172q-6 6-13.5 9t-15.5 3h-66q-17 0-28.5-11.5T520-200Zm263-184 37-39-37-37-38 38 38 38ZM580-220h38l121-122-18-19-19-18-122 121v38Zm0 0v-38l122-121 37 37-121 122h-38Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="pause"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M400-320q17 0 28.5-11.5T440-360v-240q0-17-11.5-28.5T400-640q-17 0-28.5 11.5T360-600v240q0 17 11.5 28.5T400-320Zm160 0q17 0 28.5-11.5T600-360v-240q0-17-11.5-28.5T560-640q-17 0-28.5 11.5T520-600v240q0 17 11.5 28.5T560-320ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M400-320q17 0 28.5-11.5T440-360v-240q0-17-11.5-28.5T400-640q-17 0-28.5 11.5T360-600v240q0 17 11.5 28.5T400-320Zm160 0q17 0 28.5-11.5T600-360v-240q0-17-11.5-28.5T560-640q-17 0-28.5 11.5T520-600v240q0 17 11.5 28.5T560-320ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="pen"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M167-120q-21 5-36.5-10.5T120-167l40-191 198 198-191 40Zm191-40L160-358l458-458q23-23 57-23t57 23l84 84q23 23 23 57t-23 57L358-160Zm317-600L261-346l85 85 414-414-85-85Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M168-121q-21 5-36.5-10.5T121-168l35-170 182 182-170 35Zm235-84L205-403l413-413q23-23 57-23t57 23l84 84q23 23 23 57t-23 57L403-205Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="play"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m426-330 195-125q14-9 14-25t-14-25L426-630q-15-10-30.5-1.5T380-605v250q0 18 15.5 26.5T426-330Zm54 250q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m426-330 195-125q14-9 14-25t-14-25L426-630q-15-10-30.5-1.5T380-605v250q0 18 15.5 26.5T426-330Zm54 250q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="play_pause"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-312v-336l240 168-240 168Zm320-8v-320h80v320h-80Zm160 0v-320h80v320h-80Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-312v-336l240 168-240 168Zm320-8v-320h80v320h-80Zm160 0v-320h80v320h-80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="previous_page"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m142-480 294 294q15 15 14.5 35T435-116q-15 15-35 15t-35-15L57-423q-12-12-18-27t-6-30q0-15 6-30t18-27l308-308q15-15 35.5-14.5T436-844q15 15 15 35t-15 35L142-480Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m142-480 294 294q15 15 14.5 35T435-116q-15 15-35 15t-35-15L57-423q-12-12-18-27t-6-30q0-15 6-30t18-27l308-308q15-15 35.5-14.5T436-844q15 15 15 35t-15 35L142-480Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="previous_track"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M220-280v-400q0-17 11.5-28.5T260-720q17 0 28.5 11.5T300-680v400q0 17-11.5 28.5T260-240q-17 0-28.5-11.5T220-280Zm458-1L430-447q-9-6-13.5-14.5T412-480q0-10 4.5-18.5T430-513l248-166q5-4 11-5t11-1q16 0 28 11t12 29v330q0 18-12 29t-28 11q-5 0-11-1t-11-5Zm-18-199Zm0 90v-180l-136 90 136 90Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M220-280v-400q0-17 11.5-28.5T260-720q17 0 28.5 11.5T300-680v400q0 17-11.5 28.5T260-240q-17 0-28.5-11.5T220-280Zm458-1L430-447q-9-6-13.5-14.5T412-480q0-10 4.5-18.5T430-513l248-166q5-4 11-5t11-1q16 0 28 11t12 29v330q0 18-12 29t-28 11q-5 0-11-1t-11-5Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="quick_settings"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M280-240q-100 0-170-70T40-480q0-100 70-170t170-70h400q100 0 170 70t70 170q0 100-70 170t-170 70H280Zm0-80h400q66 0 113-47t47-113q0-66-47-113t-113-47H280q-66 0-113 47t-47 113q0 66 47 113t113 47Zm400-40q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35ZM480-480Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M280-240q-100 0-170-70T40-480q0-100 70-170t170-70h400q100 0 170 70t70 170q0 100-70 170t-170 70H280Zm400-120q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="recents"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M160-80q-33 0-56.5-23.5T80-160v-360q0-33 23.5-56.5T160-600h80v-200q0-33 23.5-56.5T320-880h480q33 0 56.5 23.5T880-800v360q0 33-23.5 56.5T800-360h-80v200q0 33-23.5 56.5T640-80H160Zm0-80h480v-280H160v280Zm560-280h80v-280H320v120h320q33 0 56.5 23.5T720-520v80Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M160-80q-33 0-56.5-23.5T80-160v-360q0-33 23.5-56.5T160-600h80v-200q0-33 23.5-56.5T320-880h480q33 0 56.5 23.5T880-800v360q0 33-23.5 56.5T800-360h-80v200q0 33-23.5 56.5T640-80H160Zm0-80h480v-280H160v280Zm560-280h80v-280H320v120h320q33 0 56.5 23.5T720-520v80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="redo"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M648-560H396q-63 0-109.5 40T240-420q0 60 46.5 100T396-280h244q17 0 28.5 11.5T680-240q0 17-11.5 28.5T640-200H396q-97 0-166.5-63T160-420q0-94 69.5-157T396-640h252l-76-76q-11-11-11-28t11-28q11-11 28-11t28 11l144 144q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L628-428q-11 11-28 11t-28-11q-11-11-11-28t11-28l76-76Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M648-560H396q-63 0-109.5 40T240-420q0 60 46.5 100T396-280h244q17 0 28.5 11.5T680-240q0 17-11.5 28.5T640-200H396q-97 0-166.5-63T160-420q0-94 69.5-157T396-640h252l-76-76q-11-11-11-28t11-28q11-11 28-11t28 11l144 144q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L628-428q-11 11-28 11t-28-11q-11-11-11-28t11-28l76-76Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="refresh"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-70q0-17 11.5-28.5T760-800q17 0 28.5 11.5T800-760v200q0 17-11.5 28.5T760-520H560q-17 0-28.5-11.5T520-560q0-17 11.5-28.5T560-600h128q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q68 0 124.5-34.5T692-367q8-14 22.5-19.5t29.5-.5q16 5 23 21t-1 30q-41 80-117 128t-169 48Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-70q0-17 11.5-28.5T760-800q17 0 28.5 11.5T800-760v200q0 17-11.5 28.5T760-520H560q-17 0-28.5-11.5T520-560q0-17 11.5-28.5T560-600h128q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q68 0 124.5-34.5T692-367q8-14 22.5-19.5t29.5-.5q16 5 23 21t-1 30q-41 80-117 128t-169 48Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="rotation_lock"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M634-600q-14 0-24-10t-10-24v-132q0-14 10-24t24-10h6v-40q0-33 23.5-56.5T720-920q33 0 56.5 23.5T800-840v40h6q14 0 24 10t10 24v132q0 14-10 24t-24 10H634Zm46-200h80v-40q0-17-11.5-28.5T720-880q-17 0-28.5 11.5T680-840v40ZM441-129l-77-77q-11-11-11-28t11-28q11-11 28-11t28 11L590-92q12 12 7 28t-22 19q-14 2-27.5 2.5T520-42q-99 0-186.5-38T181-183q-65-65-103-152.5T40-522q0-17 11.5-28.5T80-562q17 0 28.5 11.5T120-522q0 72 24.5 137T212-268q43 52 102 88.5T441-129Zm149-73q-14 0-28.5-5.5T536-224L222-538q-11-11-16.5-25.5T200-592q0-15 5.5-29t16.5-25l174-174q11-11 25.5-17t28.5-6q15 0 29 6t25 17l17 17q11 11 11.5 27T522-748q-11 12-28 12.5T465-747l-15-15-170 170 310 310 170-170-14-14q-11-11-11-28t11-28q11-11 28-11t28 11l16 16q11 11 17 25t6 29q0 14-6 28.5T818-398L644-224q-11 11-25 16.5t-29 5.5Zm-70-320Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M680-800h80v-40q0-17-11.5-28.5T720-880q-17 0-28.5 11.5T680-840v40ZM520-42q-99 0-186.5-38T181-183q-65-65-103-152.5T40-522q0-17 11.5-28.5T80-562q17 0 28.5 11.5T120-522q0 72 24.5 137T212-268q43 52 102 88.5T441-129l-77-77q-11-11-11-28t11-28q11-11 28-11t28 11L590-92q12 12 7 28t-22 19q-14 2-27.5 2.5T520-42Zm70-160q-14 0-28.5-5.5T536-224L222-538q-11-11-16.5-25.5T200-592q0-15 5.5-29t16.5-25l182-182q10-10 21.5-14.5T450-847q13 0 24.5 4.5T496-828l1 1q11 11 17 25.5t6 30.5v137q0 48 33 81t81 33h137q15 0 29.5 5.5T826-498q10 9 15 21t5 25q0 12-4.5 23.5T828-408L644-224q-11 11-25 16.5t-29 5.5Zm44-398q-14 0-24-10t-10-24v-132q0-14 10-24t24-10h6v-40q0-33 23.5-56.5T720-920q33 0 56.5 23.5T800-840v40h6q14 0 24 10t10 24v132q0 14-10 24t-24 10H634Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="screenshot"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M280-280h80q17 0 28.5 11.5T400-240q0 17-11.5 28.5T360-200H240q-17 0-28.5-11.5T200-240v-120q0-17 11.5-28.5T240-400q17 0 28.5 11.5T280-360v80Zm0-400v80q0 17-11.5 28.5T240-560q-17 0-28.5-11.5T200-600v-120q0-17 11.5-28.5T240-760h120q17 0 28.5 11.5T400-720q0 17-11.5 28.5T360-680h-80Zm400 0h-80q-17 0-28.5-11.5T560-720q0-17 11.5-28.5T600-760h120q17 0 28.5 11.5T760-720v120q0 17-11.5 28.5T720-560q-17 0-28.5-11.5T680-600v-80Zm0 480h-80q-17 0-28.5-11.5T560-240q0-17 11.5-28.5T600-280h80v-80q0-17 11.5-28.5T720-400q17 0 28.5 11.5T760-360v80h80q17 0 28.5 11.5T880-240q0 17-11.5 28.5T840-200h-80v80q0 17-11.5 28.5T720-80q-17 0-28.5-11.5T680-120v-80Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M280-280h80q17 0 28.5 11.5T400-240q0 17-11.5 28.5T360-200H240q-17 0-28.5-11.5T200-240v-120q0-17 11.5-28.5T240-400q17 0 28.5 11.5T280-360v80Zm0-400v80q0 17-11.5 28.5T240-560q-17 0-28.5-11.5T200-600v-120q0-17 11.5-28.5T240-760h120q17 0 28.5 11.5T400-720q0 17-11.5 28.5T360-680h-80Zm400 0h-80q-17 0-28.5-11.5T560-720q0-17 11.5-28.5T600-760h120q17 0 28.5 11.5T760-720v120q0 17-11.5 28.5T720-560q-17 0-28.5-11.5T680-600v-80Zm0 480h-80q-17 0-28.5-11.5T560-240q0-17 11.5-28.5T600-280h80v-80q0-17 11.5-28.5T720-400q17 0 28.5 11.5T760-360v80h80q17 0 28.5 11.5T880-240q0 17-11.5 28.5T840-200h-80v80q0 17-11.5 28.5T720-80q-17 0-28.5-11.5T680-120v-80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="search"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M380-320q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l224 224q11 11 11 28t-11 28q-11 11-28 11t-28-11L532-372q-30 24-69 38t-83 14Zm0-80q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M380-320q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l224 224q11 11 11 28t-11 28q-11 11-28 11t-28-11L532-372q-30 24-69 38t-83 14Zm0-80q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="send"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M792-443 176-183q-20 8-38-3.5T120-220v-520q0-22 18-33.5t38-3.5l616 260q25 11 25 37t-25 37ZM200-280l474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M176-183q-20 8-38-3.5T120-220v-180l320-80-320-80v-180q0-22 18-33.5t38-3.5l616 260q25 11 25 37t-25 37L176-183Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="settings"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M433-80q-27 0-46.5-18T363-142l-9-66q-13-5-24.5-12T307-235l-62 26q-25 11-50 2t-39-32l-47-82q-14-23-8-49t27-43l53-40q-1-7-1-13.5v-27q0-6.5 1-13.5l-53-40q-21-17-27-43t8-49l47-82q14-23 39-32t50 2l62 26q11-8 23-15t24-12l9-66q4-26 23.5-44t46.5-18h94q27 0 46.5 18t23.5 44l9 66q13 5 24.5 12t22.5 15l62-26q25-11 50-2t39 32l47 82q14 23 8 49t-27 43l-53 40q1 7 1 13.5v27q0 6.5-2 13.5l53 40q21 17 27 43t-8 49l-48 82q-14 23-39 32t-50-2l-60-26q-11 8-23 15t-24 12l-9 66q-4 26-23.5 44T527-80h-94Zm7-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M433-80q-27 0-46.5-18T363-142l-9-66q-13-5-24.5-12T307-235l-62 26q-25 11-50 2t-39-32l-47-82q-14-23-8-49t27-43l53-40q-1-7-1-13.5v-27q0-6.5 1-13.5l-53-40q-21-17-27-43t8-49l47-82q14-23 39-32t50 2l62 26q11-8 23-15t24-12l9-66q4-26 23.5-44t46.5-18h94q27 0 46.5 18t23.5 44l9 66q13 5 24.5 12t22.5 15l62-26q25-11 50-2t39 32l47 82q14 23 8 49t-27 43l-53 40q1 7 1 13.5v27q0 6.5-2 13.5l53 40q21 17 27 43t-8 49l-48 82q-14 23-39 32t-50-2l-60-26q-11 8-23 15t-24 12l-9 66q-4 26-23.5 44T527-80h-94Zm49-260q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="setup"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm0-320 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm339 353q-17 0-28.5-11.5T520-320q0-17 11.5-28.5T560-360h280q17 0 28.5 11.5T880-320q0 17-11.5 28.5T840-280H560Zm0-320q-17 0-28.5-11.5T520-640q0-17 11.5-28.5T560-680h280q17 0 28.5 11.5T880-640q0 17-11.5 28.5T840-600H560Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m221-313 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-228q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm0-320 142-142q12-12 28-11.5t28 12.5q11 12 11 28t-11 28L250-548q-12 12-28 12t-28-12l-86-86q-11-11-11-28t11-28q11-11 28-11t28 11l57 57Zm339 353q-17 0-28.5-11.5T520-320q0-17 11.5-28.5T560-360h280q17 0 28.5 11.5T880-320q0 17-11.5 28.5T840-280H560Zm0-320q-17 0-28.5-11.5T520-640q0-17 11.5-28.5T560-680h280q17 0 28.5 11.5T880-640q0 17-11.5 28.5T840-600H560Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="shutter"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l50-54q11-12 26.5-19t32.5-7h170q17 0 32.5 7t26.5 19l50 54h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Zm0-80h640v-480H638l-73-80H395l-73 80H160v480Zm320-240Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-260q75 0 127.5-52.5T660-440q0-75-52.5-127.5T480-620q-75 0-127.5 52.5T300-440q0 75 52.5 127.5T480-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM160-120q-33 0-56.5-23.5T80-200v-480q0-33 23.5-56.5T160-760h126l50-54q11-12 26.5-19t32.5-7h170q17 0 32.5 7t26.5 19l50 54h126q33 0 56.5 23.5T880-680v480q0 33-23.5 56.5T800-120H160Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="slide_down"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M152-472q-6-27-9-54t-3-54q0-74 22-144t64-130q8-11 20-12.5t21 7.5q9 9 10 22.5t-7 24.5q-35 52-52.5 110.5T200-580q0 26 3 51.5t10 50.5l44-43q9-8 21-8.5t21 8.5q9 9 9 21t-9 21l-91 91q-12 12-28 12t-28-12l-91-91q-9-9-9-21t9-21q9-9 21-9t21 9l49 49Zm506 345q-23 8-46.5 7.5T566-131L340-236q-15-7-21-22.5t1-30.5l2-4q10-20 28-32.5t40-14.5l68-5-112-307q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l130 357q7 19-4 35.5T516-268l-47 3 131 61q7 3 15 3.5t15-1.5l157-57q31-11 45-41.5t3-61.5l-55-150q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l55 150q23 63-4.5 122.5T815-184l-157 57ZM538-594q16-6 30.5 1t20.5 23l41 112q6 16-1 31t-23 21q-16 6-31-1t-21-23l-40-113q-6-16 1-30.5t23-20.5Zm126-3q16-6 30.5 1t20.5 23l27 75q6 16-.5 30.5T719-447q-16 6-31-1t-21-23l-27-75q-6-16 1-30.5t23-20.5Zm15 242Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M152-472q-6-27-9-54t-3-54q0-74 22-144t64-130q8-11 20-12.5t21 7.5q9 9 10 22.5t-7 24.5q-35 52-52.5 110.5T200-580q0 26 3 51.5t10 50.5l44-43q9-8 21-8.5t21 8.5q9 9 9 21t-9 21l-91 91q-12 12-28 12t-28-12l-91-91q-9-9-9-21t9-21q9-9 21-9t21 9l49 49Zm506 345q-23 8-46.5 7.5T566-131L340-236q-15-7-21-22.5t1-30.5l2-4q10-20 28-32.5t40-14.5l68-5-112-307q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l96 263 38-14-41-113q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l41 113 37-14-27-75q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l27 75 38-14q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l55 150q23 63-4.5 122.5T815-184l-157 57Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="slide_up"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M213-802q-7 25-10 50.5t-3 51.5q0 63 18 121.5T270-468q8 11 7 24t-10 22q-9 9-21 8t-20-12q-42-60-64-130t-22-144q0-27 3-54t9-54l-49 49q-9 9-21 9t-21-9q-9-9-9-21t9-21l91-91q12-12 28-12t28 12l91 91q9 9 9 21t-9 21q-9 9-21 8.5t-21-8.5l-44-43Zm445 675q-23 8-46.5 7.5T566-131L340-236q-15-7-21-22.5t1-30.5l2-4q10-20 28-32.5t40-14.5l68-5-112-307q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l130 357q7 19-4 35.5T516-268l-47 3 131 61q7 3 15 3.5t15-1.5l157-57q31-11 45-41.5t3-61.5l-55-150q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l55 150q23 63-4.5 122.5T815-184l-157 57ZM538-594q16-6 30.5 1t20.5 23l41 112q6 16-1 31t-23 21q-16 6-31-1t-21-23l-40-113q-6-16 1-30.5t23-20.5Zm126-3q16-6 30.5 1t20.5 23l27 75q6 16-.5 30.5T719-447q-16 6-31-1t-21-23l-27-75q-6-16 1-30.5t23-20.5Zm15 242Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M213-802q-7 25-10 50.5t-3 51.5q0 63 18 121.5T270-468q8 11 7 24t-10 22q-9 9-21 8t-20-12q-42-60-64-130t-22-144q0-27 3-54t9-54l-49 49q-9 9-21 9t-21-9q-9-9-9-21t9-21l91-91q12-12 28-12t28 12l91 91q9 9 9 21t-9 21q-9 9-21 8.5t-21-8.5l-44-43Zm445 675q-23 8-46.5 7.5T566-131L340-236q-15-7-21-22.5t1-30.5l2-4q10-20 28-32.5t40-14.5l68-5-112-307q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l96 263 38-14-41-113q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l41 113 37-14-27-75q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l27 75 38-14q-6-16 1-30.5t23-20.5q16-6 30.5 1t20.5 23l55 150q23 63-4.5 122.5T815-184l-157 57Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="split_screen"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h160q33 0 56.5 23.5T440-760v560q0 33-23.5 56.5T360-120H200Zm400 0q-33 0-56.5-23.5T520-200v-560q0-33 23.5-56.5T600-840h160q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H600Zm160-640H600v560h160v-560Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h160q33 0 56.5 23.5T440-760v560q0 33-23.5 56.5T360-120H200Zm400 0q-33 0-56.5-23.5T520-200v-560q0-33 23.5-56.5T600-840h160q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H600Zm160-640H600v560h160v-560Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="squeeze"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M593-40q-24 0-46-9t-39-26L332-252q-12-12-11-29.5t13-29.5q16-16 37.5-21.5t42.5.5l66 19v-327q0-17 11.5-28.5T520-680q17 0 28.5 11.5T560-640v380q0 20-16 32t-35 7l-46-13 102 102q5 5 12.5 8.5T593-120h167q33 0 56.5-23.5T840-200v-160q0-17 11.5-28.5T880-400q17 0 28.5 11.5T920-360v160q0 66-47 113T760-40H593Zm109-200ZM380-818 142-580h68q13 0 21.5 8.5T240-550q0 13-8.5 21.5T210-520H80q-17 0-28.5-11.5T40-560v-130q0-13 8.5-21.5T70-720q13 0 21.5 8.5T100-690v68l238-238h-68q-13 0-21.5-8.5T240-890q0-13 8.5-21.5T270-920h130q17 0 28.5 11.5T440-880v130q0 13-8.5 21.5T410-720q-13 0-21.5-8.5T380-750v-68Zm260 298q17 0 28.5 11.5T680-480v120q0 17-11.5 28.5T640-320q-17 0-28.5-11.5T600-360v-120q0-17 11.5-28.5T640-520Zm120 40q17 0 28.5 11.5T800-440v80q0 17-11.5 28.5T760-320q-17 0-28.5-11.5T720-360v-80q0-17 11.5-28.5T760-480Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M380-818 142-580h68q13 0 21.5 8.5T240-550q0 13-8.5 21.5T210-520H80q-17 0-28.5-11.5T40-560v-130q0-13 8.5-21.5T70-720q13 0 21.5 8.5T100-690v68l238-238h-68q-13 0-21.5-8.5T240-890q0-13 8.5-21.5T270-920h130q17 0 28.5 11.5T440-880v130q0 13-8.5 21.5T410-720q-13 0-21.5-8.5T380-750v-68ZM593-40q-24 0-46-9t-39-26L332-252q-12-12-11-29.5t13-29.5q16-16 37.5-21.5t42.5.5l66 19v-327q0-17 11.5-28.5T520-680q17 0 28.5 11.5T560-640v280h40v-120q0-17 11.5-28.5T640-520q17 0 28.5 11.5T680-480v120h40v-80q0-17 11.5-28.5T760-480q17 0 28.5 11.5T800-440v80h40q0-17 11.5-28.5T880-400q17 0 28.5 11.5T920-360v160q0 66-47 113T760-40H593Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="test_pen"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-120q-17 0-28.5-11.5T160-160v-97q0-16 6-30.5t17-25.5l504-503q12-12 27-18t30-6q16 0 30.5 6t25.5 18l56 56q12 11 18 25.5t6 30.5q0 15-6 30t-18 27L353-143q-11 11-25.5 17t-30.5 6h-97Zm40-80h56l393-392-28-29-29-28-392 393v56Zm560-503-57-57 57 57Zm-139 82-29-28 57 57-28-29ZM560-120q74 0 137-37t63-103q0-32-16-55.5T702-359q-14-10-30-10t-27 12q-11 12-11 29.5t14 27.5q14 11 23 20t9 20q0 23-36.5 41.5T560-200q-17 0-28.5 11.5T520-160q0 17 11.5 28.5T560-120ZM360-720q0 14-17.5 25.5T262-654q-80 35-111 63.5T120-520q0 26 12 46t31 35q13 11 29 9.5t27-14.5q11-13 10-29t-14-27q-7-5-11-10t-4-10q0-12 18-24t76-37q88-38 117-69t29-70q0-55-44-87.5T280-840q-45 0-80.5 16T145-785q-11 13-9 29t15 26q13 11 29 9t27-13q14-14 31-20t42-6q41 0 60.5 12t19.5 28Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-120q-17 0-28.5-11.5T160-160v-97q0-16 6-30.5t17-25.5l504-503q12-12 27-18t30-6q16 0 30.5 6t25.5 18l56 56q12 11 18 25.5t6 30.5q0 15-6 30t-18 27L353-143q-11 11-25.5 17t-30.5 6h-97Zm546-529 54-54-57-57-54 54 57 57ZM560-120q74 0 137-37t63-103q0-32-16-55.5T702-359q-14-10-30-10t-27 12q-11 12-11 29.5t14 27.5q14 11 23 20t9 20q0 23-36.5 41.5T560-200q-17 0-28.5 11.5T520-160q0 17 11.5 28.5T560-120ZM360-720q0 14-17.5 25.5T262-654q-80 35-111 63.5T120-520q0 26 12 46t31 35q13 11 29 9.5t27-14.5q11-13 10-29t-14-27q-7-5-11-10t-4-10q0-12 18-24t76-37q88-38 117-69t29-70q0-55-44-87.5T280-840q-45 0-80.5 16T145-785q-11 13-9 29t15 26q13 11 29 9t27-13q14-14 31-20t42-6q41 0 60.5 12t19.5 28Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="time"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M520-496v-144q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640v159q0 8 3 15.5t9 13.5l132 132q11 11 28 11t28-11q11-11 11-28t-11-28L520-496ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M520-496v-144q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640v159q0 8 3 15.5t9 13.5l132 132q11 11 28 11t28-11q11-11 11-28t-11-28L520-496ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="today"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h240v-560H200v560Zm320 0h240v-280H520v280Zm0-360h240v-200H520v200Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h160q33 0 56.5 23.5T440-760v560q0 33-23.5 56.5T360-120H200Zm400 0q-33 0-56.5-23.5T520-200v-200q0-33 23.5-56.5T600-480h160q33 0 56.5 23.5T840-400v200q0 33-23.5 56.5T760-120H600Zm0-440q-33 0-56.5-23.5T520-640v-120q0-33 23.5-56.5T600-840h160q33 0 56.5 23.5T840-760v120q0 33-23.5 56.5T760-560H600Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="undo"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M320-200q-17 0-28.5-11.5T280-240q0-17 11.5-28.5T320-280h244q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l76 76q11 11 11 28t-11 28q-11 11-28 11t-28-11L188-572q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l144-144q11-11 28-11t28 11q11 11 11 28t-11 28l-76 76h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H320Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M320-200q-17 0-28.5-11.5T280-240q0-17 11.5-28.5T320-280h244q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l76 76q11 11 11 28t-11 28q-11 11-28 11t-28-11L188-572q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l144-144q11-11 28-11t28 11q11 11 11 28t-11 28l-76 76h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H320Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="volume_down"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M360-360H240q-17 0-28.5-11.5T200-400v-160q0-17 11.5-28.5T240-600h120l132-132q19-19 43.5-8.5T560-703v446q0 27-24.5 37.5T492-228L360-360Zm380-120q0 42-19 79.5T671-339q-10 6-20.5.5T640-356v-250q0-12 10.5-17.5t20.5.5q31 25 50 63t19 80ZM480-606l-86 86H280v80h114l86 86v-252ZM380-480Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M360-360H240q-17 0-28.5-11.5T200-400v-160q0-17 11.5-28.5T240-600h120l132-132q19-19 43.5-8.5T560-703v446q0 27-24.5 37.5T492-228L360-360Zm380-120q0 42-19 79.5T671-339q-10 6-20.5.5T640-356v-250q0-12 10.5-17.5t20.5.5q31 25 50 63t19 80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="volume_up"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M760-481q0-83-44-151.5T598-735q-15-7-22-21.5t-2-29.5q6-16 21.5-23t31.5 0q97 43 155 131.5T840-481q0 108-58 196.5T627-153q-16 7-31.5 0T574-176q-5-15 2-29.5t22-21.5q74-34 118-102.5T760-481ZM280-360H160q-17 0-28.5-11.5T120-400v-160q0-17 11.5-28.5T160-600h120l132-132q19-19 43.5-8.5T480-703v446q0 27-24.5 37.5T412-228L280-360Zm380-120q0 42-19 79.5T591-339q-10 6-20.5.5T560-356v-250q0-12 10.5-17.5t20.5.5q31 25 50 63t19 80ZM400-606l-86 86H200v80h114l86 86v-252ZM300-480Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M760-481q0-83-44-151.5T598-735q-15-7-22-21.5t-2-29.5q6-16 21.5-23t31.5 0q97 43 155 131.5T840-481q0 108-58 196.5T627-153q-16 7-31.5 0T574-176q-5-15 2-29.5t22-21.5q74-34 118-102.5T760-481ZM280-360H160q-17 0-28.5-11.5T120-400v-160q0-17 11.5-28.5T160-600h120l132-132q19-19 43.5-8.5T480-703v446q0 27-24.5 37.5T412-228L280-360Zm380-120q0 42-19 79.5T591-339q-10 6-20.5.5T560-356v-250q0-12 10.5-17.5t20.5.5q31 25 50 63t19 80Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="wallpaper"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-120q-33 0-56.5-23.5T120-200v-200q0-17 11.5-28.5T160-440q17 0 28.5 11.5T200-400v200h200q17 0 28.5 11.5T440-160q0 17-11.5 28.5T400-120H200Zm560 0H560q-17 0-28.5-11.5T520-160q0-17 11.5-28.5T560-200h200v-200q0-17 11.5-28.5T800-440q17 0 28.5 11.5T840-400v200q0 33-23.5 56.5T760-120ZM450-320l104-139q6-8 16-8t16 8l110 147q8 10 2 21t-18 11H280q-12 0-18-11t2-21l80-107q6-8 16-8t16 8l74 99ZM120-760q0-33 23.5-56.5T200-840h200q17 0 28.5 11.5T440-800q0 17-11.5 28.5T400-760H200v200q0 17-11.5 28.5T160-520q-17 0-28.5-11.5T120-560v-200Zm720 0v200q0 17-11.5 28.5T800-520q-17 0-28.5-11.5T760-560v-200H560q-17 0-28.5-11.5T520-800q0-17 11.5-28.5T560-840h200q33 0 56.5 23.5T840-760ZM620-560q-26 0-43-17t-17-43q0-26 17-43t43-17q26 0 43 17t17 43q0 26-17 43t-43 17Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M200-120q-33 0-56.5-23.5T120-200v-200q0-17 11.5-28.5T160-440q17 0 28.5 11.5T200-400v200h200q17 0 28.5 11.5T440-160q0 17-11.5 28.5T400-120H200Zm560 0H560q-17 0-28.5-11.5T520-160q0-17 11.5-28.5T560-200h200v-200q0-17 11.5-28.5T800-440q17 0 28.5 11.5T840-400v200q0 33-23.5 56.5T760-120ZM450-320l104-139q6-8 16-8t16 8l110 147q8 10 2 21t-18 11H280q-12 0-18-11t2-21l80-107q6-8 16-8t16 8l74 99ZM120-760q0-33 23.5-56.5T200-840h200q17 0 28.5 11.5T440-800q0 17-11.5 28.5T400-760H200v200q0 17-11.5 28.5T160-520q-17 0-28.5-11.5T120-560v-200Zm720 0v200q0 17-11.5 28.5T800-520q-17 0-28.5-11.5T760-560v-200H560q-17 0-28.5-11.5T520-800q0-17 11.5-28.5T560-840h200q33 0 56.5 23.5T840-760ZM620-560q-26 0-43-17t-17-43q0-26 17-43t43-17q26 0 43 17t17 43q0 26-17 43t-43 17Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="warning"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M109-120q-11 0-20-5.5T75-140q-5-9-5.5-19.5T75-180l370-640q6-10 15.5-15t19.5-5q10 0 19.5 5t15.5 15l370 640q6 10 5.5 20.5T885-140q-5 9-14 14.5t-20 5.5H109Zm69-80h604L480-720 178-200Zm302-40q17 0 28.5-11.5T520-280q0-17-11.5-28.5T480-320q-17 0-28.5 11.5T440-280q0 17 11.5 28.5T480-240Zm0-120q17 0 28.5-11.5T520-400v-120q0-17-11.5-28.5T480-560q-17 0-28.5 11.5T440-520v120q0 17 11.5 28.5T480-360Zm0-100Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M109-120q-11 0-20-5.5T75-140q-5-9-5.5-19.5T75-180l370-640q6-10 15.5-15t19.5-5q10 0 19.5 5t15.5 15l370 640q6 10 5.5 20.5T885-140q-5 9-14 14.5t-20 5.5H109Zm371-120q17 0 28.5-11.5T520-280q0-17-11.5-28.5T480-320q-17 0-28.5 11.5T440-280q0 17 11.5 28.5T480-240Zm0-120q17 0 28.5-11.5T520-400v-120q0-17-11.5-28.5T480-560q-17 0-28.5 11.5T440-520v120q0 17 11.5 28.5T480-360Z'/%3E%3C/svg%3E"); }
+:where(.mock-frame, .mock-switches, .kit) .sym[data-icon="widgets"] { --sym-o: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M638-468 468-638q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l170-170q6-6 13-8.5t15-2.5q8 0 15 2.5t13 8.5l170 170q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L694-468q-6 6-13 8.5t-15 2.5q-8 0-15-2.5t-13-8.5Zm-518-92v-240q0-17 11.5-28.5T160-840h240q17 0 28.5 11.5T440-800v240q0 17-11.5 28.5T400-520H160q-17 0-28.5-11.5T120-560Zm400 400v-240q0-17 11.5-28.5T560-440h240q17 0 28.5 11.5T840-400v240q0 17-11.5 28.5T800-120H560q-17 0-28.5-11.5T520-160Zm-400 0v-240q0-17 11.5-28.5T160-440h240q17 0 28.5 11.5T440-400v240q0 17-11.5 28.5T400-120H160q-17 0-28.5-11.5T120-160Zm80-440h160v-160H200v160Zm467 48 113-113-113-113-113 113 113 113Zm-67 352h160v-160H600v160Zm-400 0h160v-160H200v160Zm160-400Zm194-65ZM360-360Zm240 0Z'/%3E%3C/svg%3E"); --sym-f: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M638-468 468-638q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l170-170q6-6 13-8.5t15-2.5q8 0 15 2.5t13 8.5l170 170q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L694-468q-6 6-13 8.5t-15 2.5q-8 0-15-2.5t-13-8.5Zm-518-92v-240q0-17 11.5-28.5T160-840h240q17 0 28.5 11.5T440-800v240q0 17-11.5 28.5T400-520H160q-17 0-28.5-11.5T120-560Zm400 400v-240q0-17 11.5-28.5T560-440h240q17 0 28.5 11.5T840-400v240q0 17-11.5 28.5T800-120H560q-17 0-28.5-11.5T520-160Zm-400 0v-240q0-17 11.5-28.5T160-440h240q17 0 28.5 11.5T440-400v240q0 17-11.5 28.5T400-120H160q-17 0-28.5-11.5T120-160Z'/%3E%3C/svg%3E"); }
+:root { --kit-expand-more: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-362q-8 0-15-2.5t-13-8.5L268-557q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-373q-6 6-13 8.5t-15 2.5Z'/%3E%3C/svg%3E"); }
+/* @symbols:end */
+
+/* ======================================================================================== navigation */
+
+/* Navigation rail, like M3 WideNavigationRail collapsed: 96 dp; the brand mark on top; items are an icon
+   in a 56 × 32 pill with the label under it; the status line (plan §7) at the bottom. */
+:where(.mock-frame, .kit) .rail {
+  flex: none;
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 16px 0 calc(var(--nav-h, 16px) + 12px);
+  background: var(--surface);
+  color: var(--on-surface-variant);
+  overflow: hidden auto;
+  scrollbar-width: none;
+}
+:where(.mock-frame, .kit) .rail__mark {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  display: grid;
+  place-items: center;
+}
+:where(.mock-frame, .kit) .rail__mark > :is(img, .app-icon) { --size: 48px; width: 48px; height: 48px; }
+:where(.mock-frame, .kit) .rail__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 64px;
+  padding: 4px 4px 6px;
+  color: var(--on-surface-variant);
+  text-align: center;
+}
+:where(.mock-frame, .kit) .rail__indicator {
+  flex: none;
+  width: 56px;
+  height: 32px;
+  border-radius: var(--r-full, 999px);
+  display: grid;
+  place-items: center;
+}
+:where(.mock-frame, .kit) .rail__label {
+  max-width: 100%;
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  font-weight: var(--w-medium, 500);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+:where(.mock-frame, .kit) .rail__item[aria-current="page"] { color: var(--on-surface); }
+:where(.mock-frame, .kit) .rail__item[aria-current="page"] .rail__indicator {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+:where(.mock-frame, .kit) .rail__item:hover .rail__indicator { background-image: linear-gradient(var(--state-hover), var(--state-hover)); }
+:where(.mock-frame, .kit) .rail__item:active .rail__indicator { background-image: linear-gradient(var(--state-press), var(--state-press)); }
+/* The status line is secondary (the full status is on Today), so it uses the 11 sp role: at 200 % a
+   capitalised word such as "Mapper" still fits the 88 dp line, and lowercase words hyphenate. Keep it short. */
+:where(.mock-frame, .kit) .rail__status {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 4px 0;
+  text-align: center;
+  font-size: var(--t-label-small-size, 11px);
+  line-height: var(--t-label-small-line, 16px);
+  font-weight: var(--w-medium, 500);
+  color: var(--on-surface-variant);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+:where(.mock-frame, .kit) .rail__status .sym { --sym-size: 20px; }
+:where(.mock-frame, .kit) .rail__status[data-state="good"] .sym { color: var(--good-ink); }
+:where(.mock-frame, .kit) .rail__status[data-state="warn"] .sym { color: var(--warn-ink); }
+:where(.mock-frame, .kit) .rail__status[data-state="bad"] .sym { color: var(--bad-ink); }
+
+/* Bottom navigation bar (below 600 dp wide): equal items, the same pill and label as the rail. */
+:where(.mock-frame, .kit) .navbar {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  min-height: 64px;
+  padding: 6px 0 calc(var(--nav-h, 16px) + 2px);
+  background: var(--surface-container);
+}
+:where(.mock-frame, .kit) .navbar__item {
+  flex: 1 1 0;
+  min-width: 48px;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 2px;
+  color: var(--on-surface-variant);
+  text-align: center;
+}
+:where(.mock-frame, .kit) .navbar__indicator {
+  flex: none; width: 56px; height: 32px; border-radius: var(--r-full, 999px); display: grid; place-items: center;
+}
+:where(.mock-frame, .kit) .navbar__label {
+  max-width: 100%;
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  font-weight: var(--w-medium, 500);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+:where(.mock-frame, .kit) .navbar__item[aria-current="page"] { color: var(--on-surface); }
+:where(.mock-frame, .kit) .navbar__item[aria-current="page"] .navbar__indicator {
+  background: var(--secondary-container); color: var(--on-secondary-container);
+}
+:where(.mock-frame, .kit) .navbar__item:hover .navbar__indicator { background-image: linear-gradient(var(--state-hover), var(--state-hover)); }
+
+/* ======================================================================================== containers */
+
+/* Cards: flat tonal surfaces, no shadows (WiFiBar style). */
+:where(.mock-frame, .kit) .card {
+  min-width: 0;
+  padding: var(--s-card-padding, 20px);
+  border-radius: var(--r-l, 24px);
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+}
+:where(.mock-frame, .kit) .card--high { background: var(--surface-container-high); }
+:where(.mock-frame, .kit) .card--hero { background: var(--primary-container); color: var(--on-primary-container); }
+:where(.mock-frame, .kit) .card--tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+:where(.mock-frame, .kit) .card--outlined { background: transparent; box-shadow: inset 0 0 0 1px var(--outline-variant); }
+:where(.mock-frame, .kit) .card > .list { margin-inline: -16px; }
+
+/* Lists. A row is 56 dp (one line) or 72 dp (two lines) at least, and grows with its text. */
+:where(.mock-frame, .kit) .list { display: flex; flex-direction: column; min-width: 0; }
+:where(.mock-frame, .kit) .list--divided > .list-row { border-radius: 0; }
+:where(.mock-frame, .kit) .list--divided > .list-row + .list-row { box-shadow: inset 0 1px 0 var(--outline-variant); }
+:where(.mock-frame, .kit) .list-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 16px;
+  border-radius: var(--r-m, 16px);
+  color: var(--on-surface);
+  text-align: left;
+}
+:where(.mock-frame, .kit) .list-row:has(.list-row__supporting) { min-height: 72px; }
+:where(.mock-frame, .kit) :is(a, button, [role="button"], [tabindex]).list-row:hover { background-color: var(--state-hover); }
+:where(.mock-frame, .kit) :is(a, button, [role="button"], [tabindex]).list-row:active { background-color: var(--state-press); }
+:where(.mock-frame, .kit) .list-row__leading {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--on-surface-variant);
+}
+:where(.mock-frame, .kit) .list-row__leading--tonal {
+  border-radius: var(--r-full, 999px);
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+:where(.mock-frame, .kit) .list-row__leading > .app-icon { --size: 40px; }
+:where(.mock-frame, .kit) .list-row__text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+:where(.mock-frame, .kit) .list-row__headline {
+  font-size: var(--t-body-size, 16px);
+  line-height: var(--t-body-line, 24px);
+  color: var(--on-surface);
+  overflow-wrap: anywhere;
+}
+:where(.mock-frame, .kit) .list-row__supporting {
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  color: var(--on-surface-variant);
+  overflow-wrap: anywhere;
+}
+:where(.mock-frame, .kit) .list-row__trailing {
+  flex: none;
+  max-width: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  color: var(--on-surface-variant);
+  text-align: right;
+}
+/* Chosen row in a picker: tonal background, filled icon. */
+:where(.mock-frame, .kit) .list-row:is([aria-selected="true"], [aria-checked="true"], [aria-current="true"]) {
+  background-color: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+:where(.mock-frame, .kit) .list-row:is([aria-selected="true"], [aria-checked="true"], [aria-current="true"]) :is(.list-row__headline, .list-row__leading, .list-row__trailing) { color: var(--on-secondary-container); }
+:where(.mock-frame, .kit) .list-row:is([aria-selected="true"], [aria-checked="true"], [aria-current="true"]) .sym {
+  -webkit-mask-image: var(--sym-f, var(--sym-o));
+  mask-image: var(--sym-f, var(--sym-o));
+}
+/* Unavailable row: the name and icon fade (38 %); the reason ("Unavailable: needs …") stays readable. */
+:where(.mock-frame, .kit) .list-row[aria-disabled="true"] { cursor: default; }
+:where(.mock-frame, .kit) .list-row[aria-disabled="true"]:hover { background-color: transparent; }
+:where(.mock-frame, .kit) .list-row[aria-disabled="true"] :is(.list-row__headline, .list-row__leading) { opacity: .38; }
+
+/* Disclosure ("Developer details"): codes and raw data stay in here (BRIEF). */
+:where(.mock-frame, .kit) .disclosure { border-radius: var(--r-m, 16px); background: var(--surface-container); color: var(--on-surface); }
+:where(.mock-frame, .kit) .disclosure > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: inherit;
+  cursor: pointer;
+  font-size: var(--t-body-size, 16px);
+  line-height: var(--t-body-line, 24px);
+}
+:where(.mock-frame, .kit) .disclosure > summary::-webkit-details-marker { display: none; }
+:where(.mock-frame, .kit) .disclosure > summary::after {
+  content: "";
+  flex: none;
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  background: var(--on-surface-variant);
+  -webkit-mask: var(--kit-expand-more) center / contain no-repeat;
+  mask: var(--kit-expand-more) center / contain no-repeat;
+  transition: transform 200ms ease;
+}
+:where(.mock-frame, .kit) .disclosure[open] > summary::after { transform: rotate(180deg); }
+:where(.mock-frame, .kit) .disclosure > summary:hover { background-color: var(--state-hover); }
+:where(.mock-frame, .kit) .disclosure > summary .sym { color: var(--on-surface-variant); }
+:where(.mock-frame, .kit) .disclosure__body {
+  padding: 0 16px 16px;
+  font-family: var(--font-mono);
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  color: var(--on-surface-variant);
+  overflow-wrap: anywhere;
+}
+
+/* ======================================================================================== actions */
+
+/* Common button-like box: the 48 dp target; ::before draws the Material shape inside it. */
+:where(.mock-frame, .mock-switches, .kit) :is(.btn, .icon-btn, .seg__btn, .chip, .switch) {
+  position: relative;
+  isolation: isolate;
+  min-width: 48px;
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+}
+:where(.mock-frame, .mock-switches, .kit) :is(.btn, .icon-btn, .seg__btn, .chip, .switch)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+:where(.mock-frame, .mock-switches, .kit) :is(.btn, .icon-btn, .seg__btn, .chip):hover::before { background-image: linear-gradient(var(--state-hover), var(--state-hover)); }
+:where(.mock-frame, .mock-switches, .kit) :is(.btn, .icon-btn, .seg__btn, .chip):active::before { background-image: linear-gradient(var(--state-press), var(--state-press)); }
+
+/* Buttons: 40 dp pill inside the 48 dp target. */
+:where(.mock-frame, .kit) .btn {
+  --sym-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 24px;
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  font-weight: var(--w-medium, 500);
+  color: var(--primary);
+  text-align: center;
+  white-space: normal;
+}
+:where(.mock-frame, .kit) .btn::before { inset: 4px 0; border-radius: var(--r-full, 999px); }
+:where(.mock-frame, .kit) .btn:has(> .sym:first-child) { padding-left: 16px; }
+:where(.mock-frame, .kit) .btn--filled { color: var(--on-primary); }
+:where(.mock-frame, .kit) .btn--filled::before { background-color: var(--primary); }
+:where(.mock-frame, .kit) .btn--tonal { color: var(--on-secondary-container); }
+:where(.mock-frame, .kit) .btn--tonal::before { background-color: var(--secondary-container); }
+:where(.mock-frame, .kit) .btn--outlined { color: var(--primary); }
+:where(.mock-frame, .kit) .btn--outlined::before { border: 1px solid var(--outline-variant); }
+:where(.mock-frame, .kit) .btn--text { padding-inline: 12px; }
+:where(.mock-frame, .kit) .btn--text:has(> .sym:first-child) { padding-left: 12px; padding-right: 16px; }
+:where(.mock-frame, .kit) :is(.btn, .icon-btn):is(:disabled, [aria-disabled="true"]) {
+  color: color-mix(in srgb, var(--on-surface) 38%, transparent);
+  cursor: default;
+}
+:where(.mock-frame, .kit) :is(.btn--filled, .btn--tonal, .icon-btn--filled, .icon-btn--tonal):is(:disabled, [aria-disabled="true"])::before {
+  background-color: color-mix(in srgb, var(--on-surface) 10%, transparent);
+}
+:where(.mock-frame, .kit) .btn--outlined:is(:disabled, [aria-disabled="true"])::before {
+  border-color: color-mix(in srgb, var(--on-surface) 12%, transparent);
+}
+
+/* Icon buttons: a 40 dp circle in a 48 dp target. */
+:where(.mock-frame, .kit) .icon-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  color: var(--on-surface-variant);
+}
+:where(.mock-frame, .kit) .icon-btn::before { inset: 4px; border-radius: 50%; }
+:where(.mock-frame, .kit) .icon-btn--tonal { color: var(--on-secondary-container); }
+:where(.mock-frame, .kit) .icon-btn--tonal::before { background-color: var(--secondary-container); }
+:where(.mock-frame, .kit) .icon-btn--filled { color: var(--on-primary); }
+:where(.mock-frame, .kit) .icon-btn--filled::before { background-color: var(--primary); }
+
+/* Segmented button (single choice): outlined 40 dp pill segments; the chosen one is tonal with a check. */
+:where(.mock-frame, .mock-switches, .kit) .seg { display: inline-flex; align-items: stretch; flex-wrap: nowrap; max-width: 100%; }
+:where(.mock-frame, .mock-switches, .kit) .seg__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 48px;
+  padding: 8px 16px;
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  font-weight: var(--w-medium, 500);
+  color: var(--on-surface);
+  text-align: center;
+}
+:where(.mock-frame, .mock-switches, .kit) .seg__btn::before { inset: 4px 0 4px -1px; border: 1px solid var(--outline); }
+:where(.mock-frame, .mock-switches, .kit) .seg__btn:first-child::before { left: 0; border-radius: var(--r-full, 999px) 0 0 var(--r-full, 999px); }
+:where(.mock-frame, .mock-switches, .kit) .seg__btn:last-child::before { border-radius: 0 var(--r-full, 999px) var(--r-full, 999px) 0; }
+:where(.mock-frame, .mock-switches, .kit) .seg__btn:only-child::before { border-radius: var(--r-full, 999px); }
+:where(.mock-frame, .mock-switches, .kit) .seg__btn:is([aria-pressed="true"], [aria-checked="true"], [aria-selected="true"]) { color: var(--on-secondary-container); }
+:where(.mock-frame, .mock-switches, .kit) .seg__btn:is([aria-pressed="true"], [aria-checked="true"], [aria-selected="true"])::before { background-color: var(--secondary-container); }
+:where(.mock-frame, .mock-switches, .kit) .seg__btn:is([aria-pressed="true"], [aria-checked="true"], [aria-selected="true"])::after,
+:where(.mock-frame, .mock-switches, .kit) .chip--filter:is([aria-pressed="true"], [aria-checked="true"], [aria-selected="true"])::after {
+  content: "";
+  order: -1;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  background-color: currentColor;
+  -webkit-mask: var(--kit-check) center / contain no-repeat;
+  mask: var(--kit-check) center / contain no-repeat;
+}
+
+/* Chips: a 32 dp shape (8 dp corners) in a 48 dp target. */
+:where(.mock-frame, .kit) .chip {
+  --sym-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  font-weight: var(--w-medium, 500);
+  color: var(--on-surface-variant);
+  text-align: left;
+}
+:where(.mock-frame, .kit) .chip::before { inset: 8px 0; border-radius: var(--r-xs, 8px); border: 1px solid var(--outline-variant); }
+:where(.mock-frame, .kit) .chip:is(:has(> .sym:first-child), .chip--filter[aria-pressed="true"], .chip--filter[aria-checked="true"], .chip--filter[aria-selected="true"]) { padding-left: 8px; }
+:where(.mock-frame, .kit) .chip--filter:is([aria-pressed="true"], [aria-checked="true"], [aria-selected="true"]) { color: var(--on-secondary-container); }
+:where(.mock-frame, .kit) .chip--filter:is([aria-pressed="true"], [aria-checked="true"], [aria-selected="true"])::before {
+  border-color: transparent;
+  background-color: var(--secondary-container);
+}
+:where(.mock-frame, .kit) .chip--assist { color: var(--on-surface); }
+:where(.mock-frame, .kit) .chip--assist .sym { color: var(--primary); }
+
+/* Switch: 52 × 32 dp track in a 52 × 48 dp target; the handle grows from 16 to 24 dp when on. */
+:where(.mock-frame, .kit) .switch {
+  display: inline-block;
+  flex: none;
+  width: 52px;
+  height: 48px;
+}
+:where(.mock-frame, .kit) .switch::before {
+  inset: 8px 0;
+  border-radius: var(--r-full, 999px);
+  background-color: var(--surface-container-highest);
+  border: 2px solid var(--outline);
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+:where(.mock-frame, .kit) .switch__thumb {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background-color: var(--outline);
+  transition: left 150ms ease, width 150ms ease, height 150ms ease, margin 150ms ease, background-color 150ms ease;
+}
+:where(.mock-frame, .kit) .switch[aria-checked="true"]::before { background-color: var(--primary); border-color: var(--primary); }
+:where(.mock-frame, .kit) .switch[aria-checked="true"] .switch__thumb {
+  left: 24px;
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  background-color: var(--on-primary);
+}
+:where(.mock-frame, .kit) .switch[aria-checked="true"] .switch__thumb::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background-color: var(--on-primary-container);
+  -webkit-mask: var(--kit-check) center / contain no-repeat;
+  mask: var(--kit-check) center / contain no-repeat;
+}
+:where(.mock-frame, .kit) .switch:hover .switch__thumb { box-shadow: 0 0 0 8px var(--state-hover); }
+:where(.mock-frame, .kit) .switch:is(:disabled, [aria-disabled="true"]) { opacity: .38; cursor: default; }
+
+/* Binding chip: the action a pen control triggers (icon + name), or a dashed "Add action". */
+:where(.mock-frame, .kit) .binding {
+  --sym-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 8px 16px 8px 12px;
+  border-radius: var(--r-s, 12px);
+  background-color: var(--surface-container-high);
+  color: var(--on-surface);
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  font-weight: var(--w-medium, 500);
+  text-align: left;
+}
+:where(.mock-frame, .kit) .binding .sym { color: var(--primary); }
+:where(.mock-frame, .kit) .binding__text { display: flex; flex-direction: column; min-width: 0; }
+:where(.mock-frame, .kit) .binding__meta {
+  font-size: var(--t-label-small-size, 11px);
+  line-height: var(--t-label-small-line, 16px);
+  font-weight: var(--w-regular, 400);
+  color: var(--on-surface-variant);
+}
+:where(.mock-frame, .kit) .binding:hover { background-image: linear-gradient(var(--state-hover), var(--state-hover)); }
+:where(.mock-frame, .kit) .binding--add {
+  background-color: transparent;
+  color: var(--on-surface-variant);
+  box-shadow: none;
+  border: 1.5px dashed var(--outline);
+}
+:where(.mock-frame, .kit) .binding--add .sym { color: var(--on-surface-variant); }
+
+/* ======================================================================================== status */
+
+/* Status pill: icon + words, so a state never depends on colour alone. */
+:where(.mock-frame, .kit) .status-pill {
+  --sym-size: 18px;
+  --pill-tone: var(--outline);
+  --pill-ink: var(--on-surface-variant);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  max-width: 100%;
+  padding: 7px 14px 7px 10px;
+  border-radius: var(--r-full, 999px);
+  background-color: color-mix(in srgb, var(--pill-tone) 16%, var(--surface-container-high));
+  color: var(--on-surface);
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  font-weight: var(--w-medium, 500);
+}
+:where(.mock-frame, .kit) .status-pill .sym { color: var(--pill-ink); }
+:where(.mock-frame, .kit) .status-pill[data-state="good"] { --pill-tone: var(--good); --pill-ink: var(--good-ink); }
+:where(.mock-frame, .kit) .status-pill[data-state="warn"] { --pill-tone: var(--warn); --pill-ink: var(--warn-ink); }
+:where(.mock-frame, .kit) .status-pill[data-state="bad"] { --pill-tone: var(--bad); --pill-ink: var(--bad-ink); }
+:where(.mock-frame, .kit) .status-pill[data-state="unknown"] { --pill-tone: var(--outline); --pill-ink: var(--on-surface-variant); }
+
+/* Progress ring: hairline track, 6 dp arc in primary from 12 o'clock; set --value 0..1. */
+:where(.mock-frame, .kit) .ring {
+  --value: 0;
+  --ring-size: 112px;
+  --ring-stroke: 6px;
+  position: relative;
+  isolation: isolate;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--ring-size);
+  height: var(--ring-size);
+  border-radius: 50%;
+  color: var(--on-surface);
+}
+:where(.mock-frame, .kit) .ring::before,
+:where(.mock-frame, .kit) .ring::after { content: ""; position: absolute; border-radius: 50%; pointer-events: none; }
+:where(.mock-frame, .kit) .ring::after {
+  z-index: -2;
+  inset: calc(var(--ring-stroke) / 2 - 0.5px);
+  box-shadow: inset 0 0 0 1px var(--outline-variant);
+}
+:where(.mock-frame, .kit) .ring::before {
+  z-index: -1;
+  inset: 0;
+  background: conic-gradient(var(--primary) calc(var(--value) * 360deg), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-stroke)), #000 calc(100% - var(--ring-stroke) + 0.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-stroke)), #000 calc(100% - var(--ring-stroke) + 0.5px));
+}
+:where(.mock-frame, .kit) .ring__value {
+  font-size: var(--t-headline-size, 28px);
+  line-height: var(--t-headline-line, 36px);
+  font-weight: var(--w-regular, 400);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ======================================================================================== apps */
+
+/* App icon tile in the HyperOS superellipse; --size in dp (home screen icons are 61 dp). */
+:where(.mock-frame, .kit) .app-icon {
+  --size: 48px;
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  overflow: hidden;
+  background-color: var(--surface-container-highest);
+  -webkit-mask: var(--kit-squircle) center / 100% 100% no-repeat;
+  mask: var(--kit-squircle) center / 100% 100% no-repeat;
+}
+:where(.mock-frame, .kit) .app-icon > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-mask: var(--kit-squircle) center / 100% 100% no-repeat;
+  mask: var(--kit-squircle) center / 100% 100% no-repeat;
+}
+/* A missing icon: the app's initial on a tonal tile, never a blank (plan §6b). */
+:where(.mock-frame, .kit) .app-icon--initial {
+  background-color: var(--tertiary-container);
+  color: var(--on-tertiary-container);
+  font-size: calc(var(--size) * 0.42);
+  line-height: 1;
+  font-weight: var(--w-medium, 500);
+}
+
+/* Overlapping app icons with a ring in the surface colour, and a "+N" tile. */
+:where(.mock-frame, .kit) .app-stack { display: inline-flex; align-items: center; flex: none; --stack-size: 40px; }
+:where(.mock-frame, .kit) .app-stack > :is(.app-icon, .app-stack__more) {
+  --size: var(--stack-size);
+  padding: 2px;
+  background-color: var(--stack-ring, var(--surface-container-low));
+}
+:where(.mock-frame, .kit) .app-stack > * + * { margin-left: calc(var(--stack-size) * -0.3); }
+:where(.mock-frame, .kit) .app-stack__more {
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  -webkit-mask: var(--kit-squircle) center / 100% 100% no-repeat;
+  mask: var(--kit-squircle) center / 100% 100% no-repeat;
+}
+:where(.mock-frame, .kit) .app-stack__more > span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background-color: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font-size: var(--t-label-size, 13px);
+  line-height: 1;
+  font-weight: var(--w-medium, 500);
+  font-variant-numeric: tabular-nums;
+  -webkit-mask: var(--kit-squircle) center / 100% 100% no-repeat;
+  mask: var(--kit-squircle) center / 100% 100% no-repeat;
+}
+
+/* ======================================================================================== overlays */
+
+:where(.mock-frame, .kit) .scrim {
+  position: absolute;
+  z-index: 40;
+  inset: 0;
+  background-color: color-mix(in srgb, var(--scrim) 32%, transparent);
+}
+
+:where(.mock-frame, .kit) .sheet {
+  position: absolute;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--surface-container-low);
+  color: var(--on-surface);
+}
+/* Side sheet (landscape action picker): attached to the trailing edge, 28 dp inner corners. */
+:where(.mock-frame, .kit) .sheet--side {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(400px, 100%);
+  padding: 12px 0 calc(var(--nav-h, 16px) + 12px);
+  border-radius: var(--r-xl, 28px) 0 0 var(--r-xl, 28px);
+}
+/* Bottom sheet (portrait, or panes under 600 dp): at most 640 dp wide, centred, drag handle on top. */
+:where(.mock-frame, .kit) .sheet--bottom {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: min(640px, 100%);
+  max-height: calc(100% - 48px);
+  margin-inline: auto;
+  padding-bottom: calc(var(--nav-h, 16px) + 12px);
+  border-radius: var(--r-xl, 28px) var(--r-xl, 28px) 0 0;
+}
+:where(.mock-frame, .kit) .sheet__handle {
+  flex: none;
+  width: 32px;
+  height: 4px;
+  margin: 16px auto 8px;
+  border-radius: 2px;
+  background-color: var(--on-surface-variant);
+  opacity: .4;
+}
+/* Frosted (panels): blur where the platform allows it; otherwise use a plain .sheet over a .scrim. */
+:where(.mock-frame, .kit) .sheet--frosted {
+  background-color: color-mix(in srgb, var(--surface-container) 80%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.1);
+  backdrop-filter: blur(24px) saturate(1.1);
+}
+:where(.mock-frame, .kit) .sheet__header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 4px 12px 4px 24px;
+}
+:where(.mock-frame, .kit) .sheet__title {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: var(--t-title-size, 20px);
+  line-height: var(--t-title-line, 28px);
+  font-weight: var(--w-medium, 500);
+}
+:where(.mock-frame, .kit) .sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: none;
+  padding: 0 12px;
+}
+:where(.mock-frame, .kit) .sheet__body::-webkit-scrollbar { display: none; }
+:where(.mock-frame, .kit) .sheet__group {
+  padding: 16px 16px 4px;
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  font-weight: var(--w-medium, 500);
+  color: var(--primary);
+}
+
+/* Dialog: 280–560 dp wide, 28 dp corners, centred over a scrim. */
+:where(.mock-frame, .kit) .dialog {
+  position: absolute;
+  z-index: 50;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(560px, calc(100% - 48px));
+  min-width: 280px;
+  max-height: calc(100% - 48px);
+  overflow: auto;
+  padding: 24px;
+  border-radius: var(--r-xl, 28px);
+  background-color: var(--surface-container-high);
+  color: var(--on-surface-variant);
+}
+:where(.mock-frame, .kit) .dialog--inline { position: relative; left: auto; top: auto; transform: none; z-index: auto; }
+:where(.mock-frame, .kit) .dialog__icon { align-self: center; color: var(--secondary); }
+:where(.mock-frame, .kit) .dialog__headline {
+  color: var(--on-surface);
+  font-size: var(--t-headline-size, 28px);
+  line-height: var(--t-headline-line, 36px);
+  font-weight: var(--w-regular, 400);
+}
+:where(.mock-frame, .kit) .dialog:has(> .dialog__icon) .dialog__headline { text-align: center; }
+:where(.mock-frame, .kit) .dialog__body { font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); }
+:where(.mock-frame, .kit) .dialog__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+/* Snackbar: inverse surface, 8 dp corners; its action is a text button in inverse-primary. */
+:where(.mock-frame, .kit) .snackbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  max-width: 672px;
+  padding: 6px 8px 6px 16px;
+  border-radius: var(--r-xs, 8px);
+  background-color: var(--inverse-surface);
+  color: var(--inverse-on-surface);
+  font-size: var(--t-label-size, 13px);
+  line-height: var(--t-label-line, 18px);
+  font-weight: var(--w-regular, 400);
+}
+:where(.mock-frame, .kit) .snackbar__text { flex: 1 1 auto; min-width: 0; padding: 8px 0; }
+:where(.mock-frame, .kit) .snackbar .btn { color: var(--inverse-primary); flex: none; }
+:where(.mock-frame, .kit) .snackbar--floating {
+  position: absolute;
+  z-index: 45;
+  left: 50%;
+  bottom: calc(var(--nav-h, 16px) + 16px);
+  transform: translateX(-50%);
+  width: max-content;
+  min-width: 344px;
+  max-width: min(672px, calc(100% - 48px));
+}
+
+/* ======================================================================================== inputs */
+
+:where(.mock-frame, .kit) .search {
+  --sym-size: 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 4px 0 16px;
+  border-radius: var(--r-full, 999px);
+  background-color: var(--surface-container-high);
+  color: var(--on-surface-variant);
+}
+:where(.mock-frame, .kit) .search__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--on-surface);
+  font-size: var(--t-body-size, 16px);
+  line-height: var(--t-body-line, 24px);
+}
+:where(.mock-frame, .kit) .search__input::placeholder { color: var(--on-surface-variant); opacity: 1; }
+:where(.mock-frame, .kit) .search:has(.search__input:focus-visible),
+:where(.mock-frame, .kit) .search.is-focused { outline: 3px solid var(--secondary); outline-offset: 2px; }
+
+/* ======================================================================================== widget */
+
+/* Glance-like widget: system corner radius, 10 dp padding, a 28 dp header with the group pill (and the
+   trimmed-grid note), then the grid. Fit rule (plan §6b): usable width = widget − 20; usable height =
+   widget − 20 − 28; each cell at least 48 × 48; the icon is 0.78 × the cell's smaller side, at least 32. */
+:where(.mock-frame, .kit) .widget {
+  --w: 412px;
+  --h: 236px;
+  --cols: 6;
+  --rows: 3;
+  display: flex;
+  flex-direction: column;
+  width: var(--w);
+  height: var(--h);
+  padding: 10px;
+  overflow: hidden;
+  border-radius: var(--widget-radius, 28px);
+  background-color: var(--surface-container);
+  color: var(--on-surface);
+}
+:where(.mock-frame, .kit) .widget__header {
+  --sym-size: 16px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  min-width: 0;
+  padding-bottom: 4px;
+}
+:where(.mock-frame, .kit) .widget__pill {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 24px;
+  padding: 0 10px 0 8px;
+  border-radius: var(--r-full, 999px);
+  background-color: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font-size: var(--t-label-small-size, 11px);
+  line-height: 1;
+  font-weight: var(--w-medium, 500);
+  white-space: nowrap;
+}
+:where(.mock-frame, .kit) .widget__pill > span:not(.sym) { overflow: hidden; text-overflow: ellipsis; }
+:where(.mock-frame, .kit) .widget__note {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: var(--t-label-small-size, 11px);
+  line-height: 1;
+  color: var(--on-surface-variant);
+  white-space: nowrap;
+}
+:where(.mock-frame, .kit) .widget__note > span:not(.sym) { overflow: hidden; text-overflow: ellipsis; }
+:where(.mock-frame, .kit) .widget__note .sym { color: var(--warn-ink); }
+:where(.mock-frame, .kit) .widget__grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
+}
+:where(.mock-frame, .kit) .widget__cell {
+  container-type: size;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+:where(.mock-frame, .kit) .widget__cell > :is(.app-icon, .widget__more) { --size: max(32px, 78cqmin); }
+:where(.mock-frame, .kit) .widget__more {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  background-color: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font-size: var(--t-label-size, 13px);
+  line-height: 1;
+  font-weight: var(--w-medium, 500);
+  font-variant-numeric: tabular-nums;
+  -webkit-mask: var(--kit-squircle) center / 100% 100% no-repeat;
+  mask: var(--kit-squircle) center / 100% 100% no-repeat;
+}
+:where(.mock-frame, .kit) .widget__label {
+  max-width: 100%;
+  font-size: var(--t-label-small-size, 11px);
+  line-height: var(--t-label-small-line, 16px);
+  color: var(--on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ======================================================================================== focus */
+
+:where(.mock-frame, .mock-switches, .kit) :focus { outline: none; }
+:where(.mock-frame, .mock-switches, .kit) :is(:focus-visible, .is-focused) {
+  outline: 3px solid var(--secondary);
+  outline-offset: 2px;
+}
+/* Where the visible shape is the ::before layer, the ring follows that shape. */
+:where(.mock-frame, .mock-switches, .kit) :is(.btn, .icon-btn, .seg__btn, .chip, .switch):is(:focus-visible, .is-focused) { outline: none; }
+:where(.mock-frame, .mock-switches, .kit) :is(.btn, .icon-btn, .seg__btn, .chip, .switch):is(:focus-visible, .is-focused)::before {
+  outline: 3px solid var(--secondary);
+  outline-offset: 2px;
+}
+:where(.mock-frame, .kit) :is(.rail__item, .navbar__item):is(:focus-visible, .is-focused) { outline: none; }
+:where(.mock-frame, .kit) .rail__item:is(:focus-visible, .is-focused) .rail__indicator,
+:where(.mock-frame, .kit) .navbar__item:is(:focus-visible, .is-focused) .navbar__indicator {
+  outline: 3px solid var(--secondary);
+  outline-offset: 2px;
+}
+:where(.mock-frame, .kit) .search__input:focus-visible { outline: none; }
+
+/* ======================================================================================== switches bar */
+
+/* The preview's own controls (frame.js fills [data-mock-switches]). Fixed sizes: not part of the mock. */
+.mock-switches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 20px;
+  padding: 4px 16px;
+  border-radius: var(--r-l, 24px);
+  background-color: var(--surface-container);
+  color: var(--on-surface);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+}
+.mock-switches__group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+.mock-switches__label { color: var(--on-surface-variant); font-weight: 500; }
+.mock-switches .seg__btn { font-size: 13px; line-height: 18px; font-weight: 500; padding-inline: 12px; }
+.mock-switches__swatch {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: var(--primary, var(--seed));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface, #000) 25%, transparent);
+}
+/* Phones: colour buttons show only their swatch (the name stays for screen readers), so nothing scrolls sideways. */
+@media (max-width: 600px) {
+  .mock-switches { padding-inline: 8px; }
+  .mock-switches [data-switch="palette"] { padding-inline: 12px; }
+  .mock-switches [data-switch="palette"]::after { display: none; }
+  .mock-switches [data-switch="palette"] .mock-switches__swatch { width: 18px; height: 18px; }
+  .mock-switches [data-switch="palette"] .mock-switches__name {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+}
+
+/* ======================================================================================== motion */
+
+/* A short colour cross-fade when the theme or palette changes (frame.js adds is-switching). */
+.is-switching, .is-switching *, .is-switching *::before, .is-switching *::after {
+  transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease, box-shadow 250ms ease !important;
+}
+[data-motion="reduce"], [data-motion="reduce"] *, [data-motion="reduce"] *::before, [data-motion="reduce"] *::after {
+  transition: none !important;
+  animation: none !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mock-frame *, .mock-frame *::before, .mock-frame *::after,
+  .mock-switches *, .mock-switches *::before, .mock-switches *::after,
+  .kit *, .kit *::before, .kit *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

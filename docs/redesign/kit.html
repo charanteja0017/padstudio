@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en" data-mock-themed>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>PadStudio kit</title>
+<meta name="description" content="Every shared component of the PadStudio 2 design preview, drawn on the tablet's 1164 × 777 dp screen, with switches for theme, colours, text size and Bold text.">
+<!-- Roboto Flex stands in for the tablet's MiSans (BRIEF). Without the network the page falls back to the system font. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap">
+<!-- Gallery-only fallback: Violet dark, copied from tokens.css (generated 11 Oct). It switches on only if tokens.css fails to load. -->
+<style id="kit-fallback-tokens" media="not all">
+:root {
+  --t-display-size: 36px; --t-display-line: 44px; --t-headline-size: 28px; --t-headline-line: 36px;
+  --t-title-size: 20px; --t-title-line: 28px; --t-body-size: 16px; --t-body-line: 24px; --t-label-size: 13px; --t-label-line: 18px;
+  --w-regular: 400; --w-medium: 500; --w-semibold: 600;
+  --r-xs: 8px; --r-s: 12px; --r-m: 16px; --r-l: 24px; --r-xl: 28px; --r-full: 999px;
+  --s-grid-unit: 4px; --s-gutter: 24px; --s-card-padding: 20px; --s-gap-s: 12px; --s-gap-m: 16px; --s-touch-target: 48px;
+}
+[data-palette][data-theme] {
+  color-scheme: dark;
+  --primary: #C8BFFF; --on-primary: #2E009C; --primary-container: #5A3FD6; --on-primary-container: #D7CEFF;
+  --secondary: #C8BFFF; --on-secondary: #302763; --secondary-container: #473E7C; --on-secondary-container: #B7ADF2;
+  --tertiary: #DCB8FF; --on-tertiary: #480380; --tertiary-container: #7640AF; --on-tertiary-container: #E5CAFF;
+  --error: #FFB4AB; --on-error: #690005; --error-container: #93000A; --on-error-container: #FFDAD6;
+  --background: #1C1C1E; --on-background: #E4E2E3; --surface: #1C1C1E; --on-surface: #E4E2E3;
+  --surface-variant: #48464C; --on-surface-variant: #C9C5CD;
+  --surface-container-lowest: #131314; --surface-container-low: #232425; --surface-container: #292A2B;
+  --surface-container-high: #343536; --surface-container-highest: #3F4041; --surface-bright: #464748; --surface-dim: #1C1C1E;
+  --outline: #938F97; --outline-variant: #48464C; --inverse-surface: #E4E2E3; --inverse-on-surface: #303031;
+  --inverse-primary: #5D42D9; --scrim: #000000; --good: #34C759; --warn: #FFB300; --bad: #FFB4AB;
+}
+</style>
+<link rel="stylesheet" href="tokens.css" onerror="document.getElementById('kit-fallback-tokens').media='all';document.documentElement.setAttribute('data-kit-fallback','')">
+<link rel="stylesheet" href="kit.css">
+<style>
+/* Gallery page only (classes g-*). The components themselves are in kit.css. */
+html { background: var(--surface-container-lowest, #131314); }
+.g-page {
+  margin: 0;
+  background: var(--surface-container-lowest, #131314);
+  color: var(--on-surface, #E4E2E3);
+  font-family: "Roboto Flex", Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+}
+.g-wrap { max-width: 1440px; margin: 0 auto; padding: 24px 32px 48px; }
+.g-head h1 { margin: 0; font-size: 28px; line-height: 36px; font-weight: 500; }
+.g-head p { margin: 6px 0 0; max-width: 120ch; color: var(--on-surface-variant, #C9C5CD); }
+.g-head code { font-size: 12px; }
+.g-fallback-note { display: none; margin-top: 8px; color: var(--warn, #FFB300); }
+html[data-kit-fallback] .g-fallback-note { display: block; }
+.g-switches { margin: 16px 0 24px; }
+.g-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 540px), 1fr)); gap: 28px 24px; }
+.g-item { margin: 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+.g-cap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; margin: 0 0 8px; }
+.g-cap h2 { margin: 0; font-size: 16px; line-height: 24px; font-weight: 500; }
+.g-cap p { margin: 0; font-size: 13px; line-height: 18px; color: var(--on-surface-variant, #C9C5CD); }
+.g-fit { min-width: 0; }
+@media (max-width: 600px) { .g-wrap { padding: 16px; } }
+
+/* Inside the gallery's frames: the logo slot placeholder, sample app tiles, and a few layouts. */
+.mock-frame .g-mark { --size: 48px; background: var(--primary-container); color: var(--on-primary-container); }
+.mock-frame .g-sample { color: var(--on-surface-variant); }
+.mock-frame .g-sample .sym { --sym-size: 46%; }
+.mock-frame .g-s1 { background: linear-gradient(150deg, var(--primary-container), var(--tertiary-container)); color: var(--on-primary-container); }
+.mock-frame .g-s2 { background: var(--secondary-container); color: var(--on-secondary-container); }
+.mock-frame .g-s3 { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+.mock-frame .g-s4 { background: var(--surface-container-highest); color: var(--on-surface-variant); }
+.mock-frame .g-cols { display: flex; gap: 16px; align-items: flex-start; }
+.mock-frame .g-cols > * { flex: 1 1 0; min-width: 0; }
+.mock-frame .g-type-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.mock-frame .g-type-row > :first-child { min-width: 0; overflow-wrap: anywhere; }
+.mock-frame .g-type-meta { flex: none; font-size: var(--t-label-size); line-height: var(--t-label-line); color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+.mock-frame .g-scale { width: 100%; border-collapse: collapse; font-size: var(--t-label-size); line-height: var(--t-label-line); font-variant-numeric: tabular-nums; }
+.mock-frame .g-scale th, .mock-frame .g-scale td { padding: 6px 4px; text-align: right; box-shadow: inset 0 -1px 0 var(--outline-variant); }
+.mock-frame .g-scale th:first-child, .mock-frame .g-scale td:first-child { text-align: left; }
+.mock-frame .g-scale th { font-weight: var(--w-medium); color: var(--on-surface-variant); }
+.mock-frame .g-scale .g-now { color: var(--primary); }
+.mock-frame .g-readouts { display: flex; flex-wrap: wrap; gap: 16px 40px; }
+.mock-frame .g-split { gap: 0; padding: 8px 6px 0; justify-content: center; }
+.mock-frame .g-split__pane {
+  position: relative; display: flex; flex-direction: column; width: 560px; flex: none; overflow: hidden;
+  border-radius: 20px 20px 0 0; background: var(--background);
+}
+.mock-frame .g-split__divider { flex: none; width: 16px; display: grid; place-items: center; }
+.mock-frame .g-split__divider::before { content: ""; width: 4px; height: 48px; border-radius: 2px; background: var(--outline); }
+.mock-frame .g-home {
+  position: absolute; inset: var(--status-h) 0 0 0; padding: 28px 40px;
+  display: grid; grid-template-columns: 412px 1fr; grid-template-rows: auto auto; gap: 28px 40px; align-content: start;
+  background: radial-gradient(120% 90% at 20% 0%, var(--surface-container-high), var(--surface-container-lowest) 70%);
+}
+.mock-frame .g-home .g-wcap { margin-top: 8px; font-size: var(--t-label-size); line-height: var(--t-label-line); color: var(--on-surface-variant); }
+</style>
+</head>
+<body class="g-page">
+<div class="g-wrap">
+  <header class="g-head">
+    <h1>PadStudio kit</h1>
+    <p>Every shared component of the PadStudio 2 preview, drawn on your tablet's screen: 1164 × 777 dp in landscape, 1 dp = 1 px before the frame is scaled to fit. The switches change every frame at once. They start at your tablet's settings: dark, Violet, text 125 %, Bold text on.</p>
+    <p>A design preview, not a pixel match: Roboto Flex stands in for MiSans. Text sizes follow Android's own nonlinear font-scale tables (AOSP <code>FontScaleConverterFactory.java</code>, commit 64130047), so large text grows less than small text, and Bold text adds 300 to every weight. Numbers marked "example" are not readings from your tablet; "6 × 4" is the home-screen grid recorded on 11 Oct. App icons are your own, cut from your home-screen screenshots; the widget frames use sample tiles so that no app appears twice.</p>
+    <p class="g-fallback-note">tokens.css didn't load, so every frame shows the built-in Violet dark colours.</p>
+  </header>
+
+  <div class="g-switches" data-mock-switches></div>
+
+  <div class="g-grid">
+
+  <!-- ============================================================ 1. Shell -->
+  <figure class="g-item" id="shell">
+    <figcaption class="g-cap"><h2>Shell</h2><p>Rail with mark slot and status line · card · section label · status pills · buttons · floating snackbar</p></figcaption>
+    <div class="g-fit">
+      <div class="mock-frame" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+        <!-- component: status bar strip (decorative) -->
+        <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+        <div class="mock-app">
+          <!-- component: navigation rail -->
+          <nav class="rail" aria-label="PadStudio">
+            <div class="rail__mark"><span class="app-icon g-mark" role="img" aria-label="PadStudio logo (not picked yet)"><span class="sym sym--32" data-icon="pen"></span></span></div>
+            <button type="button" class="rail__item" aria-current="page"><span class="rail__indicator"><span class="sym" data-icon="today"></span></span><span class="rail__label">Today</span></button>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="pen"></span></span><span class="rail__label">Pen</span></button>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="home"></span></span><span class="rail__label">Home</span></button>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="looks"></span></span><span class="rail__label">Looks</span></button>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="setup"></span></span><span class="rail__label">Setup</span></button>
+            <div class="rail__status" data-state="good"><span class="sym" data-icon="ok"></span><span>Key Mapper is listening</span></div>
+          </nav>
+          <main class="mock-content">
+            <div class="mock-content__inner stack" style="--gap:16px">
+              <!-- component: card, section label, headline, status pills, buttons -->
+              <section class="card stack" style="--gap:12px">
+                <h2 class="section-label">Today</h2>
+                <p class="t-headline">Set up and sent · Key Mapper listening</p>
+                <p class="t-body muted">Focus Pen Pro · Expert setup · 4 controls set</p>
+                <div class="row" style="--gap:8px">
+                  <span class="status-pill" data-state="good"><span class="sym" data-icon="send"></span>Sent to Key Mapper 14:05</span>
+                  <span class="status-pill" data-state="good"><span class="sym" data-icon="ok"></span>Key Mapper is listening</span>
+                  <span class="status-pill" data-state="unknown"><span class="sym" data-icon="help"></span>Pen actions on (as last requested)</span>
+                </div>
+                <div class="row" style="--gap:4px 8px">
+                  <button type="button" class="btn btn--filled"><span class="sym" data-icon="test_pen"></span>Test pen</button>
+                  <button type="button" class="btn btn--tonal"><span class="sym" data-icon="pause"></span>Pause pen</button>
+                  <button type="button" class="btn btn--outlined"><span class="sym" data-icon="send"></span>Send to Key Mapper</button>
+                  <button type="button" class="btn btn--text"><span class="sym" data-icon="library"></span>Open library</button>
+                </div>
+              </section>
+              <div class="g-cols">
+                <!-- component: card with a list -->
+                <section class="card stack" style="--gap:4px">
+                  <h2 class="section-label">Pen per app</h2>
+                  <div class="list">
+                    <div class="list-row"><span class="list-row__leading list-row__leading--tonal"><span class="sym" data-icon="shutter"></span></span><span class="list-row__text"><span class="list-row__headline">Camera</span><span class="list-row__supporting">Squeeze: Shutter · Double tap: Shutter</span></span><span class="list-row__trailing"><span class="app-stack" role="img" aria-label="Camera"><span class="app-icon"><img src="assets/icons/camera.png" alt=""></span></span></span></div>
+                    <div class="list-row"><span class="list-row__leading list-row__leading--tonal"><span class="sym" data-icon="next_page"></span></span><span class="list-row__text"><span class="list-row__headline">Reading &amp; PDF</span><span class="list-row__supporting">Slide down: Next page · Slide up: Previous page</span></span><span class="list-row__trailing"><span class="app-stack" role="img" aria-label="ReadEra"><span class="app-icon"><img src="assets/icons/readera.png" alt=""></span></span></span></div>
+                  </div>
+                </section>
+                <!-- component: big numeric readout -->
+                <section class="card stack" style="--gap:4px; flex: 0 0 280px">
+                  <h2 class="section-label">Home screen</h2>
+                  <p class="readout">6 × 4</p>
+                  <p class="t-label muted" style="font-weight:var(--w-regular)">Recorded 11 Oct · names hidden</p>
+                </section>
+              </div>
+            </div>
+          </main>
+          <!-- component: floating snackbar (success, with the time) -->
+          <div class="snackbar snackbar--floating" role="status" style="left: calc(50% + 48px)"><span class="snackbar__text">Sent to Key Mapper 14:05</span></div>
+        </div>
+        <div class="mock-handle" aria-hidden="true"></div>
+      </div>
+    </div>
+  </figure>
+
+  <!-- ============================================================ 2. Type -->
+  <figure class="g-item" id="type">
+    <figcaption class="g-cap"><h2>Type and numbers</h2><p>The five type roles at the current text size, computed live by fontscale.js · big readouts</p></figcaption>
+    <div class="g-fit">
+      <div class="mock-frame" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+        <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+        <div class="mock-app">
+          <main class="mock-content">
+            <div class="mock-content__inner stack" style="--gap:16px">
+              <div class="g-cols">
+                <section class="card stack" style="--gap:10px">
+                  <h2 class="section-label">Type roles</h2>
+                  <div class="g-type-row"><span class="t-display">Display</span><span class="g-type-meta" data-role-meta="display"></span></div>
+                  <div class="g-type-row"><span class="t-headline">Headline</span><span class="g-type-meta" data-role-meta="headline"></span></div>
+                  <div class="g-type-row"><span class="t-title">Title</span><span class="g-type-meta" data-role-meta="title"></span></div>
+                  <div class="g-type-row"><span class="t-body">Body text, regular</span><span class="g-type-meta" data-role-meta="body"></span></div>
+                  <div class="g-type-row"><span class="t-label">Label, medium</span><span class="g-type-meta" data-role-meta="label"></span></div>
+                  <div class="g-type-row"><span class="t-label-small">Widget label (extra role)</span><span class="g-type-meta" data-role-meta="label-small"></span></div>
+                </section>
+                <section class="card stack" style="--gap:8px; flex: 0 0 400px">
+                  <h2 class="section-label">Text size in px</h2>
+                  <table class="g-scale">
+                    <thead><tr><th>Role (sp)</th><th data-scale-head="1">100 %</th><th data-scale-head="1.25">125 %</th><th data-scale-head="2">200 %</th></tr></thead>
+                    <tbody>
+                      <tr><td>Display 36</td><td data-scale-cell="display@1"></td><td data-scale-cell="display@1.25"></td><td data-scale-cell="display@2"></td></tr>
+                      <tr><td>Headline 28</td><td data-scale-cell="headline@1"></td><td data-scale-cell="headline@1.25"></td><td data-scale-cell="headline@2"></td></tr>
+                      <tr><td>Title 20</td><td data-scale-cell="title@1"></td><td data-scale-cell="title@1.25"></td><td data-scale-cell="title@2"></td></tr>
+                      <tr><td>Body 16</td><td data-scale-cell="body@1"></td><td data-scale-cell="body@1.25"></td><td data-scale-cell="body@2"></td></tr>
+                      <tr><td>Label 13</td><td data-scale-cell="label@1"></td><td data-scale-cell="label@1.25"></td><td data-scale-cell="label@2"></td></tr>
+                    </tbody>
+                  </table>
+                  <p class="t-label muted" style="font-weight:var(--w-regular)">Android scales big text less than small text: at 200 %, 16 sp becomes 28 px (not 32) and 36 sp becomes 43 px (not 72).</p>
+                </section>
+              </div>
+              <!-- component: readouts -->
+              <section class="card stack" style="--gap:8px">
+                <h2 class="section-label">Readouts</h2>
+                <div class="g-readouts">
+                  <div><p class="readout">4</p><p class="t-label muted">Pen controls set</p></div>
+                  <div><p class="readout">6 × 4</p><p class="t-label muted">Home screen grid, recorded 11 Oct</p></div>
+                  <div><p class="readout">12</p><p class="t-label muted">Home groups</p></div>
+                  <div><p class="readout">8 × 4</p><p class="t-label muted">Widget grid (example)</p></div>
+                </div>
+              </section>
+            </div>
+          </main>
+        </div>
+        <div class="mock-handle" aria-hidden="true"></div>
+      </div>
+    </div>
+  </figure>
+
+  <!-- ============================================================ 3. Controls -->
+  <figure class="g-item" id="controls">
+    <figcaption class="g-cap"><h2>Controls</h2><p>Buttons, chips, segments, switches, status pills, ring, bindings, search, focus ring</p></figcaption>
+    <div class="g-fit">
+      <div class="mock-frame" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+        <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+        <div class="mock-app">
+          <main class="mock-content">
+            <div class="mock-content__inner g-cols">
+              <div class="stack" style="--gap:16px">
+                <!-- component: buttons -->
+                <section class="card stack">
+                  <h2 class="section-label">Buttons</h2>
+                  <div class="row" style="--gap:4px 8px">
+                    <button type="button" class="btn btn--filled"><span class="sym" data-icon="send"></span>Send to Key Mapper</button>
+                    <button type="button" class="btn btn--tonal"><span class="sym" data-icon="pause"></span>Pause pen</button>
+                    <button type="button" class="btn btn--outlined"><span class="sym" data-icon="test_pen"></span>Test pen</button>
+                    <button type="button" class="btn btn--text">Open library</button>
+                  </div>
+                  <div class="row" style="--gap:4px 8px">
+                    <button type="button" class="btn btn--filled" disabled>Send</button>
+                    <button type="button" class="btn btn--tonal is-focused">Fix</button>
+                    <button type="button" class="icon-btn" aria-label="More"><span class="sym" data-icon="more"></span></button>
+                    <button type="button" class="icon-btn icon-btn--tonal" aria-label="Edit"><span class="sym" data-icon="edit"></span></button>
+                    <button type="button" class="icon-btn icon-btn--filled" aria-label="Add"><span class="sym" data-icon="add"></span></button>
+                  </div>
+                </section>
+                <!-- component: segmented buttons, chips, switches -->
+                <section class="card stack" style="--gap:8px">
+                  <h2 class="section-label">Choices</h2>
+                  <div class="seg" role="group" aria-label="Pen"><button type="button" class="seg__btn" aria-pressed="false">Two buttons</button><button type="button" class="seg__btn" aria-pressed="true">Focus Pen Pro</button></div>
+                  <div class="row" style="--gap:0 8px">
+                    <button type="button" class="chip chip--filter" aria-pressed="false">Study</button>
+                    <button type="button" class="chip chip--filter" aria-pressed="true">Reading</button>
+                    <button type="button" class="chip chip--filter" aria-pressed="false">Watch &amp; Listen</button>
+                    <button type="button" class="chip chip--filter" aria-pressed="false">Games</button>
+                  </div>
+                  <div class="row" style="--gap:0 8px">
+                    <button type="button" class="chip chip--assist"><span class="sym" data-icon="open"></span>Don't show text</button>
+                    <button type="button" class="chip chip--assist"><span class="sym" data-icon="open"></span>Background colour</button>
+                  </div>
+                  <div class="list">
+                    <div class="list-row"><span class="list-row__text"><span class="list-row__headline">Pen actions</span></span><span class="list-row__trailing"><button type="button" class="switch" role="switch" aria-checked="true" aria-label="Pen actions"><span class="switch__thumb"></span></button></span></div>
+                    <div class="list-row"><span class="list-row__text"><span class="list-row__headline">Match wallpaper colours</span></span><span class="list-row__trailing"><button type="button" class="switch" role="switch" aria-checked="false" aria-label="Match wallpaper colours"><span class="switch__thumb"></span></button></span></div>
+                  </div>
+                </section>
+              </div>
+              <div class="stack" style="--gap:16px">
+                <!-- component: status pills (icon + words) and the progress ring -->
+                <section class="card stack">
+                  <h2 class="section-label">Status</h2>
+                  <div class="row" style="--gap:8px">
+                    <span class="status-pill" data-state="good"><span class="sym" data-icon="ok"></span>Key Mapper is listening</span>
+                    <span class="status-pill" data-state="warn"><span class="sym" data-icon="warning"></span>Changes not sent yet</span>
+                    <span class="status-pill" data-state="bad"><span class="sym" data-icon="error"></span>Key Mapper is off</span>
+                    <span class="status-pill" data-state="unknown"><span class="sym" data-icon="help"></span>Can't be checked from the tablet</span>
+                  </div>
+                  <div class="row" style="--gap:16px">
+                    <div class="ring" style="--value:.875" role="img" aria-label="7 of 8 ready (example)"><span class="ring__value">7</span></div>
+                    <div class="stack grow" style="--gap:2px"><p class="t-title">of 8 ready (example)</p><p class="t-label muted" style="font-weight:var(--w-regular)">Hairline track, 6 dp arc</p></div>
+                  </div>
+                </section>
+                <!-- component: binding chips, search, inline snackbar -->
+                <section class="card stack">
+                  <h2 class="section-label">Pen, search, messages</h2>
+                  <div class="row" style="--gap:8px">
+                    <button type="button" class="binding"><span class="sym" data-icon="shutter"></span><span class="binding__text"><span class="binding__meta">Squeeze</span><span>Shutter</span></span></button>
+                    <button type="button" class="binding"><span class="sym" data-icon="last_app"></span><span class="binding__text"><span class="binding__meta">Double tap</span><span>Last app</span></span></button>
+                    <button type="button" class="binding binding--add"><span class="sym" data-icon="add"></span>Add action</button>
+                  </div>
+                  <label class="search"><span class="sym" data-icon="search"></span><input class="search__input" type="search" placeholder="Search apps" aria-label="Search apps"></label>
+                  <div class="snackbar" role="status"><span class="snackbar__text">Key Mapper is off</span><button type="button" class="btn btn--text">Fix</button></div>
+                </section>
+              </div>
+            </div>
+          </main>
+        </div>
+        <div class="mock-handle" aria-hidden="true"></div>
+      </div>
+    </div>
+  </figure>
+
+  <!-- ============================================================ 4. Lists, apps and details -->
+  <figure class="g-item" id="lists">
+    <figcaption class="g-cap"><h2>Lists, apps and details</h2><p>List rows · app tiles in the HyperOS shape · app stack · disclosure · tonal card</p></figcaption>
+    <div class="g-fit">
+      <div class="mock-frame" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+        <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+        <div class="mock-app">
+          <main class="mock-content">
+            <div class="mock-content__inner g-cols">
+              <!-- component: list rows -->
+              <section class="card stack" style="--gap:4px">
+                <h2 class="section-label">Pen controls</h2>
+                <div class="list list--divided">
+                  <button type="button" class="list-row"><span class="list-row__leading list-row__leading--tonal"><span class="sym" data-icon="squeeze"></span></span><span class="list-row__text"><span class="list-row__headline">Squeeze</span><span class="list-row__supporting">Shutter in Camera · Play/pause in Video &amp; music</span></span><span class="list-row__trailing"><span class="sym" data-icon="chevron"></span></span></button>
+                  <button type="button" class="list-row"><span class="list-row__leading list-row__leading--tonal"><span class="sym" data-icon="slide_up"></span></span><span class="list-row__text"><span class="list-row__headline">Slide up</span><span class="list-row__supporting">Previous page in Reading &amp; PDF</span></span><span class="list-row__trailing"><span class="sym" data-icon="chevron"></span></span></button>
+                  <button type="button" class="list-row"><span class="list-row__leading list-row__leading--tonal"><span class="sym" data-icon="double_tap"></span></span><span class="list-row__text"><span class="list-row__headline">Double tap</span><span class="list-row__supporting">Last app · Shutter in Camera</span></span><span class="list-row__trailing"><span class="sym" data-icon="chevron"></span></span></button>
+                  <div class="list-row"><span class="list-row__leading"><span class="app-icon" style="--size:40px"><img src="assets/icons/key-mapper.png" alt=""></span></span><span class="list-row__text"><span class="list-row__headline">Key Mapper</span><span class="list-row__supporting">Listening · version 4.6.1-foss</span></span><span class="list-row__trailing"><span class="sym" data-icon="open"></span></span></div>
+                  <div class="list-row"><span class="list-row__leading"><span class="sym" data-icon="looks"></span></span><span class="list-row__text"><span class="list-row__headline">Match wallpaper colours</span><span class="list-row__supporting">Off: PadStudio's own colours</span></span><span class="list-row__trailing"><button type="button" class="switch" role="switch" aria-checked="false" aria-label="Match wallpaper colours"><span class="switch__thumb"></span></button></span></div>
+                  <div class="list-row"><span class="list-row__leading"><span class="sym" data-icon="grid"></span></span><span class="list-row__text"><span class="list-row__headline">Home screen grid</span><span class="list-row__supporting">Recorded 11 Oct · names hidden</span></span><span class="list-row__trailing">6 × 4</span></div>
+                </div>
+              </section>
+              <div class="stack" style="--gap:16px">
+                <!-- component: app icon tiles, initial tile, app stack -->
+                <section class="card stack">
+                  <h2 class="section-label">App tiles</h2>
+                  <div class="row" style="--gap:16px; align-items:flex-end">
+                    <span class="app-icon" style="--size:40px"><img src="assets/icons/readera.png" alt="ReadEra"></span>
+                    <span class="app-icon" style="--size:48px"><img src="assets/icons/notes.png" alt="Notes"></span>
+                    <span class="app-icon" style="--size:61px"><img src="assets/icons/key-mapper.png" alt="Key Mapper"></span>
+                    <span class="app-icon app-icon--initial" style="--size:61px" role="img" aria-label="PadStudio (icon not picked yet)">P</span>
+                    <span class="app-stack" role="img" aria-label="Your home screen: Flipkart, Meesho, War Thunder Mobile and 3 more">
+                      <span class="app-icon"><img src="assets/icons/flipkart.png" alt=""></span>
+                      <span class="app-icon"><img src="assets/icons/meesho.png" alt=""></span>
+                      <span class="app-icon"><img src="assets/icons/war-thunder-mobile.png" alt=""></span>
+                      <span class="app-stack__more"><span>+3</span></span>
+                    </span>
+                  </div>
+                  <p class="t-label muted" style="font-weight:var(--w-regular)">40, 48 and 61 dp (your home icons are 61 dp). PadStudio has no icon yet, so it shows its initial. The stack is your home screen: 6 apps.</p>
+                </section>
+                <!-- component: disclosure, closed and open -->
+                <details class="disclosure"><summary><span class="sym" data-icon="code"></span>Developer details</summary><div class="disclosure__body">Profile bfa1ea74a187 · 32,778 bytes</div></details>
+                <details class="disclosure" open><summary><span class="sym" data-icon="code"></span>Developer details</summary><div class="disclosure__body">Profile bfa1ea74a187 · 32,778 bytes · Expert<br>Squeeze: evdev 332/189 · Xiaomi Focus Pen Pro Keyboard<br>Slide up: evdev 153/73 · Slide down: evdev 147/81</div></details>
+                <!-- component: tonal card -->
+                <section class="card card--tonal row" style="--gap:12px">
+                  <span class="sym" data-icon="warning"></span>
+                  <p class="t-body grow">Changes not sent yet</p>
+                  <button type="button" class="btn btn--filled">Send</button>
+                </section>
+              </div>
+            </div>
+          </main>
+        </div>
+        <div class="mock-handle" aria-hidden="true"></div>
+      </div>
+    </div>
+  </figure>
+
+  <!-- ============================================================ 5. Side sheet -->
+  <figure class="g-item" id="sheet">
+    <figcaption class="g-cap"><h2>Side sheet</h2><p>Action picker in landscape: scrim, chosen row, unavailable row with its reason</p></figcaption>
+    <div class="g-fit">
+      <div class="mock-frame" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+        <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+        <div class="mock-app">
+          <nav class="rail" aria-label="PadStudio">
+            <div class="rail__mark"><span class="app-icon g-mark" role="img" aria-label="PadStudio logo (not picked yet)"><span class="sym sym--32" data-icon="pen"></span></span></div>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="today"></span></span><span class="rail__label">Today</span></button>
+            <button type="button" class="rail__item" aria-current="page"><span class="rail__indicator"><span class="sym" data-icon="pen"></span></span><span class="rail__label">Pen</span></button>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="home"></span></span><span class="rail__label">Home</span></button>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="looks"></span></span><span class="rail__label">Looks</span></button>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="setup"></span></span><span class="rail__label">Setup</span></button>
+            <div class="rail__status" data-state="good"><span class="sym" data-icon="ok"></span><span>Key Mapper is listening</span></div>
+          </nav>
+          <main class="mock-content">
+            <div class="mock-content__inner stack" style="--gap:16px">
+              <section class="card stack">
+                <h2 class="section-label">Camera</h2>
+                <div class="row" style="--gap:8px">
+                  <button type="button" class="binding"><span class="sym" data-icon="shutter"></span><span class="binding__text"><span class="binding__meta">Squeeze</span><span>Shutter</span></span></button>
+                  <button type="button" class="binding"><span class="sym" data-icon="shutter"></span><span class="binding__text"><span class="binding__meta">Double tap</span><span>Shutter</span></span></button>
+                  <button type="button" class="binding binding--add"><span class="sym" data-icon="add"></span>Add action</button>
+                </div>
+              </section>
+              <section class="card stack">
+                <h2 class="section-label">Reading &amp; PDF</h2>
+                <div class="row" style="--gap:8px">
+                  <button type="button" class="binding"><span class="sym" data-icon="next_page"></span><span class="binding__text"><span class="binding__meta">Slide down</span><span>Next page</span></span></button>
+                  <button type="button" class="binding"><span class="sym" data-icon="previous_page"></span><span class="binding__text"><span class="binding__meta">Slide up</span><span>Previous page</span></span></button>
+                </div>
+              </section>
+            </div>
+          </main>
+          <!-- component: scrim + side sheet -->
+          <div class="scrim"></div>
+          <aside class="sheet sheet--side" aria-label="Choose an action">
+            <div class="sheet__header"><h2 class="sheet__title">Squeeze in Camera</h2><button type="button" class="icon-btn" aria-label="Close"><span class="sym" data-icon="close"></span></button></div>
+            <div class="sheet__body">
+              <p class="sheet__group">Camera</p>
+              <div class="list" role="listbox" aria-label="Camera">
+                <div class="list-row" role="option" aria-selected="true" tabindex="0"><span class="list-row__leading"><span class="sym" data-icon="shutter"></span></span><span class="list-row__text"><span class="list-row__headline">Shutter</span></span><span class="list-row__trailing"><span class="sym" data-icon="ok"></span></span></div>
+                <div class="list-row" role="option" aria-selected="false" tabindex="-1"><span class="list-row__leading"><span class="sym" data-icon="open_camera"></span></span><span class="list-row__text"><span class="list-row__headline">Open camera</span></span></div>
+                <div class="list-row" role="option" aria-selected="false" aria-disabled="true" tabindex="-1"><span class="list-row__leading"><span class="sym" data-icon="flashlight"></span></span><span class="list-row__text"><span class="list-row__headline">Flashlight</span><span class="list-row__supporting">Unavailable: needs camera permission</span></span></div>
+              </div>
+              <p class="sheet__group">Reading &amp; notes</p>
+              <div class="list" role="listbox" aria-label="Reading and notes">
+                <div class="list-row" role="option" aria-selected="false" tabindex="-1"><span class="list-row__leading"><span class="sym" data-icon="next_page"></span></span><span class="list-row__text"><span class="list-row__headline">Next page</span></span></div>
+                <div class="list-row" role="option" aria-selected="false" tabindex="-1"><span class="list-row__leading"><span class="sym" data-icon="previous_page"></span></span><span class="list-row__text"><span class="list-row__headline">Previous page</span></span></div>
+                <div class="list-row" role="option" aria-selected="false" tabindex="-1"><span class="list-row__leading"><span class="sym" data-icon="undo"></span></span><span class="list-row__text"><span class="list-row__headline">Undo</span></span></div>
+              </div>
+            </div>
+          </aside>
+        </div>
+        <div class="mock-handle" aria-hidden="true"></div>
+      </div>
+    </div>
+  </figure>
+
+  <!-- ============================================================ 6. Narrow window -->
+  <figure class="g-item" id="split">
+    <figcaption class="g-cap"><h2>Narrow window</h2><p>560 dp split-screen window: bottom bar · action picker as a bottom sheet</p></figcaption>
+    <div class="g-fit">
+      <div class="mock-frame" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+        <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+        <div class="mock-app g-split">
+          <div class="g-split__pane">
+              <main class="mock-content" style="padding-bottom:24px">
+                <section class="card stack">
+                  <h2 class="section-label">Reading &amp; PDF</h2>
+                  <div class="row" style="--gap:8px">
+                    <button type="button" class="binding"><span class="sym" data-icon="next_page"></span><span class="binding__text"><span class="binding__meta">Slide down</span><span>Next page</span></span></button>
+                    <button type="button" class="binding"><span class="sym" data-icon="previous_page"></span><span class="binding__text"><span class="binding__meta">Slide up</span><span>Previous page</span></span></button>
+                  </div>
+                </section>
+              </main>
+              <!-- component: bottom navigation bar (windows under 600 dp) -->
+              <nav class="navbar" aria-label="PadStudio">
+                <button type="button" class="navbar__item"><span class="navbar__indicator"><span class="sym" data-icon="today"></span></span><span class="navbar__label">Today</span></button>
+                <button type="button" class="navbar__item" aria-current="page"><span class="navbar__indicator"><span class="sym" data-icon="pen"></span></span><span class="navbar__label">Pen</span></button>
+                <button type="button" class="navbar__item"><span class="navbar__indicator"><span class="sym" data-icon="home"></span></span><span class="navbar__label">Home</span></button>
+                <button type="button" class="navbar__item"><span class="navbar__indicator"><span class="sym" data-icon="looks"></span></span><span class="navbar__label">Looks</span></button>
+                <button type="button" class="navbar__item"><span class="navbar__indicator"><span class="sym" data-icon="setup"></span></span><span class="navbar__label">Setup</span></button>
+              </nav>
+          </div>
+          <div class="g-split__divider" aria-hidden="true"></div>
+          <div class="g-split__pane">
+              <main class="mock-content" style="padding-bottom:24px">
+                <section class="card stack">
+                  <h2 class="section-label">Reading &amp; PDF</h2>
+                  <div class="row" style="--gap:8px">
+                    <button type="button" class="binding"><span class="sym" data-icon="next_page"></span><span class="binding__text"><span class="binding__meta">Slide down</span><span>Next page</span></span></button>
+                    <button type="button" class="binding"><span class="sym" data-icon="previous_page"></span><span class="binding__text"><span class="binding__meta">Slide up</span><span>Previous page</span></span></button>
+                  </div>
+                </section>
+              </main>
+              <nav class="navbar" aria-label="PadStudio">
+                <button type="button" class="navbar__item"><span class="navbar__indicator"><span class="sym" data-icon="today"></span></span><span class="navbar__label">Today</span></button>
+                <button type="button" class="navbar__item" aria-current="page"><span class="navbar__indicator"><span class="sym" data-icon="pen"></span></span><span class="navbar__label">Pen</span></button>
+                <button type="button" class="navbar__item"><span class="navbar__indicator"><span class="sym" data-icon="home"></span></span><span class="navbar__label">Home</span></button>
+                <button type="button" class="navbar__item"><span class="navbar__indicator"><span class="sym" data-icon="looks"></span></span><span class="navbar__label">Looks</span></button>
+                <button type="button" class="navbar__item"><span class="navbar__indicator"><span class="sym" data-icon="setup"></span></span><span class="navbar__label">Setup</span></button>
+              </nav>
+            <!-- component: scrim + bottom sheet -->
+            <div class="scrim"></div>
+            <section class="sheet sheet--bottom" aria-label="Choose an action">
+              <div class="sheet__handle" aria-hidden="true"></div>
+              <div class="sheet__header"><h2 class="sheet__title">Slide up in Reading &amp; PDF</h2></div>
+              <div class="sheet__body">
+                <div class="list" role="listbox" aria-label="Reading and notes">
+                  <div class="list-row" role="option" aria-selected="true" tabindex="0"><span class="list-row__leading"><span class="sym" data-icon="previous_page"></span></span><span class="list-row__text"><span class="list-row__headline">Previous page</span></span><span class="list-row__trailing"><span class="sym" data-icon="ok"></span></span></div>
+                  <div class="list-row" role="option" aria-selected="false" tabindex="-1"><span class="list-row__leading"><span class="sym" data-icon="next_page"></span></span><span class="list-row__text"><span class="list-row__headline">Next page</span></span></div>
+                  <div class="list-row" role="option" aria-selected="false" aria-disabled="true" tabindex="-1"><span class="list-row__leading"><span class="sym" data-icon="volume_up"></span></span><span class="list-row__text"><span class="list-row__headline">Volume up</span><span class="list-row__supporting">Unavailable: needs Do Not Disturb access</span></span></div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <div class="mock-handle" aria-hidden="true"></div>
+      </div>
+    </div>
+  </figure>
+
+  <!-- ============================================================ 7. Dialog -->
+  <figure class="g-item" id="dialog">
+    <figcaption class="g-cap"><h2>Dialog</h2><p>Confirmation before a destructive action (today's reset copy), over a scrim</p></figcaption>
+    <div class="g-fit">
+      <div class="mock-frame" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+        <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+        <div class="mock-app">
+          <nav class="rail" aria-label="PadStudio">
+            <div class="rail__mark"><span class="app-icon g-mark" role="img" aria-label="PadStudio logo (not picked yet)"><span class="sym sym--32" data-icon="pen"></span></span></div>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="today"></span></span><span class="rail__label">Today</span></button>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="pen"></span></span><span class="rail__label">Pen</span></button>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="home"></span></span><span class="rail__label">Home</span></button>
+            <button type="button" class="rail__item"><span class="rail__indicator"><span class="sym" data-icon="looks"></span></span><span class="rail__label">Looks</span></button>
+            <button type="button" class="rail__item" aria-current="page"><span class="rail__indicator"><span class="sym" data-icon="setup"></span></span><span class="rail__label">Setup</span></button>
+            <div class="rail__status" data-state="warn"><span class="sym" data-icon="warning"></span><span>Changes not sent yet</span></div>
+          </nav>
+          <main class="mock-content">
+            <div class="mock-content__inner stack" style="--gap:16px">
+              <section class="card row" style="--gap:20px">
+                <div class="ring" style="--value:.875" role="img" aria-label="7 of 8 ready (example)"><span class="ring__value">7</span></div>
+                <div class="stack grow" style="--gap:4px"><h2 class="section-label">Setup</h2><p class="t-title">of 8 ready (example)</p></div>
+              </section>
+              <section class="card stack" style="--gap:4px">
+                <div class="list">
+                  <div class="list-row"><span class="list-row__leading"><span class="sym" data-icon="wallpaper"></span></span><span class="list-row__text"><span class="list-row__headline">Wallpaper</span><span class="list-row__supporting">Home and lock screen</span></span></div>
+                </div>
+              </section>
+            </div>
+          </main>
+          <!-- component: scrim + dialog -->
+          <div class="scrim"></div>
+          <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="g-dialog-title" aria-describedby="g-dialog-body">
+            <h2 class="dialog__headline" id="g-dialog-title">Reset wallpaper?</h2>
+            <p class="dialog__body" id="g-dialog-body">PadStudio is being removed. Return the home and lock screen to the HyperOS default wallpaper?</p>
+            <div class="dialog__actions"><button type="button" class="btn btn--text">Keep</button><button type="button" class="btn btn--text">Reset</button></div>
+          </div>
+        </div>
+        <div class="mock-handle" aria-hidden="true"></div>
+      </div>
+    </div>
+  </figure>
+
+  <!-- ============================================================ 8. Widget -->
+  <figure class="g-item" id="widget">
+    <figcaption class="g-cap"><h2>Widget</h2><p>Home-screen widgets: header pill, icon grid, "+N" cell, trimmed grid with its note</p></figcaption>
+    <div class="g-fit">
+      <div class="mock-frame" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+        <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+        <div class="g-home">
+          <div>
+            <!-- component: widget. Gallery only: the cells are generated by the script at the end of this page.
+                 One cell is <span class="widget__cell"><span class="app-icon"><img src="assets/icons/APP.png" alt="APP"></span></span>;
+                 the last cell of a full group is <span class="widget__cell"><span class="widget__more">+N</span></span>. -->
+            <div class="widget" style="--w:412px; --h:236px; --cols:6; --rows:3" role="group" aria-label="Games widget">
+              <div class="widget__header"><span class="widget__pill"><span class="sym" data-icon="widgets"></span><span>Games</span></span></div>
+              <div class="widget__grid" data-g-cells="17" data-g-more="3"></div>
+            </div>
+            <p class="g-wcap">412 × 236 dp · Auto, 6 × 3 · 20 apps, so the last cell is "+3"</p>
+          </div>
+          <div>
+            <div class="widget" style="--w:520px; --h:260px; --cols:8; --rows:4" role="group" aria-label="Watch and Listen widget">
+              <div class="widget__header"><span class="widget__pill"><span class="sym" data-icon="widgets"></span><span>Watch &amp; Listen</span></span></div>
+              <div class="widget__grid" data-g-cells="29"></div>
+            </div>
+            <p class="g-wcap">520 × 260 dp · 8 × 4 fits: cells 62.5 × 53 dp</p>
+          </div>
+          <div>
+            <div class="widget" style="--w:340px; --h:220px; --cols:6; --rows:3" role="group" aria-label="Study widget">
+              <div class="widget__header"><span class="widget__pill"><span class="sym" data-icon="widgets"></span><span>Study</span></span><span class="widget__note"><span class="sym" data-icon="fit_warn"></span><span>8 × 4 doesn't fit · showing 6 × 3</span></span></div>
+              <div class="widget__grid" data-g-cells="18"></div>
+            </div>
+            <p class="g-wcap">340 × 220 dp · saved 8 × 4 needs 384 × 192 dp of cells; 320 × 172 is free</p>
+          </div>
+        </div>
+        <div class="mock-handle" aria-hidden="true"></div>
+      </div>
+    </div>
+  </figure>
+
+  </div>
+</div>
+
+<script src="fontscale.js"></script>
+<script src="frame.js"></script>
+<script>
+/* Gallery only: sample widget cells, the live type numbers, and #<section> anchors next to switch values. */
+(function () {
+  "use strict";
+  var GLYPHS = ["play", "open_notes", "keyboard", "widgets", "library", "looks", "send", "test_pen", "grid", "time"];
+  Array.prototype.forEach.call(document.querySelectorAll("[data-g-cells]"), function (grid, gi) {
+    var n = Number(grid.getAttribute("data-g-cells")) || 0;
+    var more = Number(grid.getAttribute("data-g-more")) || 0;
+    for (var i = 0; i < n + (more ? 1 : 0); i++) {
+      var cell = document.createElement("span");
+      cell.className = "widget__cell";
+      if (more && i === n) {
+        var m = document.createElement("span");
+        m.className = "widget__more";
+        m.textContent = "+" + more;
+        cell.appendChild(m);
+      } else {
+        var tile = document.createElement("span");
+        tile.className = "app-icon g-sample g-s" + (((i + gi) % 4) + 1);
+        tile.setAttribute("aria-hidden", "true");
+        var g = document.createElement("span");
+        g.className = "sym";
+        g.setAttribute("data-icon", GLYPHS[(i * 3 + gi) % GLYPHS.length]);
+        tile.appendChild(g);
+        cell.appendChild(tile);
+      }
+      grid.appendChild(cell);
+    }
+  });
+
+  function fmt(v) { return String(Math.round(v * 10) / 10); }
+  function paint() {
+    if (!window.PadFontScale || !window.PadFrame) return;
+    var scale = Number(window.PadFrame.state.fontscale);
+    var now = window.PadFontScale.roleSizes(scale);
+    Array.prototype.forEach.call(document.querySelectorAll("[data-role-meta]"), function (el) {
+      var r = now[el.getAttribute("data-role-meta")];
+      if (r) el.textContent = r.sp + " sp → " + fmt(r.size) + " px, line " + fmt(r.line);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-scale-cell]"), function (el) {
+      var parts = el.getAttribute("data-scale-cell").split("@");
+      var s = Number(parts[1]);
+      el.textContent = fmt(window.PadFontScale.roleSizes(s)[parts[0]].size);
+      el.classList.toggle("g-now", s === scale);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-scale-head]"), function (el) {
+      el.classList.toggle("g-now", Number(el.getAttribute("data-scale-head")) === scale);
+    });
+  }
+  document.addEventListener("padframe:change", paint);
+  paint();
+
+  try {
+    var id = window.location.hash.slice(1).split("&").filter(function (p) { return p && p.indexOf("=") < 0; })[0];
+    var target = id && document.getElementById(decodeURIComponent(id));
+    if (target) target.scrollIntoView();
+  } catch (e) { /* no anchor */ }
+})();
+</script>
+</body>
+</html>

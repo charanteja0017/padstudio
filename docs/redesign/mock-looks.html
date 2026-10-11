@@ -1,0 +1,411 @@
+<!--
+  PadStudio 2 preview: the Looks screen (plan §10 "Looks"), in the layout of the owner's reference
+  design (docs/redesign/reference-today.png): expanded rail, large title, top-right outlined action,
+  24 dp cards on a deep navy-violet canvas. Fragment for index.html; classes m-looks-*.
+
+  Real content and where it comes from
+  - Icon style "Original" is selected and the remembered pack is Lawnicons: config.json in the
+    11 Oct backup (docs/device/backup/2026-10-11) has iconStyle ORIGINAL, iconPack app.lawnchair.lawnicons.
+  - The 12 apps are the owner's, from assets/manifest.json, with their labels. Not shown: the two games
+    and Freenotes (their one-colour icons can't be checked from here) and ByteByteGo (a shortcut).
+  - Icon pack: the glyphs are Lawnicons 2.18.0's own vector drawables (Apache-2.0), converted to SVG from
+    apks/Lawnicons.2.18.0.apk (SHA-256 e830b37e…3bfe, as in ADR-000) with aapt2. PadStudio's rule
+    (core AppFilter.drawableFor: exact component, else the package's first entry) finds an entry for 11
+    of the 12; com.charan.wifibar has none, so WiFiBar keeps its original icon (IconRepository: pack ?: original).
+    Lawnicons draws its glyph at 54 % of the icon (foreground inset 32 % of the 108 dp layer) on its own
+    colours, which come from the system's wallpaper palette (system_accent2_800 / accent1_200 at night,
+    accent1_100 / accent1_700 by day). On this tablet that palette is grey (plan §3.1), drawn here with
+    the neutral surface tokens of the same tones.
+  - Themed (IconRepository.badge): the glyph at 66 % (monochrome inset 28 %, drawn at 150 %) on a
+    rounded square with 30 % corners, in the palette's tones 40 / 90 at night and 90 / 30 by day
+    (ui/Theme.kt themedIconColors), here --inverse-primary / --primary-fixed and --primary-fixed /
+    --on-primary-fixed-variant. WiFiBar's glyph is its own monochrome layer (WIFI widget source,
+    mipmap-xxxhdpi/ic_launcher_monochrome.png). For the other 11 apps the Lawnicons glyph stands in:
+    an app's own monochrome layer, when it ships one, comes first and can't be read from here.
+  - The wallpaper follows looks/WallpaperGenerator.kt: a 135° gradient from HSV(h − 14°, .45, .14) to
+    HSV(h + 20°, .55, .26) and four light pools HSV(h ± 30°, .6, .5) at 35 % alpha, where h is the hue
+    of the palette's primary; dusk is its dark variant. Grain is left out (invisible at this size).
+    The four Shuffle seeds are hand-placed pools, not Kotlin's Random.
+  - Status copy follows plan §7 ("Key Mapper is listening").
+-->
+<section class="mock" data-screen="looks">
+<style>
+/* ---- Looks (m-looks-*). Tokens from tokens.css, components from kit.css; this adds the reference's
+   expanded rail, page header, card grid and the icon-style previews. */
+.mock-frame.m-looks-frame {
+  --m-looks-bg: color-mix(in oklab, var(--surface-container-lowest) 95%, var(--primary-container));
+  --m-looks-card: color-mix(in oklab, var(--surface-container-low) 95%, var(--primary-container));
+  --m-looks-well: var(--surface-container-lowest);
+  background: var(--m-looks-bg);
+}
+.mock-frame.m-looks-frame[data-theme="light"] {
+  --m-looks-bg: color-mix(in oklab, var(--background) 95%, var(--primary-container));
+  --m-looks-card: var(--surface-container-low);
+  --m-looks-well: var(--surface-container);
+}
+
+/* Expanded navigation rail (reference): mark + wordmark, labelled items, status and Settings at the foot. */
+.m-looks-rail {
+  flex: none; width: 216px; display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 12px calc(var(--nav-h, 16px) + 8px);
+  color: var(--on-surface-variant); overflow: hidden;
+}
+.m-looks-brand { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; margin-bottom: 12px; color: var(--on-surface); }
+.m-looks-brand .sym { --sym-size: 28px; }
+/* The wordmark is a logo, drawn at a fixed size like an image; it doesn't follow the text size. */
+.m-looks-brand__word { font-size: 22px; line-height: 28px; font-weight: var(--w-medium, 500); white-space: nowrap; }
+.m-looks-nav {
+  display: flex; align-items: center; gap: 16px; width: 100%; min-height: 48px; padding: 10px 16px;
+  border-radius: var(--r-s, 12px); color: var(--on-surface-variant);
+  font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); font-weight: var(--w-medium, 500);
+}
+.m-looks-nav:hover { background-color: var(--state-hover); }
+.m-looks-nav[aria-current="page"] { background-color: var(--secondary-container); color: var(--on-secondary-container); }
+.m-looks-rail__foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
+.m-looks-rail__status {
+  display: flex; align-items: flex-start; gap: 12px; padding: 4px 16px 8px;
+  font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); font-weight: var(--w-medium, 500);
+}
+.m-looks-rail__status .sym { --sym-size: 20px; color: var(--good-ink); }
+
+/* Page: title, subtitle, top-right action; then two columns of cards. */
+.mock-content.m-looks-content { padding: 16px 24px calc(var(--nav-h, 16px) + 12px); }
+.m-looks-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+.m-looks-head__text { flex: 1 1 0; min-width: 0; }
+.m-looks-title { font-size: var(--t-display-size, 36px); line-height: var(--t-display-line, 44px); font-weight: var(--w-medium, 500); color: var(--on-surface); }
+.m-looks-sub { font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); color: var(--on-surface-variant); }
+.m-looks-head > .btn { flex: none; margin-top: 2px; }
+.m-looks-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.m-looks-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.m-looks-col > :last-child { flex: 1 1 auto; }
+.card.m-looks-card { background: var(--m-looks-card); border-radius: var(--r-l, 24px); padding: 20px; }
+.m-looks-h { font-size: var(--t-title-size, 20px); line-height: var(--t-title-line, 28px); font-weight: var(--w-medium, 500); color: var(--on-surface); }
+.m-looks-hsub { margin-top: 2px; font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); color: var(--on-surface-variant); }
+
+/* Icon style: three previews, a radio group. */
+.m-looks-styles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.m-looks-style {
+  position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 48px;
+  padding: 12px; border-radius: var(--r-m, 16px); background: var(--m-looks-well); color: var(--on-surface);
+}
+.m-looks-style:hover { background-image: linear-gradient(var(--state-hover), var(--state-hover)); }
+.m-looks-style[aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--primary); }
+.m-looks-style__name { padding-right: 32px; font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); font-weight: var(--w-medium, 500); overflow-wrap: anywhere; }
+.m-looks-style__cap { font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); color: var(--on-surface-variant); }
+.m-looks-style__mark { position: absolute; top: 14px; right: 12px; width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--outline); }
+.m-looks-style[aria-checked="true"] .m-looks-style__mark { background-color: var(--primary); box-shadow: none; }
+.m-looks-style[aria-checked="true"] .m-looks-style__mark::after {
+  content: ""; position: absolute; inset: 3px; background-color: var(--on-primary);
+  -webkit-mask: var(--kit-check) center / contain no-repeat; mask: var(--kit-check) center / contain no-repeat;
+}
+.m-looks-icons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: auto; padding-top: 10px; }
+.m-looks-ic { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 1; }
+.m-looks-ic.app-icon { width: 100%; height: auto; }
+.m-looks-ic > svg { display: block; }
+.m-looks-ic--themed { overflow: hidden; border-radius: 30%; background-color: var(--inverse-primary); color: var(--primary-fixed); }
+.m-looks-frame[data-theme="light"] .m-looks-ic--themed { background-color: var(--primary-fixed); color: var(--on-primary-fixed-variant); }
+.m-looks-ic--themed > svg { width: 66%; height: 66%; }
+.m-looks-mono {
+  width: 100%; height: 100%; background-color: currentColor;
+  -webkit-mask: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAQAAABIkb+zAAAFdElEQVR42u2bX4hUVRzHP+ecydX1X/4jTYLIrVQQlgLFFI19MQoziughIqKSooceejApeorKh3oRsj/QQw8VlSnpPkRhpWmhKQlCu6AVRFiobK6wus4959vDXLeZncW5c++dnRHubx4WZpi5v8/5/c75fc/vnDXi2jZLAVAAFAAFQAFQABQABUABUAC0y0od5IvBYBCiCY1vOmY/4PBVw+qTQnQGgEGAYQmLGOIklwBLSPRdtf9lhNCzOqaLkso6pdc0R8gm+XYnuG80Q3tVsRD/HdDyZAjtB7BCn0q6LK8gKchrVNJJzZGNo9PBAE7oXkmXVWujkl6PP7/qqxPqwJMIU7e8i0eZhq/7pKMKmcEzhRWYOj8shsX0QGcDAHQxa0I3heX6awFghDMT1F5hKHMaGhW09gKIEp5DmLqiJQKD/B6XuA4AMBgsFjsuJQKwg1CHEGHZjsc1lBQtL1NOpXEFydS844RelhRUlleQV6SypH65dhcyV7WKd+tGLdcK3aLZYwXMjiGiV1SuqQOfaIZM4zKmlok5R0DALFbTx53cxly6sJS5wAAH2MnRKgVqCfTyNHexiH85zof0j0m8Nog5F4/cGr2jPzWxBX2u26sqrYujMVNTxhQS7RBzJnblAX0Xu+pVViSvMPaKVFaQNKSHqhBsFYxL/sT8lQ1ar33xKEdj6rLeKjn/YI3mNMlHPn+Aytgv0HvxuEdqZJGChtUjk0z5txagInw36o945JNZWdLupFuXVgI4Iac3qlIjmQV5BfVmQbC5dDY88+lnC4HQVJ/DEDA8kkURlHJwP2IZO1lGlOLXDLAeU9WRmOTGVomIVXyb0v3K83uYOcGWZlIAHBFr+Iob8BliOZsFjXV/KwAcnlX0MxuPyxTF7nb0Rh2e5ezJ7D6E9DMgPYDFs5AvWZDZfbjM+ckGMBim8BlLiDK6L+As5xpvHfNdRh0Rb7M25cozHuAUlxJK55wi4Ih4gs05uF8RAj9D+jjaVJN3KdsJmXP/Sv9nX/oEah7AAI4PmJ6+9Izr/fzNoXhzPykAFs8LrM48eSvmgb0MJ+g95HTAYRE9/EJXXXskbQUwrOVQzelMSyNgEG/Snb7wjxt/y0F+xE5WIXN47mFjDqXrf9uWdS4lT6HKGeJh7sgJwOP4gXUTtBVbFAFL4OHc3K+sQVtyWMuaOMkq6XgT+93Gu+H3k5zA5NWZc3g2sTun8Q8Y/qKXoSwVoLkUEvA8yil1AobNnMua/8lTyAr1xt21fNJnm1Apj46ITRynx7GNj9wSWESJr9mapXg1u4waRDcD3ETI3ATwOAZZm1P6JJwDFliXm/v/sImziW9C5AJggPtR5kd6HOfZyGBe6ZMMwBBxHX0TnOU27/4w93GEUn7uJwOApdyaUcBFOM6wgYOUiGAyASywEkuUASCixEn6+Clv95MWspWZCo2nxPes40T+7icB8MCy1AnkMTjeZQOncfm73xjAIKZxcyoAEeEY5imeYTTbtiV9X8gg5jEvBYDHUWI/z3ECR8hr3U8zB+YytWm1GXBc4EX6ONHMHcRWRACmY5vYeASEA77gJQYA24rMb6616JqashY4zKvsic/rA7QTQMCleC6YBklTwgHHeIuPYp3roROuHp9jlK6rbCdCfJEGvmEHu9C4e7gttUZy2iC6GGRxnBwmjsqVG85XBuA3dvExR+suEbc9AsIxyn4eq0opU7WoBgbYx14OMAIYLH4y3U+SQgK2UuZuFjENAwQuMsQpBjnMEX6lHP9SyHZY1OrG1lQWMp+peEY4yxAjNXc8A226RZ4MwEwgBAwuXvXbegG+udZi7STuCDPFP0QXAAVAAVAAFAAFQAFQABQABUBa+w/pJoH/zvgtggAAAABJRU5ErkJggg==") center / 100% 100% no-repeat;
+  mask: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAQAAABIkb+zAAAFdElEQVR42u2bX4hUVRzHP+ecydX1X/4jTYLIrVQQlgLFFI19MQoziughIqKSooceejApeorKh3oRsj/QQw8VlSnpPkRhpWmhKQlCu6AVRFiobK6wus4959vDXLeZncW5c++dnRHubx4WZpi5v8/5/c75fc/vnDXi2jZLAVAAFAAFQAFQABQABUABUAC0y0od5IvBYBCiCY1vOmY/4PBVw+qTQnQGgEGAYQmLGOIklwBLSPRdtf9lhNCzOqaLkso6pdc0R8gm+XYnuG80Q3tVsRD/HdDyZAjtB7BCn0q6LK8gKchrVNJJzZGNo9PBAE7oXkmXVWujkl6PP7/qqxPqwJMIU7e8i0eZhq/7pKMKmcEzhRWYOj8shsX0QGcDAHQxa0I3heX6awFghDMT1F5hKHMaGhW09gKIEp5DmLqiJQKD/B6XuA4AMBgsFjsuJQKwg1CHEGHZjsc1lBQtL1NOpXEFydS844RelhRUlleQV6SypH65dhcyV7WKd+tGLdcK3aLZYwXMjiGiV1SuqQOfaIZM4zKmlok5R0DALFbTx53cxly6sJS5wAAH2MnRKgVqCfTyNHexiH85zof0j0m8Nog5F4/cGr2jPzWxBX2u26sqrYujMVNTxhQS7RBzJnblAX0Xu+pVViSvMPaKVFaQNKSHqhBsFYxL/sT8lQ1ar33xKEdj6rLeKjn/YI3mNMlHPn+Aytgv0HvxuEdqZJGChtUjk0z5txagInw36o945JNZWdLupFuXVgI4Iac3qlIjmQV5BfVmQbC5dDY88+lnC4HQVJ/DEDA8kkURlHJwP2IZO1lGlOLXDLAeU9WRmOTGVomIVXyb0v3K83uYOcGWZlIAHBFr+Iob8BliOZsFjXV/KwAcnlX0MxuPyxTF7nb0Rh2e5ezJ7D6E9DMgPYDFs5AvWZDZfbjM+ckGMBim8BlLiDK6L+As5xpvHfNdRh0Rb7M25cozHuAUlxJK55wi4Ih4gs05uF8RAj9D+jjaVJN3KdsJmXP/Sv9nX/oEah7AAI4PmJ6+9Izr/fzNoXhzPykAFs8LrM48eSvmgb0MJ+g95HTAYRE9/EJXXXskbQUwrOVQzelMSyNgEG/Snb7wjxt/y0F+xE5WIXN47mFjDqXrf9uWdS4lT6HKGeJh7sgJwOP4gXUTtBVbFAFL4OHc3K+sQVtyWMuaOMkq6XgT+93Gu+H3k5zA5NWZc3g2sTun8Q8Y/qKXoSwVoLkUEvA8yil1AobNnMua/8lTyAr1xt21fNJnm1Apj46ITRynx7GNj9wSWESJr9mapXg1u4waRDcD3ETI3ATwOAZZm1P6JJwDFliXm/v/sImziW9C5AJggPtR5kd6HOfZyGBe6ZMMwBBxHX0TnOU27/4w93GEUn7uJwOApdyaUcBFOM6wgYOUiGAyASywEkuUASCixEn6+Clv95MWspWZCo2nxPes40T+7icB8MCy1AnkMTjeZQOncfm73xjAIKZxcyoAEeEY5imeYTTbtiV9X8gg5jEvBYDHUWI/z3ECR8hr3U8zB+YytWm1GXBc4EX6ONHMHcRWRACmY5vYeASEA77gJQYA24rMb6616JqashY4zKvsic/rA7QTQMCleC6YBklTwgHHeIuPYp3roROuHp9jlK6rbCdCfJEGvmEHu9C4e7gttUZy2iC6GGRxnBwmjsqVG85XBuA3dvExR+suEbc9AsIxyn4eq0opU7WoBgbYx14OMAIYLH4y3U+SQgK2UuZuFjENAwQuMsQpBjnMEX6lHP9SyHZY1OrG1lQWMp+peEY4yxAjNXc8A226RZ4MwEwgBAwuXvXbegG+udZi7STuCDPFP0QXAAVAAVAAFAAFQAFQABQABUBa+w/pJoH/zvgtggAAAABJRU5ErkJggg==") center / 100% 100% no-repeat;
+}
+.m-looks-ic--pack {
+  background-color: var(--surface-container-high); color: var(--on-surface-variant);
+  -webkit-mask: var(--kit-squircle) center / 100% 100% no-repeat; mask: var(--kit-squircle) center / 100% 100% no-repeat;
+}
+.m-looks-frame[data-theme="light"] .m-looks-ic--pack { background-color: var(--surface-container-highest); }
+.m-looks-ic--pack > svg { width: 54%; height: 54%; }
+.m-looks-pick { margin-top: 12px; }
+.m-looks-dev { margin-top: 8px; }
+.m-looks-dev .disclosure__body p + p { margin-top: 6px; }
+
+/* Match wallpaper colours. */
+.card.m-looks-match { display: flex; align-items: center; gap: 16px; padding: 16px 20px; }
+.m-looks-match__text { flex: 1 1 0; min-width: 0; }
+.m-looks-match__title { font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); font-weight: var(--w-medium, 500); color: var(--on-surface); }
+.m-looks-match__why { font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); color: var(--on-surface-variant); }
+.m-looks-frame:has(.m-looks-match [role="switch"][aria-checked="true"]) .m-looks-swatches { opacity: .38; }
+
+/* Colours and wallpaper: the tablet preview, palette swatches, Shuffle, Apply to Home / Lock / Both. */
+.card.m-looks-wall { display: flex; flex-direction: column; gap: 12px; }
+.m-looks-tablet {
+  position: relative; flex: none; aspect-ratio: 1164 / 777; border-radius: 18px;
+  background-color: color-mix(in srgb, var(--scrim) 90%, var(--on-surface));
+  box-shadow: 0 0 0 1px var(--outline-variant);
+}
+.m-looks-wp {
+  --m-looks-x1: 80%; --m-looks-y1: 18%; --m-looks-r1: 150px; --m-looks-h1: -20;
+  --m-looks-x2: 14%; --m-looks-y2: 92%; --m-looks-r2: 125px; --m-looks-h2: 26;
+  --m-looks-x3: 52%; --m-looks-y3: 58%; --m-looks-r3: 95px;  --m-looks-h3: 6;
+  --m-looks-x4: 96%; --m-looks-y4: 100%; --m-looks-r4: 85px; --m-looks-h4: -28;
+  position: absolute; inset: 5px; overflow: hidden; border-radius: 13px;
+  background: linear-gradient(135deg, var(--surface-container-lowest), var(--primary-container));
+  background:
+    radial-gradient(circle var(--m-looks-r1) at var(--m-looks-x1) var(--m-looks-y1), hwb(from var(--primary) calc(h + var(--m-looks-h1)) 20% 50% / .353), transparent),
+    radial-gradient(circle var(--m-looks-r2) at var(--m-looks-x2) var(--m-looks-y2), hwb(from var(--primary) calc(h + var(--m-looks-h2)) 20% 50% / .353), transparent),
+    radial-gradient(circle var(--m-looks-r3) at var(--m-looks-x3) var(--m-looks-y3), hwb(from var(--primary) calc(h + var(--m-looks-h3)) 20% 50% / .353), transparent),
+    radial-gradient(circle var(--m-looks-r4) at var(--m-looks-x4) var(--m-looks-y4), hwb(from var(--primary) calc(h + var(--m-looks-h4)) 20% 50% / .353), transparent),
+    linear-gradient(135deg, hwb(from var(--primary) calc(h - 14) 7.7% 86%), hwb(from var(--primary) calc(h + 20) 11.7% 74%));
+}
+.m-looks-wp[data-seed="2"] { --m-looks-x1: 22%; --m-looks-y1: 20%; --m-looks-h1: 18; --m-looks-x2: 86%; --m-looks-y2: 70%; --m-looks-h2: -24; --m-looks-x3: 48%; --m-looks-y3: 100%; --m-looks-x4: 70%; --m-looks-y4: 4%; }
+.m-looks-wp[data-seed="3"] { --m-looks-x1: 50%; --m-looks-y1: 40%; --m-looks-r1: 170px; --m-looks-h1: 4; --m-looks-x2: 0%; --m-looks-y2: 10%; --m-looks-x3: 92%; --m-looks-y3: 86%; --m-looks-h3: -30; --m-looks-x4: 30%; --m-looks-y4: 96%; --m-looks-h4: 22; }
+.m-looks-wp[data-seed="4"] { --m-looks-x1: 66%; --m-looks-y1: 64%; --m-looks-h1: 28; --m-looks-x2: 30%; --m-looks-y2: 26%; --m-looks-h2: -12; --m-looks-x3: 100%; --m-looks-y3: 12%; --m-looks-x4: 6%; --m-looks-y4: 70%; }
+.m-looks-dock {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 6px; padding: 5px 7px;
+  border-radius: 10px; background-color: color-mix(in srgb, var(--primary-fixed) 22%, transparent);
+}
+.m-looks-dock .app-icon { --size: 16px; }
+/* Shuffle sits on the preview, top right, like the reference's Pause on its hero; tonal, so its
+   contrast doesn't depend on the wallpaper under it. */
+.m-looks-stage { position: relative; flex: none; }
+.m-looks-shuffle { position: absolute; z-index: 1; top: 9px; right: 13px; }
+.m-looks-wall__name { min-width: 0; }
+.m-looks-wall__title { font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); font-weight: var(--w-medium, 500); color: var(--on-surface); }
+.m-looks-wall__meta, .m-looks-wall__label, .m-looks-note { font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); color: var(--on-surface-variant); }
+.m-looks-wall__label { margin-bottom: -8px; }
+.m-looks-swatches { display: flex; justify-content: space-between; gap: 4px; }
+.m-looks-sw { position: relative; flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; }
+.m-looks-sw:hover { background-color: var(--state-hover); }
+.m-looks-sw__dot { position: relative; width: 36px; height: 36px; border-radius: 50%; background-color: var(--primary); }
+.m-looks-frame[data-theme="dark"] .m-looks-sw__dot[data-theme="light"],
+.m-looks-frame[data-theme="light"] .m-looks-sw__dot[data-theme="dark"] { display: none; }
+.mock-frame[data-palette="Violet"] .m-looks-sw[data-m-looks-palette="Violet"] .m-looks-sw__dot,
+.mock-frame[data-palette="Ocean"] .m-looks-sw[data-m-looks-palette="Ocean"] .m-looks-sw__dot,
+.mock-frame[data-palette="Rose"] .m-looks-sw[data-m-looks-palette="Rose"] .m-looks-sw__dot,
+.mock-frame[data-palette="Emerald"] .m-looks-sw[data-m-looks-palette="Emerald"] .m-looks-sw__dot,
+.mock-frame[data-palette="Graphite"] .m-looks-sw[data-m-looks-palette="Graphite"] .m-looks-sw__dot {
+  box-shadow: 0 0 0 3px var(--m-looks-card), 0 0 0 5px var(--on-surface);
+}
+.mock-frame[data-palette="Violet"] .m-looks-sw[data-m-looks-palette="Violet"] .m-looks-sw__dot::after,
+.mock-frame[data-palette="Ocean"] .m-looks-sw[data-m-looks-palette="Ocean"] .m-looks-sw__dot::after,
+.mock-frame[data-palette="Rose"] .m-looks-sw[data-m-looks-palette="Rose"] .m-looks-sw__dot::after,
+.mock-frame[data-palette="Emerald"] .m-looks-sw[data-m-looks-palette="Emerald"] .m-looks-sw__dot::after,
+.mock-frame[data-palette="Graphite"] .m-looks-sw[data-m-looks-palette="Graphite"] .m-looks-sw__dot::after {
+  content: ""; position: absolute; inset: 8px; background-color: var(--on-primary);
+  -webkit-mask: var(--kit-check) center / contain no-repeat; mask: var(--kit-check) center / contain no-repeat;
+}
+.mock-frame[data-palette="Violet"] .m-looks-pal::before { content: "Violet"; }
+.mock-frame[data-palette="Ocean"] .m-looks-pal::before { content: "Ocean"; }
+.mock-frame[data-palette="Rose"] .m-looks-pal::before { content: "Rose"; }
+.mock-frame[data-palette="Emerald"] .m-looks-pal::before { content: "Emerald"; }
+.mock-frame[data-palette="Graphite"] .m-looks-pal::before { content: "Graphite"; }
+.seg.m-looks-seg { display: flex; width: 100%; }
+.m-looks-seg > .seg__btn { flex: 1 1 0; }
+.m-looks-apply { display: flex; align-items: center; gap: 12px; margin-top: auto; }
+.m-looks-note { flex: 1 1 0; min-width: 0; }
+</style>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <!-- Lawnicons 2.18.0 (Apache-2.0) foreground glyphs, 192 × 192 viewport, stroked in the pack's tint (currentColor). -->
+      <symbol id="m-looks-g-flipkart" viewBox="0 0 192 192"><path d="M136,73c-30,0 -28,25 -42,92m-20,-52h54M64,93h16m-28,40h28" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M31,25L161,25A6,6 0,0 1,167 31L167,161A6,6 0,0 1,161 167L31,167A6,6 0,0 1,25 161L25,31A6,6 0,0 1,31 25z" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="m-looks-g-meesho" viewBox="0 0 192 192"><path d="M169,82.5a36.5,36.5 0,0 0,-73 0m-73,0a36.5,36.5 0,1 1,73 0M23,144V83m73,61V83m73,61V83" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round"/></symbol>
+      <symbol id="m-looks-g-key_mapper" viewBox="0 0 192 192"><path d="M46,110V92a6,6 0,0 1,6 -6h14a6,6 0,0 1,6 6v18m-26,0H28a6,6 0,0 0,-6 6v14a6,6 0,0 0,6 6h18m0,-26 l26,26m0,-26h18a6,6 0,0 1,6 6v14a6,6 0,0 1,-6 6H72m0,-26 l-26,26m0,0v18a6,6 0,0 0,6 6h14a6,6 0,0 0,6 -6v-18m92,-102h-62a6,6 0,0 0,-6 6v40a6,6 0,0 0,6 6h62a6,6 0,0 0,6 -6V40a6,6 0,0 0,-6 -6" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M121,66h24" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="m-looks-g-read_era" viewBox="0 0 192 192"><path d="M22,44a6,6 0,0 1,6 -6h50.91a6,6 0,0 1,2.11 0.38l12.87,4.83a6,6 0,0 0,4.21 0l12.87,-4.83a6,6 0,0 1,2.11 -0.38L164,38a6,6 0,0 1,6 6v104a6,6 0,0 1,-6 6h-50.91c-0.72,0 -1.43,0.13 -2.11,0.38l-12.87,4.83a6,6 0,0 1,-4.21 0l-12.87,-4.83a6,6 0,0 0,-2.11 -0.38L28,154a6,6 0,0 1,-6 -6zM96,45v114m37,-131v136" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M44,62h30M44,98h30M44,80h30" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="m-looks-g-generic_notes" viewBox="0 0 192 192"><path d="M22,42h72m40,0h36M22,78h57m41,0h50M22,114h41m41,0h66M22,150h34m34,0h32m-67,-10.41L61.17,171l26.43,-17.82 46.12,-112.07a6,6 0,0 0,-3.24 -7.82l-21.53,-8.98a6,6 0,0 0,-7.86 3.25z" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="m-looks-g-gmail" viewBox="0 0 192 192"><path d="M170,53v89c0,6.63 -5.37,12 -12,12h-12a6,6 0,0 1,-6 -6V86.69M22,53v89c0,6.63 5.37,12 12,12h12a6,6 0,0 0,6 -6V86.69m0,0 l39.99,36a6,6 0,0 0,8.03 0L140,86.69l25.04,-22.54a15,15 0,0 0,-15.04 -25.29,15 15,0 0,0 -5.03,2.99l-44.95,40.47a6,6 0,0 1,-8.03 0L47.04,41.85a15,15 0,0 0,-20.07 22.29L52,86.69Z" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="m-looks-g-whatsapp" viewBox="0 0 192 192"><path d="M79.48,112.4c-13.79,-13.37 -23.64,-37.14 -17.73,-49.02C67,55 82.93,55.46 87.36,60.41c4.43,4.95 6.4,16.83 5.91,20.8 -0.49,3.96 -3.94,7.92 -3.94,7.92 3.94,6.93 7.88,10.89 13.9,14.88 0,0 3.56,-4.34 7.51,-4.7 3.95,-0.36 15.75,0.52 20.48,6.63s3.38,22.32 -3.8,25.64c-12.01,5.55 -34.16,-5.79 -47.95,-19.16Z" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M96,170c40.87,0 74,-33.13 74,-74s-33.13,-74 -74,-74 -74,33.13 -74,74c0,13.35 3.54,25.88 9.73,36.7L25,167l33.35,-7.28C69.38,166.25 82.25,170 96,170" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="m-looks-g-brave" viewBox="0 0 192 192"><path d="m96,170 l-42.12,-27.76a6,6 0,0 1,-2.48 -3.4L32,69l7,-14 -5,-8.5 8.89,-8.49a6,6 0,0 1,4.99 -1.6L59,38l14,-16h46l14,16 11.12,-1.59a6,6 0,0 1,4.99 1.6L158,46.5l-5,8.5 7,14 -19.4,69.83a6,6 0,0 1,-2.48 3.4z" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M64,60c8.14,0 14.44,2.3 17.65,3.78 1.53,0.71 2.57,2.16 2.64,3.85C84.79,77.97 78,90 78,90c0,4 12,9 18,9m0,0c6,0 18,-5 18,-9 0,0 -6.79,-12.03 -6.3,-22.37 0.08,-1.69 1.11,-3.14 2.64,-3.85C113.56,62.3 119.86,60 128,60M96,99c0,13 -7,17 -24,25m24,-25c0,13 7,17 24,25" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="m-looks-g-claude_by_anthropic" viewBox="0 0 192 192"><path d="M61.25,22.23 L101.4,99.43l46.7,-58.15" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="m101.4,99.43 l69.6,-23.84" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="m101.4,99.43 l68.11,13.1" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="m101.4,99.43 l55.08,43.33" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="m101.4,99.43 l33.5,60.62" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="m101.4,99.43 l-7.89,70.34" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="m56.47,160.07 l44.93,-60.65 -63.41,32.7" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="m101.4,99.43 l-81.4,-3.51" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="m35.11,51.98 l66.29,47.45 9.14,-75.45" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="m-looks-g-generic_camera" viewBox="0 0 192 192"><path d="M96,101m-28,0a28,28 0,1 1,56 0a28,28 0,1 1,-56 0" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M38,157a16,16 0,0 1,-16 -16m0,-76a16,16 0,0 1,16 -16m132,92a16,16 0,0 1,-16 16m0,-108a16,16 0,0 1,16 16M22,65v76m148,-76v76M38,157h116M38,49h19a6,6 0,0 0,4.8 -2.4l8.4,-11.2A6,6 0,0 1,75 33h42a6,6 0,0 1,4.8 2.4l8.4,11.2A6,6 0,0 0,135 49h19" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="m-looks-g-google_play_store" viewBox="0 0 192 192"><path d="m38,33 l88,90m-88,34.61L127,67" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round"/><path d="M157.87,109.93 L56,167.88A16,16 0,0 1,32 154V38.05a16,16 0,0 1,24 -13.93l101.9,57.95a16,16 0,0 1,0 27.86z" fill="none" stroke="currentColor" stroke-width="12"/></symbol>
+    </defs>
+  </svg>
+  <div class="mock-frame m-looks-frame" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+    <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+    <div class="mock-app">
+      <nav class="m-looks-rail" aria-label="PadStudio">
+        <div class="m-looks-brand" role="img" aria-label="PadStudio (logo not picked yet)"><span class="sym" data-icon="pen"></span><span class="m-looks-brand__word" aria-hidden="true">PadStudio</span></div>
+        <button type="button" class="m-looks-nav"><span class="sym" data-icon="today"></span>Today</button>
+        <button type="button" class="m-looks-nav"><span class="sym" data-icon="pen"></span>Pen</button>
+        <button type="button" class="m-looks-nav"><span class="sym" data-icon="home"></span>Home</button>
+        <button type="button" class="m-looks-nav" aria-current="page"><span class="sym sym--fill" data-icon="looks"></span>Looks</button>
+        <button type="button" class="m-looks-nav"><span class="sym" data-icon="setup"></span>Setup</button>
+        <div class="m-looks-rail__foot">
+          <p class="m-looks-rail__status" data-state="good"><span class="sym" data-icon="ok"></span><span>Key Mapper is listening</span></p>
+          <button type="button" class="m-looks-nav"><span class="sym" data-icon="settings"></span>Settings</button>
+        </div>
+      </nav>
+      <div class="mock-content m-looks-content" role="region" aria-label="Looks">
+        <div class="mock-content__inner">
+          <header class="m-looks-head">
+            <div class="m-looks-head__text">
+              <h3 class="m-looks-title">Looks</h3>
+              <p class="m-looks-sub">Colours, wallpaper and icons for PadStudio's widgets.</p>
+            </div>
+            <button type="button" class="btn btn--outlined"><span class="sym" data-icon="open"></span>HyperOS Themes</button>
+          </header>
+          <div class="m-looks-grid">
+            <div class="m-looks-col">
+              <section class="card m-looks-card" aria-labelledby="m-looks-icons-h">
+                <h4 class="m-looks-h" id="m-looks-icons-h">Icon style</h4>
+                <p class="m-looks-hsub">Home screen icons stay as HyperOS draws them.</p>
+                <div class="m-looks-styles" role="radiogroup" aria-labelledby="m-looks-icons-h">
+                  <button type="button" class="m-looks-style" role="radio" aria-checked="true" aria-label="Original: icons as each app draws them">
+                    <span class="m-looks-style__mark" aria-hidden="true"></span>
+                    <span class="m-looks-style__name">Original</span>
+                    <span class="m-looks-style__cap">As each app draws them</span>
+                <span class="m-looks-icons" aria-hidden="true">
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/flipkart.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/meesho.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/wifibar.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/key-mapper.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/readera.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/notes.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/gmail.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/whatsapp.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/brave.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/claude.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/camera.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/play-store.png" alt="" loading="lazy" decoding="async"></span>
+                </span>
+                  </button>
+                  <button type="button" class="m-looks-style" role="radio" aria-checked="false" aria-label="Themed: one colour, from your palette">
+                    <span class="m-looks-style__mark" aria-hidden="true"></span>
+                    <span class="m-looks-style__name">Themed</span>
+                    <span class="m-looks-style__cap">One colour, in <span class="m-looks-pal"></span></span>
+                <span class="m-looks-icons" aria-hidden="true">
+                  <span class="m-looks-ic m-looks-ic--themed"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-flipkart"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--themed"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-meesho"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--themed"><span class="m-looks-mono"></span></span>
+                  <span class="m-looks-ic m-looks-ic--themed"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-key_mapper"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--themed"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-read_era"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--themed"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-generic_notes"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--themed"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-gmail"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--themed"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-whatsapp"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--themed"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-brave"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--themed"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-claude_by_anthropic"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--themed"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-generic_camera"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--themed"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-google_play_store"></use></svg></span>
+                </span>
+                  </button>
+                  <button type="button" class="m-looks-style" role="radio" aria-checked="false" aria-label="Icon pack: Lawnicons has 11 of these 12 apps; WiFiBar keeps its own icon">
+                    <span class="m-looks-style__mark" aria-hidden="true"></span>
+                    <span class="m-looks-style__name">Icon pack</span>
+                    <span class="m-looks-style__cap">Lawnicons has 11 of these 12</span>
+                <span class="m-looks-icons" aria-hidden="true">
+                  <span class="m-looks-ic m-looks-ic--pack"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-flipkart"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--pack"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-meesho"></use></svg></span>
+                  <span class="app-icon m-looks-ic"><img src="assets/icons/wifibar.png" alt="" loading="lazy" decoding="async"></span>
+                  <span class="m-looks-ic m-looks-ic--pack"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-key_mapper"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--pack"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-read_era"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--pack"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-generic_notes"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--pack"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-gmail"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--pack"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-whatsapp"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--pack"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-brave"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--pack"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-claude_by_anthropic"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--pack"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-generic_camera"></use></svg></span>
+                  <span class="m-looks-ic m-looks-ic--pack"><svg viewBox="0 0 192 192" focusable="false"><use href="#m-looks-g-google_play_store"></use></svg></span>
+                </span>
+                  </button>
+                </div>
+                <div class="list m-looks-pick">
+                  <button type="button" class="list-row">
+                    <span class="list-row__leading list-row__leading--tonal"><span class="sym" data-icon="grid"></span></span>
+                    <span class="list-row__text"><span class="list-row__headline">Icon pack: Lawnicons</span><span class="list-row__supporting">New packs show up when you come back</span></span>
+                    <span class="list-row__trailing"><span class="sym" data-icon="chevron"></span></span>
+                  </button>
+                </div>
+                <details class="disclosure m-looks-dev">
+                  <summary><span class="sym" data-icon="code"></span>Developer details</summary>
+                  <div class="disclosure__body">
+                    <p>Pack: app.lawnchair.lawnicons 2.18.0. Its appfilter.xml has entries for 11 of these 12 apps; com.charan.wifibar has none, so it keeps its original icon.</p>
+                    <p>Themed: the app's AdaptiveIconDrawable.monochrome (Android 13+), else the Lawnicons glyph, else the original icon. WiFiBar ships ic_launcher_monochrome.</p>
+                    <p>Saved: iconStyle ORIGINAL · iconPack app.lawnchair.lawnicons · wallpaperApplied true (config.json backup, 11 Oct).</p>
+                  </div>
+                </details>
+              </section>
+              <section class="card m-looks-card m-looks-match" aria-label="Match wallpaper colours">
+                <div class="m-looks-match__text">
+                  <h4 class="m-looks-match__title" id="m-looks-match-h">Match wallpaper colours</h4>
+                  <p class="m-looks-match__why" id="m-looks-match-why">Off: PadStudio keeps your <span class="m-looks-pal"></span> colours.</p>
+                </div>
+                <button type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="m-looks-match-h" aria-describedby="m-looks-match-why"><span class="switch__thumb"></span></button>
+              </section>
+            </div>
+            <div class="m-looks-col">
+              <section class="card m-looks-card m-looks-wall" aria-labelledby="m-looks-wall-h">
+                <h4 class="m-looks-h" id="m-looks-wall-h">Colours and wallpaper</h4>
+                <div class="m-looks-stage">
+                  <div class="m-looks-tablet" role="img" aria-label="Preview: the wallpaper on your home screen, with your dock">
+                    <div class="m-looks-wp" data-seed="1">
+                      <span class="m-looks-dock" aria-hidden="true">
+                    <span class="app-icon"><img src="assets/icons/freenotes.png" alt="" loading="lazy" decoding="async"></span>
+                    <span class="app-icon"><img src="assets/icons/readera.png" alt="" loading="lazy" decoding="async"></span>
+                    <span class="app-icon"><img src="assets/icons/notes.png" alt="" loading="lazy" decoding="async"></span>
+                    <span class="app-icon"><img src="assets/icons/gmail.png" alt="" loading="lazy" decoding="async"></span>
+                    <span class="app-icon"><img src="assets/icons/whatsapp.png" alt="" loading="lazy" decoding="async"></span>
+                    <span class="app-icon"><img src="assets/icons/brave.png" alt="" loading="lazy" decoding="async"></span>
+                    <span class="app-icon"><img src="assets/icons/claude.png" alt="" loading="lazy" decoding="async"></span>
+                      </span>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn--tonal m-looks-shuffle" data-m-looks-shuffle><span class="sym" data-icon="refresh"></span>Shuffle</button>
+                </div>
+                <div class="m-looks-wall__name">
+                  <p class="m-looks-wall__title"><span class="m-looks-pal"></span> dusk</p>
+                  <p class="m-looks-wall__meta">Theme and wallpaper</p>
+                </div>
+                <div class="m-looks-swatches" role="radiogroup" aria-label="Colours">
+                <button type="button" class="m-looks-sw" role="radio" aria-checked="true" aria-label="Violet" data-m-looks-palette="Violet"><span class="m-looks-sw__dot" data-palette="Violet" data-theme="dark"></span><span class="m-looks-sw__dot" data-palette="Violet" data-theme="light"></span></button>
+                <button type="button" class="m-looks-sw" role="radio" aria-checked="false" aria-label="Ocean" data-m-looks-palette="Ocean"><span class="m-looks-sw__dot" data-palette="Ocean" data-theme="dark"></span><span class="m-looks-sw__dot" data-palette="Ocean" data-theme="light"></span></button>
+                <button type="button" class="m-looks-sw" role="radio" aria-checked="false" aria-label="Rose" data-m-looks-palette="Rose"><span class="m-looks-sw__dot" data-palette="Rose" data-theme="dark"></span><span class="m-looks-sw__dot" data-palette="Rose" data-theme="light"></span></button>
+                <button type="button" class="m-looks-sw" role="radio" aria-checked="false" aria-label="Emerald" data-m-looks-palette="Emerald"><span class="m-looks-sw__dot" data-palette="Emerald" data-theme="dark"></span><span class="m-looks-sw__dot" data-palette="Emerald" data-theme="light"></span></button>
+                <button type="button" class="m-looks-sw" role="radio" aria-checked="false" aria-label="Graphite" data-m-looks-palette="Graphite"><span class="m-looks-sw__dot" data-palette="Graphite" data-theme="dark"></span><span class="m-looks-sw__dot" data-palette="Graphite" data-theme="light"></span></button>
+                </div>
+                <p class="m-looks-wall__label" id="m-looks-apply-h">Apply to</p>
+                <div class="seg m-looks-seg" role="radiogroup" aria-labelledby="m-looks-apply-h">
+                  <button type="button" class="seg__btn" role="radio" aria-checked="false">Home</button>
+                  <button type="button" class="seg__btn" role="radio" aria-checked="false">Lock</button>
+                  <button type="button" class="seg__btn" role="radio" aria-checked="true">Both</button>
+                </div>
+                <div class="m-looks-apply">
+                  <p class="m-looks-note">Apps can't copy your current wallpaper, so note it first.</p>
+                  <button type="button" class="btn btn--filled">Apply</button>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mock-handle" aria-hidden="true"></div>
+  </div>
+<script>
+/* Progressive enhancement only: the radios, the switch and Shuffle respond to clicks, and a swatch
+   picks that palette for the whole preview through frame.js. Without this the page reads the same. */
+(function () {
+  "use strict";
+  var root = document.currentScript && document.currentScript.closest('[data-screen="looks"]');
+  if (!root || root.hasAttribute("data-m-looks-ready")) return;
+  root.setAttribute("data-m-looks-ready", "");
+  function syncSwatches(palette) {
+    Array.prototype.forEach.call(root.querySelectorAll("[data-m-looks-palette]"), function (b) {
+      b.setAttribute("aria-checked", String(b.getAttribute("data-m-looks-palette") === palette));
+    });
+  }
+  root.addEventListener("click", function (e) {
+    var el = e.target.closest && e.target.closest('[role="radio"], [role="switch"], [data-m-looks-shuffle]');
+    if (!el || !root.contains(el)) return;
+    if (el.hasAttribute("data-m-looks-shuffle")) {
+      var wp = root.querySelector(".m-looks-wp");
+      if (wp) wp.setAttribute("data-seed", String((Number(wp.getAttribute("data-seed")) || 1) % 4 + 1));
+      return;
+    }
+    if (el.getAttribute("role") === "switch") {
+      el.setAttribute("aria-checked", String(el.getAttribute("aria-checked") !== "true"));
+      return;
+    }
+    var palette = el.getAttribute("data-m-looks-palette");
+    if (palette && window.PadFrame && typeof window.PadFrame.set === "function") { window.PadFrame.set({ palette: palette }); return; }
+    var group = el.closest('[role="radiogroup"]');
+    if (group) Array.prototype.forEach.call(group.querySelectorAll('[role="radio"]'), function (b) {
+      b.setAttribute("aria-checked", String(b === el));
+    });
+  });
+  document.addEventListener("padframe:change", function (e) { if (e.detail && e.detail.palette) syncSwatches(e.detail.palette); });
+  var frame = root.querySelector(".mock-frame");
+  if (frame) syncSwatches(frame.getAttribute("data-palette"));
+})();
+</script>
+</section>

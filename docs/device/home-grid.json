@@ -1,0 +1,16 @@
+{
+  "columns": 6,
+  "rows": 4,
+  "namesHidden": true,
+  "orientation": "landscape",
+  "recordedAt": "2026-10-11",
+  "source": "Gate G5 (docs/decisions/ADR-005-home-grid.md): icon-centre lattice on docs/test-logs/2026-10-11-g5-home-baseline.png; a recorded baseline, not live state",
+  "hyperosGridSetting": false,
+  "hyperosOptions": [
+    "Home screen: Classic | With App drawer",
+    "Fill cells of uninstalled apps",
+    "Lock Home screen layout",
+    "Don't show text",
+    "Background colour (for compatible icons)"
+  ]
+}

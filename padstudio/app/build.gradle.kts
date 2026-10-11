@@ -17,8 +17,8 @@ android {
         // Pad 6 (India) runs Android 14 and Pad 7/8 Android 16; 31 keeps Glance's adaptive grids and blur APIs.
         minSdk = 31
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = 2
+        versionName = "0.2"
     }
 
     buildFeatures {

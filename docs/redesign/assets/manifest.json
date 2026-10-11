@@ -1,0 +1,162 @@
+[
+  {
+    "file": "assets/icons/flipkart.png",
+    "label": "Flipkart",
+    "package": "com.flipkart.android",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "home screen, row 1, column 1",
+    "box": [458, 217, 168, 168],
+    "evidence": "The launcher's dump (16:26) names cell (0,0) 'Flipkart'. Package com.flipkart.android is installed (packages.txt). Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=458, y=217)."
+  },
+  {
+    "file": "assets/icons/meesho.png",
+    "label": "Meesho",
+    "package": "com.meesho.supply",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "home screen, row 1, column 2",
+    "box": [881, 217, 168, 168],
+    "evidence": "The launcher's dump (16:26) names cell (1,0) 'Meesho'. Package com.meesho.supply is installed (packages.txt). Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=881, y=217)."
+  },
+  {
+    "file": "assets/icons/war-thunder-mobile.png",
+    "label": "War Thunder Mobile",
+    "package": "com.gaijingames.wtm",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "home screen, row 1, column 3",
+    "box": [1304, 217, 168, 168],
+    "evidence": "The launcher's dump (16:26) names cell (2,0) 'War Thunder Mobile'. Package com.gaijingames.wtm is installed (packages.txt). Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=1304, y=217)."
+  },
+  {
+    "file": "assets/icons/conquistadorio.png",
+    "label": "Сonquistadorio",
+    "package": "com.MorionStudio.ConquistadorioFull",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "home screen, row 1, column 4",
+    "box": [1727, 217, 168, 168],
+    "evidence": "The launcher's dump (16:26) names cell (3,0) 'Сonquistadorio'. Package com.MorionStudio.ConquistadorioFull is installed (packages.txt). The label's first letter is Cyrillic С (U+0421), as the app ships it. Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=1727, y=217)."
+  },
+  {
+    "file": "assets/icons/wifibar.png",
+    "label": "WiFiBar",
+    "package": "com.charan.wifibar",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "home screen, row 1, column 5",
+    "box": [2150, 217, 168, 168],
+    "evidence": "The launcher's dump (16:26) names cell (4,0) 'WiFiBar'. Package com.charan.wifibar is installed (packages.txt). Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=2150, y=217)."
+  },
+  {
+    "file": "assets/icons/key-mapper.png",
+    "label": "Key Mapper",
+    "package": "io.github.sds100.keymapper",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "home screen, row 2, column 1",
+    "box": [458, 640, 168, 168],
+    "evidence": "The launcher's dump (16:26) names cell (0,1) 'Key Mapper'. Package io.github.sds100.keymapper is installed (packages.txt). Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=458, y=640)."
+  },
+  {
+    "file": "assets/icons/freenotes.png",
+    "label": "Freenotes",
+    "package": "ai.note.notepad.memo.journal.freenote",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "dock 1",
+    "box": [513, 1894, 168, 168],
+    "evidence": "The launcher's dump (16:26) lists it as dock item 1 of 8 'Freenotes' (type 0). Package ai.note.notepad.memo.journal.freenote is installed (packages.txt). The only freenote package installed; ADR-001 records it as freenote. Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=612, y=1894)."
+  },
+  {
+    "file": "assets/icons/bytebytego.png",
+    "label": "ByteByteGo",
+    "package": null,
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "dock 2",
+    "box": [710, 1894, 168, 168],
+    "evidence": "The launcher's dump (16:26) lists it as dock item 2 of 8 'ByteByteGo | Technical Interview Prep' (type 14). Launcher item type 14, a shortcut rather than an installed app (apps are type 0); no ByteByteGo package is installed. Full launcher title: 'ByteByteGo | Technical Interview Prep'. Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=809, y=1894)."
+  },
+  {
+    "file": "assets/icons/readera.png",
+    "label": "ReadEra",
+    "package": "org.readera",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "dock 3",
+    "box": [907, 1894, 168, 168],
+    "evidence": "The launcher's dump (16:26) lists it as dock item 3 of 8 'ReadEra' (type 0). Package org.readera is installed (packages.txt). Key Mapper's 'Reading & PDF' group chip also shows this icon; that group's first constraint is org.readera (test-logs/2026-10-11-state-check.png). Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=1006, y=1894)."
+  },
+  {
+    "file": "assets/icons/notes.png",
+    "label": "Notes",
+    "package": "com.miui.notes",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "dock 4",
+    "box": [1104, 1894, 168, 168],
+    "evidence": "The launcher's dump (16:26) lists it as dock item 4 of 8 'Notes' (type 0). Package com.miui.notes is installed (packages.txt). Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=1203, y=1894)."
+  },
+  {
+    "file": "assets/icons/gmail.png",
+    "label": "Gmail",
+    "package": "com.google.android.gm",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "dock 5",
+    "box": [1301, 1894, 168, 168],
+    "evidence": "The launcher's dump (16:26) lists it as dock item 5 of 8 'Gmail' (type 0). Package com.google.android.gm is installed (packages.txt). Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=1400, y=1894)."
+  },
+  {
+    "file": "assets/icons/whatsapp.png",
+    "label": "WhatsApp",
+    "package": "com.whatsapp",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "dock 6",
+    "box": [1498, 1894, 168, 168],
+    "evidence": "The launcher's dump (16:26) lists it as dock item 6 of 8 'WhatsApp' (type 0). Package com.whatsapp is installed (packages.txt). Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=1597, y=1894)."
+  },
+  {
+    "file": "assets/icons/brave.png",
+    "label": "Brave",
+    "package": "com.brave.browser",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "dock 7",
+    "box": [1695, 1894, 168, 168],
+    "evidence": "The launcher's dump (16:26) lists it as dock item 7 of 8 'Brave' (type 0). Package com.brave.browser is installed (packages.txt). Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=1794, y=1894)."
+  },
+  {
+    "file": "assets/icons/claude.png",
+    "label": "Claude",
+    "package": "com.anthropic.claude",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "dock 8",
+    "box": [1892, 1894, 168, 168],
+    "evidence": "The launcher's dump (16:26) lists it as dock item 8 of 8 'Claude' (type 0). Package com.anthropic.claude is installed (packages.txt). Edge colours separated from the wallpaper by matting against the same icon in docs/test-logs/2026-10-11-home-brand-icon.png (box x=1991, y=1894)."
+  },
+  {
+    "file": "assets/icons/camera.png",
+    "label": "Camera",
+    "package": "com.android.camera",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-widget-v2.png",
+    "slot": "dock, recent apps 3",
+    "box": [2518, 1894, 168, 168],
+    "evidence": "Dock, recent-apps part (not in the launcher dump). Same icon as the one the launcher names 'Camera' at page cell (3,3) (dumps 15:30, 15:31, 16:26; that page is test-logs/2026-10-11-keymapper-restore-5.png) and as Key Mapper's 'Camera' group chip (constraint com.android.camera). Correlation with that icon 0.996; with any other icon here at most 0.321. Package com.android.camera is installed (packages.txt). Edge colours cleaned with the launcher's alpha measured on the icons seen on both backgrounds."
+  },
+  {
+    "file": "assets/icons/play-store.png",
+    "label": "Play Store",
+    "package": "com.android.vending",
+    "confidence": "high",
+    "source": "docs/test-logs/2026-10-11-home-brand-icon.png",
+    "slot": "dock, recent apps 2",
+    "box": [2420, 1894, 168, 168],
+    "evidence": "Dock, recent-apps part (not in the launcher dump). Unmistakable Google Play icon. Package com.android.vending is installed (packages.txt). Edge colours cleaned with the launcher's alpha measured on the icons seen on both backgrounds."
+  }
+]

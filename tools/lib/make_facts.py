@@ -96,6 +96,8 @@ def main() -> int:
     ap.add_argument("--control", action="append", default=[], help="control=KEY_NAME")
     ap.add_argument("--kind", choices=["TWO_BUTTON", "FOCUS_PEN_PRO"])
     ap.add_argument("--mode", choices=["BASIC", "EXPERT"])
+    ap.add_argument("--home-grid", type=Path,
+                    help="docs/device/home-grid.json: HyperOS's home-screen grid as recorded by gate G5 (plan §6a)")
     ap.add_argument("--out", required=True, type=Path)
     args = ap.parse_args()
 
@@ -123,6 +125,14 @@ def main() -> int:
         facts["penKind"] = args.kind
     if args.mode:
         facts["penMode"] = args.mode
+    if args.home_grid:
+        # A recorded baseline, not live state: PadStudio can't read HyperOS's grid (plan §6a, §7).
+        home = json.loads(args.home_grid.read_text())
+        missing = {"columns", "rows", "namesHidden", "recordedAt", "source"} - home.keys()
+        if missing:
+            print(f"{args.home_grid}: missing {sorted(missing)}", file=sys.stderr)
+            return 1
+        facts["homeScreen"] = home
     args.out.write_text(json.dumps(facts, indent=2) + "\n")
     print(f"wrote {args.out}: {len(devices)} pen devices, {len(controls)} controls, {len(facts['cameras'])} cameras")
     return 0

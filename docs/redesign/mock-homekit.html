@@ -1,0 +1,436 @@
+<!--
+  PadStudio 2 preview: the Home Kit screen (plan §6 and §10 "Home Kit"; BRIEF.md). Owner: the homekit agent.
+  A fragment: one section holding the 1164 × 777 dp frame. Needs tokens.css, kit.css, then fontscale.js and frame.js.
+  Own classes: m-homekit-*. Layout language: the owner's reference, docs/redesign/reference-today.png
+  (expanded rail with mark and wordmark, large title and subtitle, outlined action top right, 24 dp cards).
+
+  Real data on this screen
+  - Home screen grid card: outcome G5-B as measured in docs/decisions/ADR-005-home-grid.md (data-g5="B"):
+    no grid setting in HyperOS; "Recorded 11 Oct: 6 × 4, names hidden"; the HyperOS options' own wording.
+  - "Applies to all widgets set to Default (2)": widgets 42 and 49 (dumpsys appwidget, 11 Oct), neither has a grid key.
+  - Density "Standard": the saved setting on 11 Oct (config.json: COMPACT, labelled "Standard" in core Density).
+  - Groups: AppGroup.kt names and display order. An app appears only in the group the core rules give it
+    (CuratedApps.kt; Games by the "Android: game" rule, which is expected but not checked on the tablet).
+    Icons and names come only from assets/manifest.json. Groups whose apps aren't in those screenshots
+    (Watch & Listen, Life, System, More) show a symbol tile instead of icons. Reading is left out: only one of
+    its curated apps is installed, so it may be folded into More. Hidden is empty because no app has been moved.
+  Examples, not readings from the tablet
+  - The preview widget is 472 × 252 dp; HyperOS hasn't reported real widget sizes yet (plan §6b, Step 4).
+    The refused 10 × 5 follows from that size by the fit rule. 8 × 4 is selected to show an exact grid;
+    the saved setting today is Auto.
+-->
+<section class="mock" data-screen="homekit" aria-label="Home Kit">
+<style>
+/* ---- Colours: token roles only, mixed to follow the reference (a cool near-black page, a darker rail,
+        slightly lifted cards with a hairline, a deep violet selection). Light keeps the neutral tokens. ---- */
+.mock-frame.m-homekit { background: var(--m-homekit-page); }
+.m-homekit[data-theme="dark"] {
+  --m-homekit-page: color-mix(in oklab, var(--surface-container-lowest) 94%, var(--primary-container));
+  --m-homekit-rail: color-mix(in oklab, var(--m-homekit-page) 90%, #000);
+  --m-homekit-card: color-mix(in oklab, color-mix(in oklab, var(--surface-container-low) 60%, var(--surface-container-lowest)) 94%, var(--primary-container));
+  --m-homekit-inset: color-mix(in oklab, var(--m-homekit-card) 91%, var(--on-surface));
+  --m-homekit-line: color-mix(in oklab, var(--outline-variant) 62%, transparent);
+  --m-homekit-sel: color-mix(in oklab, var(--primary-container) 62%, var(--m-homekit-page));
+  --m-homekit-sel-ink: var(--on-primary-container);
+  --m-homekit-wall: linear-gradient(150deg, color-mix(in oklab, var(--primary-container) 58%, #000), color-mix(in oklab, var(--tertiary-container) 42%, #000));
+}
+.m-homekit[data-theme="light"] {
+  --m-homekit-page: var(--background);
+  --m-homekit-rail: color-mix(in oklab, var(--background) 95%, var(--primary-container));
+  --m-homekit-card: var(--surface-container-lowest);
+  --m-homekit-inset: var(--surface-container);
+  --m-homekit-line: var(--outline-variant);
+  --m-homekit-sel: var(--secondary-container);
+  --m-homekit-sel-ink: var(--on-secondary-container);
+  --m-homekit-wall: linear-gradient(150deg, color-mix(in oklab, var(--primary-container) 34%, var(--background)), color-mix(in oklab, var(--tertiary-container) 28%, var(--background)));
+}
+
+/* ---- Expanded navigation rail (216 dp): mark and wordmark, labelled items, status and Settings at the foot. ---- */
+.m-homekit .m-homekit-rail {
+  flex: none; width: 216px; display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 12px calc(var(--nav-h, 16px) + 8px);
+  background: var(--m-homekit-rail); box-shadow: inset -1px 0 0 var(--m-homekit-line);
+  overflow: hidden auto; scrollbar-width: none;
+}
+.m-homekit .m-homekit-rail__brand {
+  display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 12px; margin-bottom: 12px;
+  color: var(--on-surface); font-size: var(--t-title-size, 20px); line-height: var(--t-title-line, 28px); font-weight: var(--w-medium, 500);
+}
+.m-homekit .m-homekit-rail__brand .sym { --sym-size: 28px; color: var(--primary); }
+.m-homekit .m-homekit-rail__item {
+  display: flex; align-items: center; gap: 16px; width: 100%; min-height: 56px; padding: 8px 16px;
+  border-radius: var(--r-m, 16px); color: var(--on-surface-variant);
+  font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); font-weight: var(--w-medium, 500);
+}
+.m-homekit .m-homekit-rail__item:hover { background-color: var(--state-hover); }
+.m-homekit .m-homekit-rail__item[aria-current="page"] { background-color: var(--m-homekit-sel); color: var(--m-homekit-sel-ink); }
+.m-homekit .m-homekit-rail__foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; padding-top: 12px; }
+.m-homekit .m-homekit-rail__status {
+  display: flex; align-items: center; gap: 10px; padding: 4px 16px;
+  font-size: var(--t-label-small-size, 11px); line-height: var(--t-label-small-line, 16px); font-weight: var(--w-medium, 500);
+  color: var(--on-surface-variant);
+}
+.m-homekit .m-homekit-rail__dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--good-ink); }
+
+/* ---- Page head: large title, one-line subtitle, outlined action top right. ---- */
+.m-homekit .m-homekit-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+.m-homekit .m-homekit-head__text { flex: 1 1 0; min-width: 0; }
+.m-homekit .m-homekit-title {
+  font-size: var(--t-display-size, 36px); line-height: var(--t-display-line, 44px); font-weight: var(--w-regular, 400); color: var(--on-surface);
+}
+.m-homekit .m-homekit-sub { font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); color: var(--on-surface-variant); }
+.m-homekit .m-homekit-action { flex: none; margin-top: 2px; color: var(--on-surface); }
+.m-homekit .m-homekit-action::before { inset: 2px 0; border-radius: var(--r-s, 12px); }
+
+/* ---- Cards: G5-B top left, widget grid as a tall right column, groups below on the left. ---- */
+.m-homekit .m-homekit-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start;
+  grid-template-areas: "hos wg" "groups wg" "dev dev";
+}
+.m-homekit .m-homekit-hos { grid-area: hos; }
+.m-homekit .m-homekit-wg { grid-area: wg; }
+.m-homekit .m-homekit-groups { grid-area: groups; }
+.m-homekit .m-homekit-dev { grid-area: dev; }
+.m-homekit .m-homekit-card {
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--m-homekit-card); box-shadow: inset 0 0 0 1px var(--m-homekit-line);
+}
+.m-homekit .m-homekit-card__title { font-size: var(--t-title-size, 20px); line-height: var(--t-title-line, 28px); font-weight: var(--w-medium, 500); color: var(--on-surface); }
+.m-homekit .m-homekit-card__sub { font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); color: var(--on-surface-variant); }
+.m-homekit .m-homekit-card__top { display: flex; flex-direction: column; gap: 2px; }
+.m-homekit .m-homekit-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -10px -12px -8px 0; }
+
+/* Home screen grid (G5-B). */
+.m-homekit .m-homekit-hos { gap: 10px; }
+.m-homekit .m-homekit-hos__fact { font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); color: var(--on-surface); }
+.m-homekit .m-homekit-base { display: flex; align-items: center; gap: 16px; padding: 8px 16px; border-radius: var(--r-m, 16px); background: var(--m-homekit-inset); }
+.m-homekit .m-homekit-base .readout { flex: none; }
+.m-homekit .m-homekit-base__text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.m-homekit .m-homekit-base__line { font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); font-weight: var(--w-medium, 500); color: var(--on-surface); }
+.m-homekit .m-homekit-base__tag {
+  display: flex; align-items: center; gap: 6px; color: var(--on-surface-variant);
+  font-size: var(--t-label-small-size, 11px); line-height: var(--t-label-small-line, 16px);
+}
+.m-homekit .m-homekit-near { display: flex; flex-direction: column; }
+.m-homekit .m-homekit-near__label {
+  display: flex; align-items: center; gap: 6px; color: var(--on-surface-variant);
+  font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px);
+}
+.m-homekit .m-homekit-chips { display: flex; flex-wrap: wrap; column-gap: 8px; }
+.m-homekit .m-homekit-denser { align-self: flex-start; margin: -6px 0 -12px -12px; }
+
+/* Widget grid (plan §6b): options, the refusal with its reason, a live preview, density for Auto. */
+.m-homekit .m-homekit-wg .m-homekit-chips { margin: -4px 0; }
+.m-homekit .m-homekit-chips .chip[aria-disabled="true"] { color: color-mix(in srgb, var(--on-surface) 38%, transparent); cursor: not-allowed; }
+.m-homekit .m-homekit-chips .chip[aria-disabled="true"]::before { border-color: color-mix(in srgb, var(--on-surface) 12%, transparent); background-image: none; }
+.m-homekit .m-homekit-why {
+  display: flex; align-items: flex-start; gap: 8px; color: var(--on-surface-variant);
+  font-size: var(--t-label-small-size, 11px); line-height: var(--t-label-small-line, 16px);
+}
+.m-homekit .m-homekit-why .sym { --sym-size: 18px; color: var(--warn-ink); margin-top: 1px; }
+.m-homekit .m-homekit-pv { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.m-homekit .m-homekit-pv__wall { --k: 0.62; position: relative; height: calc(252px * var(--k) + 28px); border-radius: var(--r-m, 16px); background: var(--m-homekit-wall); overflow: hidden; }
+.m-homekit .m-homekit-pv__widget { position: absolute; top: 14px; left: calc(50% - 236px * var(--k)); transform: scale(var(--k)); transform-origin: 0 0; }
+.m-homekit .m-homekit-slot { background-color: color-mix(in srgb, var(--on-surface) 10%, transparent); }
+.m-homekit .m-homekit-pv__cap { font-size: var(--t-label-small-size, 11px); line-height: var(--t-label-small-line, 16px); color: var(--on-surface-variant); }
+.m-homekit .m-homekit-density { display: flex; flex-direction: column; gap: 4px; padding-top: 12px; box-shadow: inset 0 1px 0 var(--m-homekit-line); }
+.m-homekit .m-homekit-density__label { font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); font-weight: var(--w-medium, 500); color: var(--on-surface); }
+.m-homekit .m-homekit-density__label span { font-weight: var(--w-regular, 400); color: var(--on-surface-variant); }
+
+/* Groups: icon preview, name, Add widget S / M / L, Open. */
+.m-homekit .m-homekit-gl {
+  display: grid; grid-template-columns: 88px minmax(0, 1fr) 144px 48px; align-items: center; column-gap: 12px;
+  min-height: 60px; padding: 4px 0;
+}
+.m-homekit .m-homekit-gl__list > .m-homekit-gl + .m-homekit-gl { box-shadow: inset 0 1px 0 var(--m-homekit-line); }
+.m-homekit .m-homekit-gl--hint {
+  min-height: 0; padding: 0 0 2px; color: var(--on-surface-variant);
+  font-size: var(--t-label-small-size, 11px); line-height: var(--t-label-small-line, 16px); font-weight: var(--w-medium, 500);
+}
+.m-homekit .m-homekit-gl--hint > :first-child { grid-column: 1 / 3; }
+.m-homekit .m-homekit-gl--hint > :not(:first-child) { text-align: center; }
+.m-homekit .m-homekit-gl__icons { --stack-size: 36px; --stack-ring: var(--m-homekit-card); }
+.m-homekit .m-homekit-gl__tile {
+  display: grid; place-items: center; width: 36px; height: 36px;
+  background: var(--secondary-container); color: var(--on-secondary-container);
+  -webkit-mask: var(--kit-squircle) center / 100% 100% no-repeat; mask: var(--kit-squircle) center / 100% 100% no-repeat;
+}
+.m-homekit .m-homekit-gl__tile .sym { --sym-size: 20px; }
+.m-homekit .m-homekit-gl__name { min-width: 0; display: flex; flex-direction: column; font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); color: var(--on-surface); overflow-wrap: anywhere; }
+.m-homekit .m-homekit-gl__sub { font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); color: var(--on-surface-variant); }
+.m-homekit .m-homekit-gl__sizes { display: flex; }
+.m-homekit .m-homekit-size { width: 48px; padding: 0; }
+.m-homekit .m-homekit-size::before { inset: 4px 3px; border-radius: var(--r-s, 12px); }
+.m-homekit .m-homekit-dev { background: var(--m-homekit-card); box-shadow: inset 0 0 0 1px var(--m-homekit-line); }
+</style>
+
+<div class="mock-frame m-homekit" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+  <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+  <div class="mock-app">
+
+    <nav class="m-homekit-rail" aria-label="PadStudio">
+      <div class="m-homekit-rail__brand"><span class="sym" data-icon="pen" aria-hidden="true"></span><span>PadStudio</span></div>
+      <button type="button" class="m-homekit-rail__item"><span class="sym" data-icon="today"></span><span>Today</span></button>
+      <button type="button" class="m-homekit-rail__item"><span class="sym" data-icon="pen"></span><span>Pen</span></button>
+      <button type="button" class="m-homekit-rail__item" aria-current="page"><span class="sym sym--fill" data-icon="home"></span><span>Home</span></button>
+      <button type="button" class="m-homekit-rail__item"><span class="sym" data-icon="looks"></span><span>Looks</span></button>
+      <button type="button" class="m-homekit-rail__item"><span class="sym" data-icon="setup"></span><span>Setup</span></button>
+      <div class="m-homekit-rail__foot">
+        <p class="m-homekit-rail__status"><span class="m-homekit-rail__dot" aria-hidden="true"></span><span>Key Mapper is listening</span></p>
+        <button type="button" class="m-homekit-rail__item"><span class="sym" data-icon="settings"></span><span>Settings</span></button>
+      </div>
+    </nav>
+
+    <div class="mock-content">
+      <div class="mock-content__inner">
+
+        <div class="m-homekit-head">
+          <div class="m-homekit-head__text">
+            <h3 class="m-homekit-title">Home</h3>
+            <p class="m-homekit-sub">Group widgets keep your home screen tidy.</p>
+          </div>
+          <button type="button" class="btn btn--outlined m-homekit-action"><span class="sym" data-icon="edit"></span>Organize</button>
+        </div>
+
+        <div class="m-homekit-grid">
+
+          <!-- Home screen grid: outcome G5-B, measured 11 Oct (ADR-005). -->
+          <section class="card m-homekit-card m-homekit-hos" data-g5="B" aria-labelledby="m-homekit-hos-h">
+            <div class="m-homekit-card__top">
+              <h4 class="m-homekit-card__title" id="m-homekit-hos-h">Home screen grid</h4>
+              <p class="m-homekit-hos__fact">HyperOS on this tablet has no grid setting.</p>
+            </div>
+            <div class="m-homekit-base">
+              <p class="readout" aria-hidden="true">6 × 4</p>
+              <div class="m-homekit-base__text">
+                <p class="m-homekit-base__line">Recorded 11 Oct: 6 × 4, names hidden</p>
+                <p class="m-homekit-base__tag"><span class="sym sym--16" data-icon="time"></span><span>Recorded baseline, not live</span></p>
+              </div>
+            </div>
+            <div class="m-homekit-near">
+              <p class="m-homekit-near__label"><span>Nearest options in HyperOS</span><span class="sym sym--16" data-icon="open"></span></p>
+              <div class="m-homekit-chips">
+                <button type="button" class="chip chip--assist" aria-label="Don't show text, opens HyperOS"><span class="sym" data-icon="names_hidden"></span>Don't show text</button>
+                <button type="button" class="chip chip--assist" aria-label="Lock Home screen layout, opens HyperOS"><span class="sym" data-icon="lock"></span>Lock Home screen layout</button>
+                <button type="button" class="chip chip--assist" aria-label="Classic or App drawer, opens HyperOS"><span class="sym" data-icon="home"></span>Classic or App drawer</button>
+                <button type="button" class="chip chip--assist" aria-label="Icon background colour, opens HyperOS"><span class="sym" data-icon="looks"></span>Icon background colour</button>
+              </div>
+            </div>
+            <button type="button" class="btn btn--text m-homekit-denser"><span class="sym" data-icon="widgets"></span>For a denser page, use PadStudio's widget grid<span class="sym" data-icon="chevron"></span></button>
+          </section>
+
+          <!-- PadStudio's widget grid (plan §6b): Default picker, live preview, density for Auto. -->
+          <section class="card m-homekit-card m-homekit-wg" aria-labelledby="m-homekit-wg-h">
+            <div class="m-homekit-card__top">
+              <h4 class="m-homekit-card__title" id="m-homekit-wg-h">Widget grid</h4>
+              <p class="m-homekit-card__sub">Applies to all widgets set to Default (2)</p>
+            </div>
+            <div class="m-homekit-chips" role="radiogroup" aria-label="Default widget grid">
+              <button type="button" class="chip chip--filter" role="radio" aria-checked="false" data-grid="auto">Auto</button>
+              <button type="button" class="chip chip--filter" role="radio" aria-checked="false" data-grid="6x3">6 × 3</button>
+              <button type="button" class="chip chip--filter" role="radio" aria-checked="true" data-grid="8x4">8 × 4</button>
+              <button type="button" class="chip chip--filter" role="radio" aria-checked="false" aria-disabled="true" aria-describedby="m-homekit-why" data-grid="10x5">10 × 5</button>
+              <button type="button" class="chip chip--filter" role="radio" aria-checked="false" data-grid="custom">Custom</button>
+            </div>
+            <p class="m-homekit-why" id="m-homekit-why"><span class="sym" data-icon="fit_warn"></span><span>10 × 5 needs bigger widgets: its spaces would be too small to tap. Resize one first.</span></p>
+            <figure class="m-homekit-pv">
+              <div class="m-homekit-pv__wall">
+                <div class="widget m-homekit-pv__widget" style="--w:472px; --h:252px; --cols:8; --rows:4" role="group" aria-label="Preview of a widget set to Default">
+                  <div class="widget__header"><span class="widget__pill"><span class="sym" data-icon="widgets"></span><span>Preview</span></span></div>
+                  <div class="widget__grid">
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/flipkart.png" alt="Flipkart"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/meesho.png" alt="Meesho"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/war-thunder-mobile.png" alt="War Thunder Mobile"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/conquistadorio.png" alt="&#x421;onquistadorio"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/wifibar.png" alt="WiFiBar"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/key-mapper.png" alt="Key Mapper"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/freenotes.png" alt="Freenotes"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/readera.png" alt="ReadEra"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/notes.png" alt="Notes"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/gmail.png" alt="Gmail"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/whatsapp.png" alt="WhatsApp"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/brave.png" alt="Brave"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/claude.png" alt="Claude"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/play-store.png" alt="Play Store"></span></span>
+                    <span class="widget__cell"><span class="app-icon"><img src="assets/icons/camera.png" alt="Camera"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                    <span class="widget__cell" aria-hidden="true"><span class="app-icon m-homekit-slot"></span></span>
+                  </div>
+                </div>
+              </div>
+              <figcaption class="m-homekit-pv__cap" data-custom="Custom: 4 to 10 columns, 2 to 8 rows">8 × 4 · 32 spaces · names hidden</figcaption>
+            </figure>
+            <div class="m-homekit-density">
+              <p class="m-homekit-density__label">Icon density <span>· used by Auto</span></p>
+              <div class="seg" role="radiogroup" aria-label="Icon density">
+                <button type="button" class="seg__btn" role="radio" aria-checked="false" data-cell="76">Roomy</button>
+                <button type="button" class="seg__btn" role="radio" aria-checked="true" data-cell="64">Standard</button>
+                <button type="button" class="seg__btn" role="radio" aria-checked="false" data-cell="52">Dense</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Groups (AppGroup.kt, display order), Hidden last. -->
+          <section class="card m-homekit-card m-homekit-groups" aria-labelledby="m-homekit-groups-h">
+            <div class="m-homekit-card__head">
+              <h4 class="m-homekit-card__title" id="m-homekit-groups-h">Your groups</h4>
+              <button type="button" class="btn btn--text">Open library<span class="sym" data-icon="chevron"></span></button>
+            </div>
+            <div>
+              <div class="m-homekit-gl m-homekit-gl--hint" aria-hidden="true"><span>S small · M wide · L large</span><span>Add widget</span><span>Open</span></div>
+              <ul class="m-homekit-gl__list">
+                <li class="m-homekit-gl">
+                  <span class="app-stack m-homekit-gl__icons" role="img" aria-label="Freenotes, Notes and more"><span class="app-icon"><img src="assets/icons/freenotes.png" alt=""></span><span class="app-icon"><img src="assets/icons/notes.png" alt=""></span><span class="app-stack__more"><span>…</span></span></span>
+                  <span class="m-homekit-gl__name">Study</span>
+                  <span class="m-homekit-gl__sizes" role="group" aria-label="Add a Study widget"><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Small">S</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Wide">M</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Large">L</button></span>
+                  <button type="button" class="icon-btn" aria-label="Open Study"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+                <li class="m-homekit-gl">
+                  <span class="app-stack m-homekit-gl__icons" role="img" aria-label="Gmail and more"><span class="app-icon"><img src="assets/icons/gmail.png" alt=""></span><span class="app-stack__more"><span>…</span></span></span>
+                  <span class="m-homekit-gl__name">Work</span>
+                  <span class="m-homekit-gl__sizes" role="group" aria-label="Add a Work widget"><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Small">S</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Wide">M</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Large">L</button></span>
+                  <button type="button" class="icon-btn" aria-label="Open Work"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+                <li class="m-homekit-gl">
+                  <span class="app-stack m-homekit-gl__icons" role="img" aria-label="Camera and more"><span class="app-icon"><img src="assets/icons/camera.png" alt=""></span><span class="app-stack__more"><span>…</span></span></span>
+                  <span class="m-homekit-gl__name">Create</span>
+                  <span class="m-homekit-gl__sizes" role="group" aria-label="Add a Create widget"><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Small">S</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Wide">M</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Large">L</button></span>
+                  <button type="button" class="icon-btn" aria-label="Open Create"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+                <li class="m-homekit-gl">
+                  <span class="app-stack m-homekit-gl__icons" role="img" aria-label="WhatsApp and more"><span class="app-icon"><img src="assets/icons/whatsapp.png" alt=""></span><span class="app-stack__more"><span>…</span></span></span>
+                  <span class="m-homekit-gl__name">Social</span>
+                  <span class="m-homekit-gl__sizes" role="group" aria-label="Add a Social widget"><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Small">S</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Wide">M</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Large">L</button></span>
+                  <button type="button" class="icon-btn" aria-label="Open Social"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+                <li class="m-homekit-gl">
+                  <span class="m-homekit-gl__tile" role="img" aria-label="Watch and Listen apps"><span class="sym" data-icon="play"></span></span>
+                  <span class="m-homekit-gl__name">Watch &amp; Listen</span>
+                  <span class="m-homekit-gl__sizes" role="group" aria-label="Add a Watch and Listen widget"><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Small">S</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Wide">M</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Large">L</button></span>
+                  <button type="button" class="icon-btn" aria-label="Open Watch and Listen"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+                <li class="m-homekit-gl">
+                  <span class="app-stack m-homekit-gl__icons" role="img" aria-label="Flipkart, Meesho and more"><span class="app-icon"><img src="assets/icons/flipkart.png" alt=""></span><span class="app-icon"><img src="assets/icons/meesho.png" alt=""></span><span class="app-stack__more"><span>…</span></span></span>
+                  <span class="m-homekit-gl__name">Shop &amp; Pay</span>
+                  <span class="m-homekit-gl__sizes" role="group" aria-label="Add a Shop and Pay widget"><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Small">S</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Wide">M</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Large">L</button></span>
+                  <button type="button" class="icon-btn" aria-label="Open Shop and Pay"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+                <li class="m-homekit-gl">
+                  <span class="app-stack m-homekit-gl__icons" role="img" aria-label="War Thunder Mobile, &#x421;onquistadorio and more"><span class="app-icon"><img src="assets/icons/war-thunder-mobile.png" alt=""></span><span class="app-icon"><img src="assets/icons/conquistadorio.png" alt=""></span><span class="app-stack__more"><span>…</span></span></span>
+                  <span class="m-homekit-gl__name">Games</span>
+                  <span class="m-homekit-gl__sizes" role="group" aria-label="Add a Games widget"><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Small">S</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Wide">M</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Large">L</button></span>
+                  <button type="button" class="icon-btn" aria-label="Open Games"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+                <li class="m-homekit-gl">
+                  <span class="m-homekit-gl__tile" role="img" aria-label="Life apps"><span class="sym" data-icon="light"></span></span>
+                  <span class="m-homekit-gl__name">Life</span>
+                  <span class="m-homekit-gl__sizes" role="group" aria-label="Add a Life widget"><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Small">S</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Wide">M</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Large">L</button></span>
+                  <button type="button" class="icon-btn" aria-label="Open Life"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+                <li class="m-homekit-gl">
+                  <span class="app-stack m-homekit-gl__icons" role="img" aria-label="Key Mapper, Play Store and more"><span class="app-icon"><img src="assets/icons/key-mapper.png" alt=""></span><span class="app-icon"><img src="assets/icons/play-store.png" alt=""></span><span class="app-stack__more"><span>…</span></span></span>
+                  <span class="m-homekit-gl__name">Tools</span>
+                  <span class="m-homekit-gl__sizes" role="group" aria-label="Add a Tools widget"><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Small">S</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Wide">M</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Large">L</button></span>
+                  <button type="button" class="icon-btn" aria-label="Open Tools"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+                <li class="m-homekit-gl">
+                  <span class="m-homekit-gl__tile" role="img" aria-label="System apps"><span class="sym" data-icon="settings"></span></span>
+                  <span class="m-homekit-gl__name">System</span>
+                  <span class="m-homekit-gl__sizes" role="group" aria-label="Add a System widget"><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Small">S</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Wide">M</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Large">L</button></span>
+                  <button type="button" class="icon-btn" aria-label="Open System"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+                <li class="m-homekit-gl">
+                  <span class="m-homekit-gl__tile" role="img" aria-label="More apps"><span class="sym" data-icon="more"></span></span>
+                  <span class="m-homekit-gl__name">More</span>
+                  <span class="m-homekit-gl__sizes" role="group" aria-label="Add a More widget"><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Small">S</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Wide">M</button><button type="button" class="btn btn--outlined m-homekit-size" aria-label="Large">L</button></span>
+                  <button type="button" class="icon-btn" aria-label="Open More"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+                <li class="m-homekit-gl">
+                  <span class="m-homekit-gl__tile" role="img" aria-label="Hidden apps"><span class="sym" data-icon="names_hidden"></span></span>
+                  <span class="m-homekit-gl__name">Hidden<span class="m-homekit-gl__sub">Kept out of every widget. None yet.</span></span>
+                  <span></span>
+                  <button type="button" class="icon-btn" aria-label="Open Hidden"><span class="sym" data-icon="chevron"></span></button>
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <details class="disclosure m-homekit-dev">
+            <summary><span class="sym" data-icon="code"></span>Developer details</summary>
+            <div class="disclosure__body">
+              <p>Home-screen grid: recorded 11 Oct 2026 from icon centres on a 3200 × 2136 px screenshot (docs/decisions/ADR-005-home-grid.md); columns from x = 570 px every 411.5 px, rows from y = 320 px every 413 px. Stored as the homeScreen block of device-facts.json (docs/device/home-grid.json). PadStudio can't read the live grid.</p>
+              <p>HyperOS links: com.miui.home.Setting (Home screen settings) and com.miui.home.action.ICON_CUSTOMIZE (Background colour).</p>
+              <p>Widgets set to Default: 42 (Wide, GroupWidgetReceiver) and 49 (Large, GroupWidgetLargeReceiver); neither has a grid key.</p>
+              <p>Fit rule: every space at least 48 × 48 dp; usable width = widget − 20 dp; usable height = widget − 20 − 28 dp header. The preview is an example widget of 472 × 252 dp until the tablet reports real sizes.</p>
+              <p>Density saved on 11 Oct: COMPACT (shown as Standard).</p>
+            </div>
+          </details>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mock-handle" aria-hidden="true"></div>
+</div>
+
+<script>
+/* Progressive enhancement only: the grid options and density update the preview. The frame is complete without it. */
+(function () {
+  "use strict";
+  var roots = document.querySelectorAll('.mock[data-screen="homekit"]:not([data-m-homekit-live])');
+  Array.prototype.forEach.call(roots, function (root) {
+    root.setAttribute("data-m-homekit-live", "");
+    var widget = root.querySelector(".m-homekit-pv__widget"), grid = widget && widget.querySelector(".widget__grid");
+    var cap = root.querySelector(".m-homekit-pv__cap"), chips = root.querySelectorAll("[data-grid]"), dens = root.querySelectorAll("[data-cell]");
+    if (!grid || !cap || !chips.length || !dens.length) return;
+    var icons = Array.prototype.filter.call(grid.children, function (c) { return c.querySelector("img"); });
+    var slot = grid.querySelector(".m-homekit-slot");
+    slot = slot && slot.parentNode.cloneNode(true);
+    function checked(list) { return Array.prototype.filter.call(list, function (b) { return b.getAttribute("aria-checked") === "true"; })[0]; }
+    function draw() {
+      var g = checked(chips), d = checked(dens);
+      if (!g || !d || !slot) return;
+      var key = g.getAttribute("data-grid"), m = /^(\d+)x(\d+)$/.exec(key), cols, rows, text;
+      if (key === "auto") {
+        var cell = +d.getAttribute("data-cell"); // core Density.cellDp; today's gridFor on the 472 × 252 dp example
+        cols = Math.max(1, Math.min(10, Math.floor(452 / cell))); rows = Math.max(1, Math.floor(196 / cell));
+        text = "Auto at " + d.textContent + ": " + cols + " × " + rows + " · " + cols * rows + " spaces";
+      } else if (m) { cols = +m[1]; rows = +m[2]; text = cols + " × " + rows + " · " + cols * rows + " spaces · names hidden"; }
+      else { cap.textContent = cap.getAttribute("data-custom"); return; }
+      var n = cols * rows, over = icons.length > n, shown = over ? n - 1 : Math.min(n, icons.length);
+      widget.style.setProperty("--cols", cols); widget.style.setProperty("--rows", rows);
+      while (grid.firstChild) grid.removeChild(grid.firstChild);
+      for (var i = 0; i < shown; i++) grid.appendChild(icons[i]);
+      if (over) { var more = document.createElement("span"); more.className = "widget__cell"; more.innerHTML = '<span class="widget__more"></span>'; more.firstChild.textContent = "+" + (icons.length - shown); grid.appendChild(more); }
+      for (var j = shown + (over ? 1 : 0); j < n; j++) grid.appendChild(slot.cloneNode(true));
+      cap.textContent = text;
+    }
+    function bind(list) {
+      Array.prototype.forEach.call(list, function (b) {
+        b.addEventListener("click", function () {
+          if (b.getAttribute("aria-disabled") === "true") return;
+          Array.prototype.forEach.call(list, function (o) { o.setAttribute("aria-checked", String(o === b)); });
+          draw();
+        });
+      });
+    }
+    bind(chips); bind(dens);
+  });
+})();
+</script>
+</section>

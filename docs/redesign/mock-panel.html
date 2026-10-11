@@ -1,0 +1,297 @@
+<section class="mock" data-screen="panel" aria-label="Folder panel and Edit widget, over the home screen">
+<style>
+/* mock-panel.html: the folder panel (plan §10 "Panels") with its long-press menu, and the Edit widget pane
+   beside it. Launcher overlay, not a main tab, so there is no rail. Every rule is scoped to .m-panel.
+   Blur and dim follow Panels.kt blurOrDimBehind(): blurBehindRadius 64 px = 23 dp at 2.75 px/dp, dim 0.25. */
+.m-panel { --m-panel-tint: var(--primary-container); }
+
+/* The home screen behind: the owner's own screenshot, blurred and dimmed. */
+.m-panel .m-panel-wall {
+  position: absolute; inset: 0; width: 100%; height: 100%; max-width: none;
+  object-fit: cover; filter: blur(23px) saturate(1.05); transform: scale(1.08);
+  pointer-events: none; user-select: none;
+}
+.m-panel .m-panel-dim { position: absolute; inset: 0; background-color: color-mix(in srgb, var(--scrim) 25%, transparent); }
+/* Over this dark wallpaper the system draws light status icons whatever the app's theme. */
+.m-panel[data-theme="light"] .mock-status { color: var(--inverse-on-surface); }
+.m-panel[data-theme="light"] .mock-handle { background: var(--inverse-on-surface); }
+
+/* Two frosted sheets, 28 dp corners, tinted toward the palette (the reference's navy-violet). */
+.m-panel .m-panel-sheet {
+  top: 12px;
+  padding: 20px 24px 24px;
+  border-radius: var(--r-xl, 28px);
+  background-color: color-mix(in srgb, color-mix(in oklab, var(--surface-container-low) 86%, var(--m-panel-tint)) 88%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 9%, transparent);
+}
+.m-panel .m-panel-folder { left: 24px; width: 576px; }
+.m-panel .m-panel-edit {
+  right: 24px; width: 516px;
+  max-height: calc(100% - 24px - var(--nav-h, 16px));
+  overflow: auto; scrollbar-width: none;
+}
+.m-panel .m-panel-edit::-webkit-scrollbar { display: none; }
+
+/* Header: eyebrow, large title, one-line subtitle; actions top right (reference layout). */
+.m-panel .m-panel-head { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.m-panel .m-panel-head__text { flex: 1 1 0; min-width: 0; padding-top: 2px; }
+.m-panel .m-panel-head__actions { flex: none; display: flex; align-items: center; gap: 4px; }
+.m-panel .m-panel-eyebrow {
+  font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); font-weight: var(--w-medium, 500);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--on-surface-variant);
+}
+.m-panel .m-panel-title {
+  font-size: var(--t-headline-size, 28px); line-height: var(--t-headline-line, 36px);
+  font-weight: var(--w-medium, 500); color: var(--on-surface); overflow-wrap: anywhere;
+}
+.m-panel .m-panel-sub { font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); color: var(--on-surface-variant); }
+
+/* Folder: search and a dense grid of real icons. */
+.m-panel .m-panel-search { margin-top: 16px; background-color: color-mix(in oklab, var(--surface-container-high) 88%, var(--m-panel-tint)); }
+.m-panel .m-panel-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 12px; }
+.m-panel .m-panel-cell { position: relative; min-width: 0; }
+.m-panel .m-panel-appbtn {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 100%; min-height: 48px; padding: 10px 4px 8px;
+  border-radius: var(--r-m, 16px); color: var(--on-surface); text-align: center;
+}
+.m-panel .m-panel-appbtn:hover { background-color: var(--state-hover); }
+.m-panel .m-panel-appbtn > .app-icon { --size: 56px; }
+.m-panel .m-panel-applabel {
+  max-width: 100%; font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px);
+  font-weight: var(--w-regular, 400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.m-panel .m-panel-appbtn.is-held { background-color: color-mix(in srgb, var(--secondary-container) 72%, transparent); color: var(--on-secondary-container); }
+
+/* Long-press menu: an elevated popup anchored under the held app. */
+.m-panel .m-panel-menu {
+  position: absolute; z-index: 5; top: calc(100% - 4px); right: 0;
+  width: 272px; padding: 4px 0 8px;
+  border-radius: var(--r-m, 16px);
+  background-color: var(--surface-container-high); color: var(--on-surface);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--scrim) 45%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--on-surface) 7%, transparent);
+}
+.m-panel .m-panel-menu__head { display: flex; align-items: center; gap: 12px; padding: 10px 16px 12px; }
+.m-panel .m-panel-menu__head > .app-icon { --size: 36px; }
+.m-panel .m-panel-menu__head > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.m-panel .m-panel-menu__name { font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); font-weight: var(--w-medium, 500); }
+.m-panel .m-panel-menu__where { font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); color: var(--on-surface-variant); }
+.m-panel .m-panel-menu__sep { height: 1px; margin: 4px 0; background-color: var(--outline-variant); }
+.m-panel .m-panel-menu__item {
+  display: flex; flex-direction: column; justify-content: center;
+  width: 100%; min-height: 48px; padding: 8px 16px;
+  font-size: var(--t-body-size, 16px); line-height: var(--t-body-line, 24px); color: var(--on-surface); text-align: left;
+}
+.m-panel .m-panel-menu__item:hover { background-color: var(--state-hover); }
+.m-panel .m-panel-menu__hint { font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); color: var(--on-surface-variant); }
+.m-panel .m-panel-menu__item--danger { color: var(--error); }
+
+/* Edit widget pane. */
+.m-panel .m-panel-edit .m-panel-head { align-items: center; }
+.m-panel .m-panel-field { margin-top: 16px; }
+.m-panel .m-panel-field__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px; margin-bottom: 8px; }
+.m-panel .m-panel-meta { font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); color: var(--on-surface-variant); }
+.m-panel .m-panel-example {
+  display: inline-block; margin-left: 6px; padding: 0 8px; border-radius: var(--r-full, 999px);
+  box-shadow: inset 0 0 0 1px var(--outline); color: var(--on-surface-variant);
+  font-size: var(--t-label-small-size, 11px); line-height: var(--t-label-small-line, 16px);
+}
+.m-panel .m-panel-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.m-panel .m-panel-tile {
+  --m-panel-tile-bg: color-mix(in oklab, var(--surface-container-high) 88%, var(--m-panel-tint));
+  --stack-ring: var(--m-panel-tile-bg);
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  min-width: 0; min-height: 48px; padding: 12px;
+  border-radius: var(--r-m, 16px); background-color: var(--m-panel-tile-bg); color: var(--on-surface); text-align: left;
+}
+.m-panel .m-panel-tile:hover { background-image: linear-gradient(var(--state-hover), var(--state-hover)); }
+.m-panel .m-panel-tile[aria-checked="true"] { --m-panel-tile-bg: var(--secondary-container); color: var(--on-secondary-container); }
+.m-panel .m-panel-tile[aria-checked="true"]::after {
+  content: ""; position: absolute; top: 10px; right: 10px; width: 18px; height: 18px; background-color: currentColor;
+  -webkit-mask: var(--kit-check) center / contain no-repeat; mask: var(--kit-check) center / contain no-repeat;
+}
+.m-panel .m-panel-tile[aria-disabled="true"] { cursor: default; }
+.m-panel .m-panel-tile[aria-disabled="true"]:hover { background-image: none; }
+.m-panel .m-panel-tile[aria-disabled="true"] :is(.m-panel-tile__name, .m-panel-mini) { opacity: .38; }
+.m-panel .m-panel-tile__row { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.m-panel .m-panel-tile__name {
+  min-width: 0; font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); font-weight: var(--w-medium, 500);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.m-panel .m-panel-tile__count { margin-left: 4px; font-weight: var(--w-regular, 400); opacity: .75; }
+.m-panel .m-panel-tile__sub {
+  font-size: var(--t-label-small-size, 11px); line-height: var(--t-label-small-line, 16px);
+  color: var(--on-surface-variant); font-variant-numeric: tabular-nums;
+}
+.m-panel .m-panel-tile[aria-checked="true"] .m-panel-tile__sub { color: inherit; }
+.m-panel .m-panel-tile .app-stack { --stack-size: 28px; }
+.m-panel .m-panel-tile .app-stack__more > span { font-size: var(--t-label-small-size, 11px); }
+/* On the chosen (tonal) tile the "+N" tile would vanish into the background, so it takes the ink colour. */
+.m-panel .m-panel-tile[aria-checked="true"] .app-stack__more > span { background-color: var(--on-secondary-container); color: var(--secondary-container); }
+.m-panel .m-panel-tile .sym--warn { color: var(--warn-ink); }
+/* The 200 % switch changes the names verdict for 6 × 3 and 8 × 4 (11 sp label → 22 dp, 32 dp line). */
+.m-panel .m-panel-at-200 { display: none; }
+.m-panel[data-fontscale="2"] .m-panel-at-200 { display: inline; }
+.m-panel[data-fontscale="2"] .m-panel-at-normal { display: none; }
+/* 200 %: header actions drop under the title, tiles go two across, names may wrap (the Edit pane scrolls). */
+.m-panel[data-fontscale="2"] .m-panel-head { flex-wrap: wrap; }
+.m-panel[data-fontscale="2"] .m-panel-head__text { flex-basis: 100%; }
+.m-panel[data-fontscale="2"] .m-panel-head__actions { flex-wrap: wrap; }
+.m-panel[data-fontscale="2"] .m-panel-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.m-panel[data-fontscale="2"] .m-panel-tile__name { white-space: normal; }
+.m-panel[data-fontscale="2"] .m-panel-tile[aria-checked="true"] { padding-right: 36px; }
+.m-panel[data-fontscale="2"] .m-panel-appbtn { padding-inline: 0; }
+
+/* A grid drawn as hairlines (house style: 1 dp data graphics). */
+.m-panel .m-panel-mini {
+  --m-panel-cols: 6; --m-panel-rows: 4;
+  flex: none; width: 30px; height: 20px; border-radius: 4px; opacity: .8;
+  background:
+    linear-gradient(90deg, currentColor 1px, transparent 0) 0 0 / calc(100% / var(--m-panel-cols)) 100%,
+    linear-gradient(currentColor 1px, transparent 0) 0 0 / 100% calc(100% / var(--m-panel-rows));
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+.m-panel .m-panel-reason {
+  display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; padding: 10px 14px 10px 12px;
+  border-radius: var(--r-s, 12px);
+  background-color: color-mix(in srgb, var(--warn) 13%, transparent);
+  font-size: var(--t-label-size, 13px); line-height: var(--t-label-line, 18px); color: var(--on-surface);
+  text-wrap: pretty;
+}
+.m-panel .m-panel-reason .sym { --sym-size: 20px; color: var(--warn-ink); }
+.m-panel .m-panel-density { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+.m-panel .m-panel-density__text { flex: 1 1 0; min-width: 0; }
+
+/* Page note under the frame (outside the mock). */
+.m-panel-note { margin: 8px 0 0; font-size: 13px; line-height: 18px; opacity: .75; }
+</style>
+
+<div class="mock-frame m-panel" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+  <img class="m-panel-wall" src="assets/before/before-home.jpg" alt="" aria-hidden="true">
+  <div class="m-panel-dim" aria-hidden="true"></div>
+  <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+
+  <div class="mock-app">
+
+    <!-- Folder panel: opened from the More widget's header -->
+    <section class="sheet sheet--frosted m-panel-sheet m-panel-folder" aria-labelledby="m-panel-folder-title">
+      <header class="m-panel-head">
+        <div class="m-panel-head__text">
+          <p class="m-panel-eyebrow">Group</p>
+          <h2 class="m-panel-title" id="m-panel-folder-title">More</h2>
+          <p class="m-panel-sub">5 apps</p>
+        </div>
+        <div class="m-panel-head__actions">
+          <button type="button" class="btn btn--outlined"><span class="sym" data-icon="library"></span>Open library</button>
+          <button type="button" class="btn btn--tonal" aria-pressed="true" aria-controls="m-panel-edit"><span class="sym" data-icon="edit"></span>Edit widget</button>
+          <button type="button" class="icon-btn" aria-label="Close"><span class="sym" data-icon="close"></span></button>
+        </div>
+      </header>
+
+      <label class="search m-panel-search"><span class="sym" data-icon="search"></span><input class="search__input" type="search" placeholder="Search apps" aria-label="Search apps in More"></label>
+
+      <ul class="m-panel-grid" aria-label="Apps in More">
+        <li class="m-panel-cell"><button type="button" class="m-panel-appbtn"><span class="app-icon"><img src="assets/icons/camera.png" alt=""></span><span class="m-panel-applabel">Camera</span></button></li>
+        <li class="m-panel-cell"><button type="button" class="m-panel-appbtn"><span class="app-icon"><img src="assets/icons/claude.png" alt=""></span><span class="m-panel-applabel">Claude</span></button></li>
+        <li class="m-panel-cell"><button type="button" class="m-panel-appbtn"><span class="app-icon"><img src="assets/icons/gmail.png" alt=""></span><span class="m-panel-applabel">Gmail</span></button></li>
+        <li class="m-panel-cell"><button type="button" class="m-panel-appbtn"><span class="app-icon"><img src="assets/icons/readera.png" alt=""></span><span class="m-panel-applabel">ReadEra</span></button></li>
+        <li class="m-panel-cell">
+          <button type="button" class="m-panel-appbtn is-held" aria-haspopup="menu" aria-expanded="true" aria-controls="m-panel-menu"><span class="app-icon"><img src="assets/icons/wifibar.png" alt=""></span><span class="m-panel-applabel">WiFiBar</span></button>
+          <!-- Long-press menu, open on WiFiBar -->
+          <div class="m-panel-menu" id="m-panel-menu" role="menu" aria-label="WiFiBar">
+            <div class="m-panel-menu__head" aria-hidden="true"><span class="app-icon"><img src="assets/icons/wifibar.png" alt=""></span><span><span class="m-panel-menu__name">WiFiBar</span><span class="m-panel-menu__where">In More</span></span></div>
+            <div class="m-panel-menu__sep" role="separator"></div>
+            <button type="button" class="m-panel-menu__item" role="menuitem">App info</button>
+            <button type="button" class="m-panel-menu__item" role="menuitem">Move to group…</button>
+            <button type="button" class="m-panel-menu__item" role="menuitem"><span>Hide</span><span class="m-panel-menu__hint">Out of every widget</span></button>
+            <div class="m-panel-menu__sep" role="separator"></div>
+            <button type="button" class="m-panel-menu__item m-panel-menu__item--danger" role="menuitem"><span>Uninstall</span><span class="m-panel-menu__hint">Asks first</span></button>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Edit widget: the same widget, beside the panel -->
+    <section class="sheet sheet--frosted m-panel-sheet m-panel-edit" id="m-panel-edit" aria-labelledby="m-panel-edit-title">
+      <header class="m-panel-head">
+        <div class="m-panel-head__text">
+          <h2 class="m-panel-title" id="m-panel-edit-title">Edit widget</h2>
+          <p class="m-panel-sub">Changes apply right away</p>
+        </div>
+        <div class="m-panel-head__actions">
+          <button type="button" class="btn btn--filled">Done</button>
+        </div>
+      </header>
+
+      <div class="m-panel-field">
+        <div class="m-panel-field__head"><h3 class="section-label">Group</h3><span class="m-panel-meta">Showing More · 5 apps</span></div>
+        <div class="m-panel-tiles" role="radiogroup" aria-label="Group this widget shows">
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="false">
+            <span class="app-stack" aria-hidden="true"><span class="app-icon"><img src="assets/icons/freenotes.png" alt=""></span><span class="app-icon"><img src="assets/icons/notes.png" alt=""></span></span>
+            <span class="m-panel-tile__name">Study<span class="m-panel-tile__count">2</span></span>
+          </button>
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="false">
+            <span class="app-stack" aria-hidden="true"><span class="app-icon"><img src="assets/icons/brave.png" alt=""></span><span class="app-icon"><img src="assets/icons/whatsapp.png" alt=""></span></span>
+            <span class="m-panel-tile__name">Social<span class="m-panel-tile__count">2</span></span>
+          </button>
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="false">
+            <span class="app-stack" aria-hidden="true"><span class="app-icon"><img src="assets/icons/flipkart.png" alt=""></span><span class="app-icon"><img src="assets/icons/meesho.png" alt=""></span></span>
+            <span class="m-panel-tile__name">Shop &amp; Pay<span class="m-panel-tile__count">2</span></span>
+          </button>
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="false">
+            <span class="app-stack" aria-hidden="true"><span class="app-icon"><img src="assets/icons/war-thunder-mobile.png" alt=""></span><span class="app-icon"><img src="assets/icons/conquistadorio.png" alt=""></span></span>
+            <span class="m-panel-tile__name">Games<span class="m-panel-tile__count">2</span></span>
+          </button>
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="false">
+            <span class="app-stack" aria-hidden="true"><span class="app-icon"><img src="assets/icons/key-mapper.png" alt=""></span><span class="app-icon"><img src="assets/icons/play-store.png" alt=""></span></span>
+            <span class="m-panel-tile__name">Tools<span class="m-panel-tile__count">2</span></span>
+          </button>
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="true">
+            <span class="app-stack" aria-hidden="true"><span class="app-icon"><img src="assets/icons/camera.png" alt=""></span><span class="app-icon"><img src="assets/icons/claude.png" alt=""></span><span class="app-icon"><img src="assets/icons/gmail.png" alt=""></span><span class="app-stack__more"><span>+2</span></span></span>
+            <span class="m-panel-tile__name">More<span class="m-panel-tile__count">5</span></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="m-panel-field">
+        <div class="m-panel-field__head"><h3 class="section-label">Grid</h3><span class="m-panel-meta">This widget: 412 × 300 dp<span class="m-panel-example">example</span></span></div>
+        <div class="m-panel-tiles" role="radiogroup" aria-label="Grid">
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="true">
+            <span class="m-panel-tile__row"><span class="sym sym--20" data-icon="grid"></span><span class="m-panel-tile__name">Default</span></span>
+            <span class="m-panel-tile__sub">Now Auto</span>
+          </button>
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="false">
+            <span class="m-panel-tile__row"><span class="m-panel-mini" style="--m-panel-cols:6;--m-panel-rows:4" aria-hidden="true"></span><span class="m-panel-tile__name">Auto</span></span>
+            <span class="m-panel-tile__sub">6 × 4 here</span>
+          </button>
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="false">
+            <span class="m-panel-tile__row"><span class="m-panel-mini" style="--m-panel-cols:6;--m-panel-rows:3" aria-hidden="true"></span><span class="m-panel-tile__name">6 × 3</span></span>
+            <span class="m-panel-tile__sub"><span class="m-panel-at-normal">Fits, with names</span><span class="m-panel-at-200">Fits, no names</span></span>
+          </button>
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="false">
+            <span class="m-panel-tile__row"><span class="m-panel-mini" style="--m-panel-cols:8;--m-panel-rows:4" aria-hidden="true"></span><span class="m-panel-tile__name">8 × 4</span></span>
+            <span class="m-panel-tile__sub"><span class="m-panel-at-normal">Fits, with names</span><span class="m-panel-at-200">Fits, no names</span></span>
+          </button>
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="false" aria-disabled="true" aria-describedby="m-panel-reason">
+            <span class="m-panel-tile__row"><span class="m-panel-mini" style="--m-panel-cols:10;--m-panel-rows:5" aria-hidden="true"></span><span class="m-panel-tile__name">10 × 5</span></span>
+            <span class="m-panel-tile__sub"><span class="sym sym--16 sym--warn" data-icon="fit_warn"></span> Doesn't fit</span>
+          </button>
+          <button type="button" class="m-panel-tile" role="radio" aria-checked="false">
+            <span class="m-panel-tile__row"><span class="sym sym--20" data-icon="edit"></span><span class="m-panel-tile__name">Custom</span></span>
+            <span class="m-panel-tile__sub">Up to 8 × 5</span>
+          </button>
+        </div>
+        <p class="m-panel-reason" id="m-panel-reason"><span class="sym" data-icon="fit_warn"></span><span>10 columns need a 500 dp wide widget; this one is 412 dp. Resize it first.</span></p>
+      </div>
+
+      <div class="m-panel-density">
+        <div class="m-panel-density__text"><h3 class="section-label">Density</h3><p class="m-panel-meta">Used by Auto</p></div>
+        <div class="seg" role="group" aria-label="Density"><button type="button" class="seg__btn" aria-pressed="false">Roomy</button><button type="button" class="seg__btn" aria-pressed="true">Standard</button><button type="button" class="seg__btn" aria-pressed="false">Dense</button></div>
+      </div>
+    </section>
+
+  </div>
+  <div class="mock-handle" aria-hidden="true"></div>
+</div>
+<p class="m-panel-note">Groups hold only the 15 apps from your home-screen screenshots (ByteByteGo is a shortcut, so it is in none). On the tablet each group also holds the rest of its apps.</p>
+</section>
