@@ -15,7 +15,7 @@ object CuratedApps {
             "com.google.android.apps.classroom", "com.duolingo", "com.byjus.thelearningapp", "com.unacademyapp",
             "xyz.penpencil.physicswala", "org.khanacademy.android", "org.coursera.android", "com.udemy.android",
             "com.microblink.photomath", "com.orion.notein.global", "com.flexcil.flexcilnote",
-            "com.microsoft.office.onenote", "com.google.android.keep", "com.miui.notes",
+            "com.microsoft.office.onenote", "com.google.android.keep", "com.miui.notes", "ai.note.notepad.memo.journal.freenote",
             "com.steadfastinnovation.android.projectpapyrus",
         ) + group(
             AppGroup.WORK,
@@ -32,7 +32,7 @@ object CuratedApps {
         ) + group(
             AppGroup.CREATE,
             "com.canva.editor", "com.lemon.lvoverseas", "com.niksoftware.snapseed", "com.adobe.lrmobile",
-            "jp.ne.ibis.ibispaintx.app", "com.brakefield.painter", "com.adsk.sketchbook", "com.tophatch.concepts",
+            "jp.ne.ibis.ibispaintx.app", "com.brakefield.painter", "com.adsk.sketchbook", "com.tophatch.concepts", "com.miui.creation",
             "com.android.camera", "com.miui.gallery", "com.google.android.apps.photos",
         ) + group(
             AppGroup.SOCIAL,

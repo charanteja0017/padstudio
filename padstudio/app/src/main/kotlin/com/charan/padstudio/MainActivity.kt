@@ -80,12 +80,14 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Debug builds only, e.g. `adb shell am start -n com.charan.padstudio/.MainActivity --es tab home`
-     * opens a tab (pen, home, looks, setup, about) for screenshots.
+     * opens a tab (pen, home, looks, setup, about) for screenshots; `--es open probe` opens the pen probe.
      */
     private fun handleDebug(intent: Intent?) {
         val debuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         if (!debuggable) return
         intent?.getStringExtra("tab")?.let { requestedTab = it }
+        // `--es open probe` opens the pen probe (it isn't exported, so adb can't start it directly).
+        if (intent?.getStringExtra("open") == "probe") startActivity(Intent(this, com.charan.padstudio.setup.PenProbeActivity::class.java))
     }
 
     private var requestedTab by mutableStateOf<String?>(null)

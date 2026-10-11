@@ -39,6 +39,8 @@ class PenProbeActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Tests take a while; the screen going off would stop HyperOS delivering pen events.
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
             PadStudioTheme {
                 Surface(Modifier.fillMaxSize()) {
@@ -86,6 +88,11 @@ class PenProbeActivity : ComponentActivity() {
         }
         lines += "$kind ${MotionEvent.actionToString(event.actionMasked)} tool=${event.getToolType(0)} " +
             "buttons=0x%x stylus=$stylus device=\"${event.device?.name}\"".format(event.buttonState)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        save()
     }
 
     private fun save() {

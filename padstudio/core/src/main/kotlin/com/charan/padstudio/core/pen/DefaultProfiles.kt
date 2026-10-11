@@ -51,7 +51,8 @@ object DefaultProfiles {
     val NATIVE_NOTES = PenContext(
         id = "notes_native",
         title = "Notes with their own pen settings",
-        packages = listOf("com.orion.notein.global", "com.flexcil.flexcilnote"),
+        // com.miui.creation (Mi Canvas) verified on the Pad 8 probe (ADR-001).
+        packages = listOf("com.miui.creation", "com.orion.notein.global", "com.flexcil.flexcilnote"),
         passThrough = true,
         labelHints = listOf("Notein", "Notewise", "Flexcil", "Mi Canvas"),
     )
@@ -62,6 +63,9 @@ object DefaultProfiles {
             "com.microsoft.office.onenote",
             "com.google.android.keep",
             "com.steadfastinnovation.android.projectpapyrus",
+            // On the Pad 8 (ADR-001): Mi Notes and freenote.
+            "com.miui.notes",
+            "ai.note.notepad.memo.journal.freenote",
         ),
     )
     val MEDIA = PenContext(
