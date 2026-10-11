@@ -77,6 +77,9 @@ class GroupWidget : GlanceAppWidget() {
     companion object {
         val GROUP = stringPreferencesKey("group")
         val DENSITY = stringPreferencesKey("density")
+
+        /** This widget's grid (plan §6b): "default" or missing → StudioConfig.widgetGrid, "auto", or "8x4". */
+        val GRID = stringPreferencesKey("grid")
     }
 }
 

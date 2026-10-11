@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.PadStudio" parent="android:Theme.Material.NoActionBar" />
+    <style name="Theme.PadStudio" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#FF1C1C1E</item>
+    </style>
 
     <style name="Theme.PadStudio.Panel" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
