@@ -51,7 +51,8 @@ pad_require_device() {
     echo "Device $ANDROID_SERIAL is not ready (state: $(adb get-state 2>&1))." >&2
     return 1
   fi
-  count="$(adb devices | awk 'NR > 1 && $2 == "device"' | wc -l | tr -d ' ')"
+  # Fields are tab-separated; wireless-debugging serials contain spaces ("adb-… (2)._adb-tls-connect._tcp").
+  count="$(adb devices | awk -F'\t' 'NR > 1 && $2 == "device"' | wc -l | tr -d ' ')"
   if [[ "$count" == "1" ]]; then
     return 0
   fi
@@ -63,7 +64,8 @@ No tablet connected. On the Pad:
        USB debugging ............................ ON
        Install via USB .......................... ON
        USB debugging (Security settings) ........ ON   (may ask for Mi-account sign-in)
-  3. Connect the USB-C cable and accept the "Allow USB debugging" prompt.
+  3. Connect the USB-C cable and accept the "Allow USB debugging" prompt,
+     or turn on Wireless debugging (same Wi-Fi as the Mac); `adb mdns services` should list it.
 Then re-run this script. `adb devices` should list the tablet as "device".
 EOF
     adb devices | sed -n '2,$p' | grep -v '^$' | sed 's/^/  seen: /' >&2 || true
@@ -76,7 +78,8 @@ EOF
 
 # Device-side timestamp in the format `logcat -T` accepts.
 pad_device_time() {
-  adb shell date +'%m-%d %H:%M:%S.000' | tr -d '\r'
+  # Quoted as one string: adb joins arguments and the device shell would split the format at the space.
+  adb shell "date +'%m-%d %H:%M:%S.000'" | tr -d '\r'
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
@@ -87,7 +90,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
       printf 'adb           '; adb version 2>/dev/null | sed -n '1p;2p' | tr '\n' ' '; echo
       printf 'JDK 17        '; "$PAD_JDK17/bin/java" -version 2>&1 | head -1
       printf 'free disk     %s GB (minimum for builds: %s GB)\n' "$(pad_free_gb)" "$PAD_MIN_FREE_GB"
-      printf 'devices       '; adb devices | awk 'NR > 1 && NF' | tr '\n' ';'; echo
+      printf 'devices       '; adb devices | awk -F'\t' 'NR > 1 && NF { print $1 " [" $2 "]" }' | tr '\n' ';'; echo
       ;;
     *)
       echo "Source this file (source tools/env.sh) or run: tools/env.sh --check" >&2

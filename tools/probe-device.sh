@@ -58,7 +58,8 @@ sh_capture stylus_packages.txt "pm list packages | grep -iE 'pen|stylus|canvas|n
 for pkg in com.miui.home com.android.camera com.miui.notes com.miui.creation com.android.thememanager \
            "$PKG_KEYMAPPER" "$PKG_PADSTUDIO" "$PKG_LAWNICONS" com.donnnno.arcticons net.sourceforge.opencamera \
            com.notein.android com.notewise.app com.flexcil.flexcilnote; do
-  version="$(adb shell "dumpsys package $pkg | grep -m1 versionName" 2>/dev/null | tr -d '\r' | sed 's/.*versionName=//')"
+  # `|| true`: grep finds nothing for apps that aren't installed, which must not stop the probe (set -e).
+  version="$(adb shell "dumpsys package $pkg | grep -m1 versionName" 2>/dev/null | tr -d '\r' | sed 's/.*versionName=//' || true)"
   printf '%s\t%s\n' "$pkg" "${version:-not installed}" >>"$RAW/versions.txt"
 done
 

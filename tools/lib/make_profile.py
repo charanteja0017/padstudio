@@ -42,6 +42,7 @@ IDENTITY_PROPS = [
 ]
 
 KNOWN_DEVICES = {
+    "yupei": "Xiaomi Pad 8 (India 25097RP43I) — pen: Xiaomi Focus Pen Pro (squeeze + slides, no buttons); HyperOS 3 / Android 16",
     "pipa": "Xiaomi Pad 6 — expected pen: Xiaomi Smart Pen (2nd gen); India builds: HyperOS 2 / Android 14",
     "uke": "Xiaomi Pad 7 — expected pen: Xiaomi Focus Pen; India builds: HyperOS 3 / Android 16",
 }
@@ -60,7 +61,19 @@ BASELINE_SETTINGS = [
 ]
 
 PEN_NAME = re.compile(r"pen|stylus|xiaomi.*(smart|focus)|mipen", re.IGNORECASE)
-SETTINGS_OF_INTEREST = re.compile(r"pen|stylus|handwrit|shortcut|key_|quick_note|notes", re.IGNORECASE)
+# Pen/shortcut settings only; app lists, usage data and cloud blobs stay out of the committed profile.
+SETTINGS_OF_INTEREST = re.compile(
+    r"^(stylus_|setting_stylus|support_native_handwriting|support_gesture_shortcut|touch_film|key_combination_|"
+    r"key_chord_|volumekey_|long_press_|key_long_press|screen_key_press|notes_pref|miui_bluetooth_store_pen)",
+    re.IGNORECASE,
+)
+MAC = re.compile(r"\b([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\b")
+UUID = re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", re.IGNORECASE)
+
+
+def redact(value: str) -> str:
+    """Bluetooth addresses and UUIDs identify this tablet and its pen; the profile doesn't need them."""
+    return UUID.sub("<uuid>", MAC.sub("<bt-address>", value))
 COMPONENT = re.compile(r"^([A-Za-z0-9_.]+)/([A-Za-z0-9_.$]+)$")
 
 
@@ -167,6 +180,9 @@ def parse_event_hub(text: str | None) -> list[InputDevice]:
             for key, value in re.findall(r"(bus|vendor|product|version)=(0x[0-9a-fA-F]+)", stripped):
                 setattr(current, key, value.lower())
     for device in devices:
+        if "TOUCH" in device.classes.upper():
+            # Touchscreen/digitizer (e.g. "NVTCapacitivePen…"): carries the ink, never a pen-button device.
+            continue
         if PEN_NAME.search(device.name):
             device.reasons.append("name looks like a pen")
         if device.bus == "0x0005" and "KEYBOARD" in device.classes.upper():
@@ -363,7 +379,7 @@ def profile_markdown(data: dict, raw: Path) -> str:
     for namespace, values in data["interesting_settings"].items():
         for key, value in sorted(values.items()):
             any_setting = True
-            out.append(f"- `{namespace}` `{key}` = `{value}`")
+            out.append(f"- `{namespace}` `{key}` = `{redact(value)}`")
     if not any_setting:
         out.append("- *(none found)*")
     out += [
