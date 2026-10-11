@@ -103,7 +103,8 @@ class ProfileGenerator(private val facts: DeviceFacts) {
                 KmKeyMap(
                     uid = uid("keymap:${binding.contextId}:${binding.control}:${binding.press}:${packageName ?: "*"}:${variant.key}"),
                     name = buildString {
-                        append("${group.name} · ${control.label} ${binding.press.label} → ${binding.intent.label}")
+                        val gesture = if (control.singleGesture) control.label else "${control.label} ${binding.press.label}"
+                        append("${group.name} · $gesture → ${binding.intent.label}")
                         if (packageName != null && multipleApps) append(" (${facts.appNames[packageName] ?: packageName})")
                         if (variant.key != "default") append(" [${variant.key}]")
                     },

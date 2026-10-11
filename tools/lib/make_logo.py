@@ -15,6 +15,9 @@ from pathlib import Path
 VIEW = 108                      # adaptive icon canvas (dp)
 SAFE_R = 34.0                   # mark reach from centre; only rounded corners and the nib point pass Android's 33
 OPTICAL_DY = 1.0                # the heavy bowl makes a centred mark look high
+# Launchers show the middle 72dp. The mark is tall, so height decides: about two thirds of the plate
+# (measured on HyperOS's dock: fitted to the circle alone it filled 83% and looked cramped).
+MARK_H = 48.0
 BG_FROM, BG_TO = "#4338CA", "#7C3AED"
 INK, NIB = "#FFFFFF", "#FBBF24"
 
@@ -32,7 +35,7 @@ def fit():
     corners = [(0, R * (1 - math.sqrt(0.5))), (BOWL_W, R * (1 - math.sqrt(0.5))), (0, NIB_SHOULDER), (STEM_W / 2, NIB_TIP), (BOWL_W, BOWL_H - R * (1 - math.sqrt(0.5)))]
     cx, cy = BOWL_W / 2, HEIGHT / 2
     reach = max(math.hypot(x - cx, y - cy) for x, y in corners)
-    scale = SAFE_R / reach
+    scale = min(SAFE_R / reach, MARK_H / HEIGHT)
     return scale, VIEW / 2 - cx * scale, VIEW / 2 - cy * scale + OPTICAL_DY
 
 
@@ -119,17 +122,18 @@ def background():
 def preview():
     """Launcher-like squircle at 3 sizes, plus the themed (monochrome) version."""
     def icon(x, y, size, themed=False):
-        k = size / VIEW
+        # Launchers show the middle 72dp of the 108dp layers, masked to their icon shape.
+        inset, shown = (VIEW - 72) / 2, 72
+        k = size / shown
         plate = "#E8E8EE" if themed else "url(#bg)"
         ink = "#3B3B46" if themed else INK
         tip = ink if themed else NIB
         return (
-            f'<g transform="translate({x},{y}) scale({k})">'
-            f'<rect x="0" y="0" width="{VIEW}" height="{VIEW}" rx="{VIEW * 0.24}" fill="{plate}"/>'
+            f'<g transform="translate({x},{y}) scale({k}) translate({-inset},{-inset})">'
+            f'<rect x="{inset}" y="{inset}" width="{shown}" height="{shown}" rx="{shown * 0.24}" fill="{plate}"/>'
             f'<path d="{body_path()}" fill="{ink}" fill-rule="evenodd"/>'
             f'<path d="{nib_path()}" fill="{ink}"/>'
-            f'<path d="{nib_tip_path()}" fill="{tip}"/>'
-            f'<circle cx="54" cy="54" r="33" fill="none" stroke="#ff000044" stroke-width="0.4"/></g>'
+            f'<path d="{nib_tip_path()}" fill="{tip}"/></g>'
         )
     w, h = 900, 380
     return (

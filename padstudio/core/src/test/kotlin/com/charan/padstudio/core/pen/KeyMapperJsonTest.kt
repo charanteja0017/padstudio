@@ -135,6 +135,7 @@ class KeyMapperJsonTest {
             assertEquals(Press.SHORT.clickType, key.getValue("clickType").jsonPrimitive.int)
         }
         val everywhere = doubleTaps.single { it.getValue("name").jsonPrimitive.content.startsWith("Everywhere") }
+        assertEquals("Everywhere else · Double tap → Last app", everywhere.getValue("name").jsonPrimitive.content)
         assertEquals("go_last_app", everywhere.getValue("actionList").jsonArray.single().jsonObject.getValue("data").jsonPrimitive.content)
     }
 
