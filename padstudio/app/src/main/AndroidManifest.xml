@@ -65,6 +65,12 @@
             </intent-filter>
         </activity>
 
+        <!-- Live pressure, tilt and hover readout; rotating keeps the drawing. -->
+        <activity
+            android:name=".pen.PenTestActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
+            android:exported="false" />
+
         <!-- Debug-friendly helpers: in-window pen event logger, and the rollback wallpaper reset. -->
         <activity
             android:name=".setup.PenProbeActivity"
@@ -94,7 +100,7 @@
 
         <!-- Hands the generated pen profile to Key Mapper's restore screen. -->
         <provider
-            android:name="androidx.core.content.FileProvider"
+            android:name=".pen.ProfileFileProvider"
             android:authorities="${applicationId}.files"
             android:exported="false"
             android:grantUriPermissions="true">

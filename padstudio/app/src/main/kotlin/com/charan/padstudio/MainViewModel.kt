@@ -14,7 +14,6 @@ import com.charan.padstudio.core.pen.PenIntent
 import com.charan.padstudio.core.pen.PenKind
 import com.charan.padstudio.core.pen.PenMode
 import com.charan.padstudio.core.pen.Press
-import com.charan.padstudio.core.pen.ProfileGenerator
 import com.charan.padstudio.data.HomeSnapshot
 import com.charan.padstudio.data.IconStyle
 import com.charan.padstudio.home.GroupWidget
@@ -24,9 +23,13 @@ import com.charan.padstudio.looks.WallpaperGenerator
 import com.charan.padstudio.pen.KeyMapperBridge
 import com.charan.padstudio.pen.PenPlan
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -43,6 +46,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val plan: StateFlow<PenPlan?> = _plan.asStateFlow()
     private val _capturing = MutableStateFlow<String?>(null)
     val capturing: StateFlow<String?> = _capturing.asStateFlow()
+    private var captureTimeout: Job? = null
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
     private val _health = MutableStateFlow<List<HealthCheck>>(emptyList())
@@ -55,9 +59,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refresh(force: Boolean = false) {
         viewModelScope.launch(Dispatchers.Default) {
+            adoptDeviceFacts()
             _snapshot.value = studio.apps.snapshot(force)
             replan()
             _health.value = healthChecks()
+        }
+    }
+
+    /** First time device-facts.json is seen, take its pen kind and mode (measured by the probe). */
+    private fun adoptDeviceFacts() {
+        if (config.value.factsAdopted) return
+        val facts = studio.pen.factsFile() ?: return
+        studio.config.update {
+            it.copy(
+                penKind = facts.penKind ?: it.penKind,
+                penMode = facts.penMode ?: it.penMode,
+                bindings = null,
+                factsAdopted = true,
+            )
+        }
+    }
+
+    fun setKeyInjection(enabled: Boolean) = studio.config.update { it.copy(keyInjection = enabled) }
+
+    /** Debug: hand the profile to Key Mapper as soon as one has been generated. */
+    fun applyWhenReady(start: (Intent) -> Unit) {
+        viewModelScope.launch {
+            plan.filterNotNull().first()
+            applyToKeyMapper()?.let(start)
         }
     }
 
@@ -82,11 +111,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun startCapture(controlId: String) {
         _capturing.value = controlId
         KeyMapperBridge.pauseMappings(studio)
+        KeyMapperBridge.scheduleResume(studio, CAPTURE_TIMEOUT_MS + RESUME_SAFETY_MARGIN_MS)
+        captureTimeout?.cancel()
+        captureTimeout = viewModelScope.launch {
+            delay(CAPTURE_TIMEOUT_MS)
+            cancelCapture()
+            _message.value = "No key reached PadStudio, so HyperOS keeps that button for itself. Key Mapper is listening again."
+        }
     }
 
+    /** Ends a capture and lets Key Mapper listen again; does nothing when no capture is running. */
     fun cancelCapture() {
+        if (_capturing.value == null) return
+        captureTimeout?.cancel()
         _capturing.value = null
         KeyMapperBridge.resumeMappings(studio)
+        KeyMapperBridge.cancelScheduledResume(studio)
+    }
+
+    override fun onCleared() {
+        cancelCapture()
     }
 
     /** Called from MainActivity.dispatchKeyEvent; true means the event was taken by the wizard. */
@@ -117,13 +161,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _message.value = "Install Key Mapper first (tools/install.sh keymapper)."
             return null
         }
+        // Key Mapper's Replace would wipe every key map and add none.
+        if (plan.generated.keyMaps.isEmpty()) {
+            _message.value = "Nothing to hand over: this pen has no recorded or measured buttons. Check the pen type."
+            return null
+        }
         studio.config.update { it.copy(appliedProfileHash = plan.hash) }
         return KeyMapperBridge.importIntent(studio, plan.json)
     }
 
+    /** Key Mapper switches only the key maps directly inside a group, so every generated group is switched. */
     fun setPenEnabled(enabled: Boolean) {
-        val sent = KeyMapperBridge.setGroupEnabled(studio, ProfileGenerator.uid("group:root"), enabled)
-        _message.value = if (sent) "Pen actions ${if (enabled) "on" else "off"}." else "Key Mapper is not installed."
+        val groups = _plan.value?.generated?.groups.orEmpty()
+        if (!KeyMapperBridge.isInstalled(studio)) {
+            _message.value = "Key Mapper is not installed."
+            return
+        }
+        groups.forEach { KeyMapperBridge.setGroupEnabled(studio, it.uid, enabled) }
+        _message.value = if (groups.isEmpty()) "The pen profile isn't ready yet." else "Pen actions ${if (enabled) "on" else "off"}."
     }
 
     // --- Home ----------------------------------------------------------------------------------
@@ -227,5 +282,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private object Android13Monochrome {
         val available = android.os.Build.VERSION.SDK_INT >= 33
+    }
+
+    private companion object {
+        /** A capture that sees nothing gives up, so Key Mapper is never left paused. */
+        const val CAPTURE_TIMEOUT_MS = 15_000L
+
+        /** The alarm only matters if PadStudio died mid-capture, so it fires after the in-app timeout. */
+        const val RESUME_SAFETY_MARGIN_MS = 5_000L
     }
 }

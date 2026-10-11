@@ -69,6 +69,12 @@ fun PenStudioScreen(model: MainViewModel, onStart: (android.content.Intent) -> U
     LazyColumn(modifier, contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { KeyMapperCard(context) }
         item {
+            Section("Pen test") {
+                Text("Write and watch pressure, tilt, hover and report rate live.", style = MaterialTheme.typography.bodySmall)
+                Button(onClick = { onStart(android.content.Intent(context, PenTestActivity::class.java)) }) { Text("Open pen test") }
+            }
+        }
+        item {
             Section("Your pen") {
                 Text("Pen", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -88,19 +94,47 @@ fun PenStudioScreen(model: MainViewModel, onStart: (android.content.Intent) -> U
                     },
                     style = MaterialTheme.typography.bodySmall,
                 )
+                if (config.penMode == PenMode.EXPERT) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Key Mapper can inject keys", style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                "Turn on only after enabling Key Mapper's Expert-mode setting for key event actions. " +
+                                    "Then page turns use Page Up/Down keys instead of swipes.",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        androidx.compose.material3.Switch(checked = config.keyInjection, onCheckedChange = model::setKeyInjection)
+                    }
+                }
                 controls.forEach { control ->
+                    val recorded = config.controls[control.id]
+                    val effective = recorded ?: plan?.controls?.get(control.id)
+                    val measured = recorded == null && effective != null
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
                         Column(Modifier.weight(1f)) {
                             Text(control.label, style = MaterialTheme.typography.bodyLarge)
-                            Text(describe(config.controls[control.id]), style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                describe(effective) + if (measured) " · measured by the probe" else "",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                         }
-                        if (capturing == control.id) {
-                            Text("Press it now…", color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
-                            TextButton(onClick = model::cancelCapture) { Text("Cancel") }
-                        } else {
-                            OutlinedButton(onClick = { model.startCapture(control.id) }) { Text(if (config.controls[control.id] == null) "Record" else "Record again") }
+                        when {
+                            capturing == control.id -> {
+                                Text("Press it now…", color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
+                                TextButton(onClick = model::cancelCapture) { Text("Cancel") }
+                            }
+                            // HyperOS keeps these presses from app windows, so only tools/capture-pen.sh can re-measure them.
+                            config.penMode == PenMode.EXPERT && measured -> Unit
+                            else -> OutlinedButton(onClick = { model.startCapture(control.id) }) { Text(if (recorded == null) "Record" else "Record again") }
                         }
                     }
+                }
+                if (config.penMode == PenMode.EXPERT && controls.any { config.controls[it.id] == null && plan?.controls?.get(it.id) != null }) {
+                    Text(
+                        "HyperOS keeps these presses away from apps, so they are measured over adb (tools/capture-pen.sh) instead of recorded here.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
         }

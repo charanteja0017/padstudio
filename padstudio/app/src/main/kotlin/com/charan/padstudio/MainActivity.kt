@@ -78,9 +78,17 @@ class MainActivity : ComponentActivity() {
     @android.annotation.SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean = model.onKeyEvent(event) || super.dispatchKeyEvent(event)
 
+    override fun onStop() {
+        // Leaving mid-capture must not leave the pen paused in Key Mapper.
+        if (!isChangingConfigurations) model.cancelCapture()
+        super.onStop()
+    }
+
     /**
      * Debug builds only, e.g. `adb shell am start -n com.charan.padstudio/.MainActivity --es tab home`
-     * opens a tab (pen, home, looks, setup, about) for screenshots; `--es open probe` opens the pen probe.
+     * opens a tab (pen, home, looks, setup, about) for screenshots; `--es open probe` opens the pen probe,
+     * `--es open pentest` the pen test;
+     * `--es apply keymapper` hands the current pen profile to Key Mapper.
      */
     private fun handleDebug(intent: Intent?) {
         val debuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
@@ -88,6 +96,9 @@ class MainActivity : ComponentActivity() {
         intent?.getStringExtra("tab")?.let { requestedTab = it }
         // `--es open probe` opens the pen probe (it isn't exported, so adb can't start it directly).
         if (intent?.getStringExtra("open") == "probe") startActivity(Intent(this, com.charan.padstudio.setup.PenProbeActivity::class.java))
+        if (intent?.getStringExtra("open") == "pentest") startActivity(Intent(this, com.charan.padstudio.pen.PenTestActivity::class.java))
+        // `--es apply keymapper` opens Key Mapper's restore dialog with the current profile.
+        if (intent?.getStringExtra("apply") == "keymapper") model.applyWhenReady { startActivity(it) }
     }
 
     private var requestedTab by mutableStateOf<String?>(null)

@@ -23,7 +23,15 @@ import java.io.File
 import java.security.MessageDigest
 
 /** A generated profile plus the JSON Key Mapper will restore and a short hash to recognise it later. */
-data class PenPlan(val contexts: List<PenContext>, val profile: PenProfile, val generated: GeneratedProfile, val json: String, val hash: String)
+data class PenPlan(
+    val contexts: List<PenContext>,
+    val profile: PenProfile,
+    val generated: GeneratedProfile,
+    val json: String,
+    val hash: String,
+    /** Controls used: recorded in PadStudio's window, or measured by the probe (device-facts.json). */
+    val controls: Map<String, PenTrigger>,
+)
 
 /** Turns PadStudio's settings and this tablet's facts into a Key Mapper pen profile. */
 class PenStudio(private val context: Context, private val config: ConfigStore, private val apps: AppRepository) {
@@ -40,6 +48,7 @@ class PenStudio(private val context: Context, private val config: ConfigStore, p
             cameras = DefaultProfiles.KNOWN_CAMERAS,
             paging = DefaultProfiles.PAGING,
             notesApp = config.config.value.notesApp,
+            canInjectKeys = config.config.value.keyInjection,
             libraryComponent = "${context.packageName}/${LibraryActivity::class.java.name}",
             appNames = snapshot.apps.associate { it.facts.packageName to it.facts.label },
         )
@@ -48,12 +57,16 @@ class PenStudio(private val context: Context, private val config: ConfigStore, p
 
     /** Default contexts limited to installed apps; apps without a verified id are matched by label. */
     fun contexts(snapshot: HomeSnapshot): List<PenContext> {
-        val installed = snapshot.apps.map { it.facts.packageName }.toSet()
+        val launchable = snapshot.apps.map { it.facts.packageName }.toSet()
         val byLabel = snapshot.apps.associate { it.facts.label to it.facts.packageName }
-        return DefaultProfiles.CONTEXTS.map { context ->
-            context.copy(packages = (context.packages.filter { it in installed } + context.labelHints.mapNotNull { byLabel[it] }).distinct())
+        return DefaultProfiles.CONTEXTS.map { penContext ->
+            // Installed without an app-drawer entry still counts: the HyperOS launcher (com.miui.home) has none.
+            val installed = penContext.packages.filter { it in launchable || isInstalled(it) }
+            penContext.copy(packages = (installed + penContext.labelHints.mapNotNull { byLabel[it] }).distinct())
         }
     }
+
+    private fun isInstalled(packageName: String) = runCatching { context.packageManager.getPackageInfo(packageName, 0) }.isSuccess
 
     fun bindings(): List<Binding> {
         val cfg = config.config.value
@@ -64,9 +77,10 @@ class PenStudio(private val context: Context, private val config: ConfigStore, p
         val cfg = config.config.value
         val contexts = contexts(snapshot)
         val profile = PenProfile(contexts, bindings())
-        val generated = ProfileGenerator(facts(snapshot)).generate(profile, com.charan.padstudio.core.pen.PenSetup(cfg.penMode, cfg.controls))
+        val controls = factsFile()?.controls.orEmpty() + cfg.controls
+        val generated = ProfileGenerator(facts(snapshot)).generate(profile, com.charan.padstudio.core.pen.PenSetup(cfg.penMode, controls))
         val json = KeyMapperJson.backup(generated)
-        return PenPlan(contexts, profile, generated, json, hash(json))
+        return PenPlan(contexts, profile, generated, json, hash(json), controls)
     }
 
     /**

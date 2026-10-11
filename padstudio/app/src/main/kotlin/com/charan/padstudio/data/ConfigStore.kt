@@ -40,6 +40,10 @@ data class StudioConfig(
     /** Hash of the last profile handed to Key Mapper; the setup screen compares it to the current one. */
     val appliedProfileHash: String? = null,
     val wallpaperApplied: Boolean = false,
+    /** Pen kind and mode were taken from device-facts.json once; the user's later choices win. */
+    val factsAdopted: Boolean = false,
+    /** The user turned on Key Mapper's "key event actions use system bridge" (Expert) setting. */
+    val keyInjection: Boolean = false,
 )
 
 class ConfigStore(private val file: File) {

@@ -1,8 +1,11 @@
 package com.charan.padstudio.pen
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import java.io.File
@@ -37,6 +40,24 @@ object KeyMapperBridge {
     fun pauseMappings(context: Context) = broadcast(context, "$PACKAGE.ACTION_PAUSE_MAPPINGS", "$API.PauseMappingsBroadcastReceiver")
 
     fun resumeMappings(context: Context) = broadcast(context, "$PACKAGE.ACTION_RESUME_MAPPINGS", "$API.PauseMappingsBroadcastReceiver")
+
+    /**
+     * Resumes Key Mapper after [delayMs] even if PadStudio's process has died by then (a crash
+     * mid-capture). A force-stop of PadStudio cancels it too; its next capture cleans up instead.
+     */
+    fun scheduleResume(context: Context, delayMs: Long) {
+        context.getSystemService(AlarmManager::class.java)
+            .set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + delayMs, resumeAlarm(context))
+    }
+
+    fun cancelScheduledResume(context: Context) = context.getSystemService(AlarmManager::class.java).cancel(resumeAlarm(context))
+
+    private fun resumeAlarm(context: Context): PendingIntent = PendingIntent.getBroadcast(
+        context,
+        0,
+        Intent("$PACKAGE.ACTION_RESUME_MAPPINGS").setComponent(ComponentName(PACKAGE, "$API.PauseMappingsBroadcastReceiver")),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 
     fun setGroupEnabled(context: Context, groupUid: String, enabled: Boolean) = broadcast(
         context,
