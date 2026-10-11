@@ -5,6 +5,9 @@
 #   tools/tap-text.sh --find "Replace"     only print its centre, tap nothing
 #
 # Exits 1 without tapping when the text is not on screen, so a script never taps a guessed spot.
+# Caution: `uiautomator dump` unbinds every accessibility service (Key Mapper included) for a
+# moment, and Key Mapper 4.6.1's Expert mode can lose the pen if that coincides with the pen
+# reconnecting. Run tools/pen-health.sh afterwards when the pen matters.
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 

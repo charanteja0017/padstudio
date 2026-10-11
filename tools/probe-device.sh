@@ -83,12 +83,20 @@ if (( WITH_CAMERA )); then
     camera_pkg="${CAMERA_COMPONENT:-com.android.camera/.Camera}"
     camera_pkg="${camera_pkg%%/*}"
     photos() { (adb shell 'ls /sdcard/DCIM/Camera 2>/dev/null' || true) | tr -d '\r' | sort; }
+    # Xiaomi Camera ignored a camera key sent ~5 s after it opened, then took one ~25 s later (2026-10-11):
+    # let it settle, and give each key a second try before calling it unsupported.
+    sleep 5
     for key in KEYCODE_CAMERA KEYCODE_VOLUME_DOWN; do
-      before="$(photos)"
-      adb shell input keyevent "$key"
-      sleep 4
-      new="$(comm -13 <(printf '%s\n' "$before") <(photos) | tr '\n' ' ')"
-      printf '%s\t%s\t%s\n' "$key" "$([[ -n "${new// /}" ]] && echo 1 || echo 0)" "$new" >>"$RAW/camera_keys_$camera_pkg.tsv"
+      fired=0
+      new=""
+      for attempt in 1 2; do
+        before="$(photos)"
+        adb shell input keyevent "$key"
+        sleep 4
+        new="$(comm -13 <(printf '%s\n' "$before") <(photos) | tr '\n' ' ')"
+        if [[ -n "${new// /}" ]]; then fired=1; break; fi
+      done
+      printf '%s\t%s\t%s\n' "$key" "$fired" "$new" >>"$RAW/camera_keys_$camera_pkg.tsv"
     done
     echo "Shutter keys: $(cut -f1,2 "$RAW/camera_keys_$camera_pkg.tsv" | tr '\t\n' '= ')(test photos are listed in docs/device/raw/$STAMP)"
   fi
