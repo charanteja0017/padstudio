@@ -1,0 +1,25 @@
+# Clones and downloads live outside version control (see docs/decisions/ADR-000-baselines.md for SHAs)
+forks/
+reference/
+apks/
+
+# Build outputs
+**/build/
+**/.gradle/
+**/.kotlin/
+local.properties
+*.apk
+*.aab
+
+# Device artefacts that may contain personal data
+docs/device/backup/
+docs/device/raw/
+
+# OS / IDE
+.DS_Store
+.idea/
+*.iml
+
+# Python bytecode
+__pycache__/
+*.pyc
