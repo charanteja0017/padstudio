@@ -100,11 +100,10 @@ internal fun GroupsCard(
     }
 }
 
-/** Lead (the 88 dp icon preview), the three 48 dp size buttons, Open, and the gaps between them. */
+/** Lead (the 88 dp icon preview), the three 48 dp size buttons, Open, and the [Tokens.GapS] gaps between them. */
 private val LEAD = 88.dp
 private val SIZE_TARGET = 48.dp
-private val GAP = 12.dp
-private val FIXED_PARTS = LEAD + SIZE_TARGET * 3 + SIZE_TARGET + GAP * 3
+private val FIXED_PARTS = LEAD + SIZE_TARGET * 3 + SIZE_TARGET + Tokens.GapS * 3
 
 /** A name column needs at least 120 dp, and room for its longest word so no word breaks. */
 @Composable
@@ -129,9 +128,9 @@ private fun HintRow(oneLine: Boolean) {
     Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp).clearAndSetSemantics { }, verticalAlignment = Alignment.CenterVertically) {
         Text("S small · M wide · L large", style = style, color = color, modifier = Modifier.weight(1f))
         if (oneLine) {
-            Spacer(Modifier.width(GAP))
+            Spacer(Modifier.width(Tokens.GapS))
             Text("Add widget", style = style, color = color, textAlign = TextAlign.Center, modifier = Modifier.width(SIZE_TARGET * 3))
-            Spacer(Modifier.width(GAP))
+            Spacer(Modifier.width(Tokens.GapS))
             Text("Open", style = style, color = color, textAlign = TextAlign.Center, softWrap = false, overflow = TextOverflow.Visible, modifier = Modifier.width(SIZE_TARGET))
         }
     }
@@ -166,7 +165,7 @@ private fun GroupLine(
         Row(
             Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(GAP),
+            horizontalArrangement = Arrangement.spacedBy(Tokens.GapS),
         ) {
             lead()
             GroupName(title, appCount(planned.apps.size), Modifier.weight(1f))
@@ -175,7 +174,7 @@ private fun GroupLine(
         }
     } else {
         Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(GAP)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.GapS)) {
                 lead()
                 GroupName(title, appCount(planned.apps.size), Modifier.weight(1f))
                 open()
@@ -265,7 +264,7 @@ private fun HiddenLine(count: Int, oneLine: Boolean, onOpen: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(GAP),
+        horizontalArrangement = Arrangement.spacedBy(Tokens.GapS),
     ) {
         Box(Modifier.width(LEAD), contentAlignment = Alignment.CenterStart) {
             Box(

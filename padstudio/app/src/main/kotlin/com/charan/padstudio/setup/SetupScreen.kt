@@ -461,7 +461,7 @@ private fun LegendLine(level: StatusLevel, words: String) {
 private fun TopIssue(row: CheckRowUi, onFix: (HealthCheck) -> Unit, onOpenLooks: (() -> Unit)?) {
     val type = MaterialTheme.typography
     val scheme = MaterialTheme.colorScheme
-    StudioCard(Modifier.fillMaxWidth(), tone = CardTone.High, contentPadding = PaddingValues(16.dp), spacing = 6.dp) {
+    StudioCard(Modifier.fillMaxWidth(), tone = CardTone.High, contentPadding = PaddingValues(Tokens.CardPadding), spacing = 6.dp) {
         Row(
             Modifier.clearAndSetSemantics { contentDescription = "${row.state.label}: ${row.check.title}. ${row.words}" },
             horizontalArrangement = Arrangement.spacedBy(Tokens.GapS),
@@ -600,6 +600,7 @@ private fun DeveloperCard(
                 trailing = RowTrailing.Chevron,
                 onClick = onOpenProbe,
             )
+            // Inset by cardBleed()'s default reach (not a gap), so the line spans the card's content as the rows' text does.
             HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = hairline())
             ListRow(
                 headline = "Device facts",

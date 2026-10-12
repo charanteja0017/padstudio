@@ -164,13 +164,13 @@ internal fun WallpaperCard(
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                    horizontalArrangement = Arrangement.spacedBy(Tokens.GapS, Alignment.End),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (applying) {
                         Row(
                             modifier = Modifier.weight(1f, fill = false).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(Tokens.GapS),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -215,7 +215,8 @@ private fun targetFlags(target: WallpaperTarget): String = when (target) {
  * Apply to: Home, Lock or Both (plan §10), as the mock-up's segmented buttons. When the labels can't each stay on
  * one line in a third of the card (large text in the narrow side pane), the same choice is a list of radio rows
  * instead, so no label breaks inside a word. The fit is measured with the text as drawn now (font scale and Bold
- * text included) and Material 3's own segment padding and check, for the widest label in the chosen segment.
+ * text included) against [SegmentedChoiceDefaults.requiredWidth] (through [segmentedChoiceFits]), which owns the
+ * control's own padding and check, so no Material size is copied here.
  */
 @Composable
 private fun TargetChoice(target: WallpaperTarget, onSelect: (WallpaperTarget) -> Unit) {
@@ -227,11 +228,8 @@ private fun TargetChoice(target: WallpaperTarget, onSelect: (WallpaperTarget) ->
             TARGET_ORDER.maxOf { measurer.measure(targetLabel(it), style, maxLines = 1, softWrap = false).size.width }.toDp()
         }
     }
-    // The control's own chrome around a label (padding, check, gap): SegmentedChoice owns those sizes.
-    val padding = SegmentedChoiceDefaults.SegmentChrome
-    val check = 0.dp
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        if (segmentsFit(widest, maxWidth, TARGET_ORDER.size, padding, check)) {
+        if (segmentedChoiceFits(widest, TARGET_ORDER.size, maxWidth)) {
             SegmentedChoice(
                 options = TARGET_ORDER,
                 selected = target,

@@ -5,6 +5,7 @@ import com.charan.padstudio.core.home.AppFacts
 import com.charan.padstudio.core.home.AppGroup
 import com.charan.padstudio.core.home.Categorizer
 import com.charan.padstudio.core.home.CuratedApps
+import com.charan.padstudio.core.home.Density
 import com.charan.padstudio.core.home.Flowerpot
 import com.charan.padstudio.core.home.FlowerpotPot
 import com.charan.padstudio.core.home.GroupPlanner
@@ -103,6 +104,39 @@ class HomeKitTextTest {
             "Couldn't open HyperOS's icon background setting: the launcher no longer offers that screen.",
             openFailedLine(HyperOsScreen.ICON_BACKGROUND, OpenFailure.NOT_FOUND),
         )
+    }
+
+    // --- The widget-grid preview's density line --------------------------------------------------
+
+    @Test fun `the Auto line says whose density it used`() {
+        assertEquals("Auto at Standard", densityLead(Density.COMPACT, widgetOwns = false, groupTitle = "Study"))
+        assertEquals("Auto at Roomy", densityLead(Density.CALM, widgetOwns = false, groupTitle = null))
+        assertEquals("Your Study widget uses Dense", densityLead(Density.DENSE, widgetOwns = true, groupTitle = "Study"))
+        assertEquals("Your Watch & Listen widget uses Roomy", densityLead(Density.CALM, widgetOwns = true, groupTitle = "Watch & Listen"))
+        assertEquals("Your widget uses Standard", densityLead(Density.COMPACT, widgetOwns = true, groupTitle = null))
+        // Instrument check: a widget's own density is never called Auto, and PadStudio's is never put on a widget.
+        for (density in Density.entries) {
+            assertFalse("Auto" in densityLead(density, widgetOwns = true, groupTitle = "Study"))
+            assertFalse("widget" in densityLead(density, widgetOwns = false, groupTitle = "Study"))
+        }
+    }
+
+    @Test fun `a Dense widget under a Standard control reads as the widget's, not as Auto`() {
+        // The owner's case: the density control below the preview shows Standard, the previewed widget saved Dense.
+        val widget = PlacedWidget(42, WidgetKind.WIDE, group = "STUDY", density = "DENSE", sizes = listOf(SizeDp(776f, 300f)))
+        val control = Density.COMPACT
+        val shown = densityFor(widget, control)
+        assertEquals(Density.DENSE, shown)
+        val layout = GroupPlanner.layoutFor(776f, 300f, shown, null, 14.3f)
+        assertEquals(
+            "Your Study widget uses Dense: 10 × 4 · 40 spaces · names hidden",
+            previewCaption(layout, null, shown, widget, "Study"),
+        )
+        // Without a density of its own the same widget follows the control, and Auto is the right word.
+        val following = widget.copy(density = null)
+        val followed = densityFor(following, control)
+        val followedLayout = GroupPlanner.layoutFor(776f, 300f, followed, null, 14.3f)
+        assertTrue(previewCaption(followedLayout, null, followed, following, "Study").startsWith("Auto at Standard: "))
     }
 
     // --- Groups ----------------------------------------------------------------------------------

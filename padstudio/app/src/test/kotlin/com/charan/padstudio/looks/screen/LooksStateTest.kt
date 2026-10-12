@@ -9,6 +9,7 @@ import com.charan.padstudio.core.home.PlannedGroup
 import com.charan.padstudio.data.IconStyle
 import com.charan.padstudio.icons.IconPack
 import com.charan.padstudio.looks.WallpaperTarget
+import com.charan.padstudio.ui.components.SegmentedChoiceDefaults
 import com.charan.padstudio.ui.theme.BrandPalette
 import java.io.File
 import kotlin.test.Test
@@ -197,18 +198,19 @@ class LooksStateTest {
         assertEquals("lock screen", targetScreens(WallpaperTarget.LOCK))
     }
 
-    @Test fun `Apply to stays segmented only while the chosen label fits on one line`() {
-        val padding = 24.dp // Material 3 segment: 12 dp each side
-        val check = 26.dp // the chosen segment's 18 dp check and 8 dp gap
-        // 125 % text: "Home" about 44 dp, three segments in the 287 dp side pane are 96 dp each.
-        assertTrue(segmentsFit(widestLabel = 44.dp, width = 287.dp, count = 3, padding = padding, check = check))
-        // 200 % text: "Home" about 72 dp needs 122 dp; stack the choice as rows instead of breaking the word.
-        assertFalse(segmentsFit(widestLabel = 72.dp, width = 287.dp, count = 3, padding = padding, check = check))
-        // A full-width card (one column) has room even at 200 %.
-        assertTrue(segmentsFit(widestLabel = 72.dp, width = 593.dp, count = 3, padding = padding, check = check))
-        // Exactly enough is enough: (287 + 2) / 3 = 96.33 dp.
-        assertTrue(segmentsFit(widestLabel = 46.dp, width = 287.dp, count = 3, padding = padding, check = check))
-        assertFalse(segmentsFit(widestLabel = 47.dp, width = 287.dp, count = 3, padding = padding, check = check))
+    @Test fun `Apply to stays segmented only while the control's own required width fits`() {
+        val count = TARGET_ORDER.size
+        val widest = 46.dp
+        val needed = SegmentedChoiceDefaults.requiredWidth(widest, count)
+        // Exactly enough is enough; half a dp less is not.
+        assertTrue(segmentedChoiceFits(widest, count, needed))
+        assertFalse(segmentedChoiceFits(widest, count, needed - 0.5.dp))
+        // Bigger text (a wider label) in the same pane: the choice stacks as rows instead of breaking a word.
+        assertFalse(segmentedChoiceFits(widest * 2, count, needed))
+        // A full-width card (one column) has room even then.
+        assertTrue(segmentedChoiceFits(widest * 2, count, needed * 2))
+        // One more option needs more room: every segment is as wide as the widest label asks.
+        assertFalse(segmentedChoiceFits(widest, count + 1, needed))
     }
 
     @Test fun `an Apply waits until its deadline, then says Requested at once`() {

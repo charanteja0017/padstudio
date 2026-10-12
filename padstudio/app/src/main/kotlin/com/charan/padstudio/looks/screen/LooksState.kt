@@ -5,12 +5,12 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.charan.padstudio.core.home.AppFacts
 import com.charan.padstudio.core.home.PlannedGroup
 import com.charan.padstudio.data.IconStyle
 import com.charan.padstudio.icons.IconPack
 import com.charan.padstudio.looks.WallpaperTarget
+import com.charan.padstudio.ui.components.SegmentedChoiceDefaults
 import com.charan.padstudio.ui.theme.BrandPalette
 
 // The Looks screen's words and decisions, kept free of composition and Android state so unit tests can pin them
@@ -217,15 +217,12 @@ internal fun targetScreens(target: WallpaperTarget): String = when (target) {
 }
 
 /**
- * Whether [count] equal segments, [width] wide in all, each fit their widest label ([widestLabel]) on one line
- * with the chosen segment's check ([check]) and the segment's side padding ([padding]). Segmented buttons share
- * their 1 dp edges, so the row is 1 dp wider per joint than the segments laid end to end.
+ * Whether a SegmentedChoice of [count] options fits in [available] width with every label on one line, the widest
+ * measuring [widestLabel]. What the control needs around a label (padding, check, gap, minimum width) is the
+ * control's own, from [SegmentedChoiceDefaults.requiredWidth]; no Material size is copied here.
  */
-internal fun segmentsFit(widestLabel: Dp, width: Dp, count: Int, padding: Dp, check: Dp): Boolean {
-    if (count <= 0) return true
-    val segment = (width + 1.dp * (count - 1)) / count
-    return segment >= widestLabel + padding + check
-}
+internal fun segmentedChoiceFits(widestLabel: Dp, count: Int, available: Dp): Boolean =
+    SegmentedChoiceDefaults.requiredWidth(widestLabel, count) <= available
 
 /**
  * A plain reason for a failed wallpaper change, from the exception message MainViewModel passes on. The raw

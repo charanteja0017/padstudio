@@ -25,6 +25,7 @@ import com.charan.padstudio.ui.components.StatusLevel
 import com.charan.padstudio.ui.components.StudioCard
 import com.charan.padstudio.ui.components.SymIcon
 import com.charan.padstudio.ui.components.statusInk
+import com.charan.padstudio.ui.theme.Tokens
 import java.time.LocalDate
 
 /**
@@ -97,8 +98,8 @@ private fun Baseline(record: HomeRecord) {
     val scheme = MaterialTheme.colorScheme
     val type = MaterialTheme.typography
     // A card inside the card (CardTone.High), as the mock's inset.
-    StudioCard(Modifier.fillMaxWidth(), tone = CardTone.High, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    StudioCard(Modifier.fillMaxWidth(), tone = CardTone.High, contentPadding = PaddingValues(horizontal = Tokens.CardPadding, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.GapM)) {
             when (record) {
                 is HomeRecord.Recorded -> {
                     Text(

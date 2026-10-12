@@ -2,6 +2,7 @@ package com.charan.padstudio.home.kit
 
 import com.charan.padstudio.core.home.AppFacts
 import com.charan.padstudio.core.home.AppGroup
+import com.charan.padstudio.core.home.Density
 import com.charan.padstudio.core.home.Placement
 import com.charan.padstudio.core.home.PlannedGroup
 import com.charan.padstudio.core.pen.HomeScreenFacts
@@ -97,6 +98,15 @@ fun openFailedLine(screen: HyperOsScreen, failure: OpenFailure): String = when (
     OpenFailure.NOT_FOUND -> "Couldn't open ${screen.title}: the launcher no longer offers that screen."
     OpenFailure.REFUSED -> "Couldn't open ${screen.title}: HyperOS refused the request."
 }
+
+/**
+ * How the widget-grid preview's Auto line starts: whose icon density it was drawn at. A widget can save a density
+ * of its own (Edit widget) and shows that one whatever the density control says, so when [widgetOwns] is true the
+ * line names the widget ("Your Study widget uses Dense"); otherwise the density is PadStudio's, which Auto follows
+ * ("Auto at Standard"). [groupTitle] is the widget's group; without it the line says "Your widget uses Dense".
+ */
+fun densityLead(density: Density, widgetOwns: Boolean, groupTitle: String?): String =
+    if (widgetOwns) "Your ${groupTitle?.let { "$it " }.orEmpty()}widget uses ${density.label}" else "Auto at ${density.label}"
 
 /** "12 apps", "1 app". */
 fun appCount(count: Int): String = if (count == 1) "1 app" else "$count apps"

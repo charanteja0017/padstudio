@@ -209,7 +209,7 @@ private fun packsLine(packs: List<IconPack>?, facts: IconFacts?): String = when 
 }
 
 /** A style preview's corner padding, mark and icon sizes (mock-looks.html `.m-looks-style`). */
-private val TilePadding = 12.dp
+private val TilePadding = Tokens.GapS
 private val MarkSize = 24.dp
 private val MarkGap = 8.dp
 private val IconGap = 6.dp
