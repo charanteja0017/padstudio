@@ -184,7 +184,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         groups.forEach { KeyMapperBridge.setGroupEnabled(studio, it.uid, enabled) }
         if (groups.isNotEmpty()) studio.config.update { it.copy(penEnabled = enabled) }
-        _message.value = if (groups.isEmpty()) "The pen profile isn't ready yet." else "Pen actions ${if (enabled) "on" else "off"}."
+        _message.value = if (groups.isEmpty()) "The pen profile isn't ready yet." else "Asked Key Mapper to turn pen actions ${if (enabled) "on" else "off"}."
     }
 
     // --- Home ----------------------------------------------------------------------------------
