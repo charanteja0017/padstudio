@@ -17,6 +17,13 @@ import kotlin.random.Random
  * light pools, and fine grain so it doesn't band on the tablet's display. Square at the screen's
  * long side, so portrait and landscape crop the same picture.
  */
+/** Where Looks → Apply puts the wallpaper. */
+enum class WallpaperTarget(val flags: Int) {
+    HOME(WallpaperManager.FLAG_SYSTEM),
+    LOCK(WallpaperManager.FLAG_LOCK),
+    BOTH(WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK),
+}
+
 object WallpaperGenerator {
     fun render(size: Int, seed: Long, accent: Int, dark: Boolean): Bitmap {
         val bitmap = createBitmap(size, size)
@@ -56,8 +63,11 @@ object WallpaperGenerator {
     }
 
     /** Sets home and lock screen; needs only the normal SET_WALLPAPER permission. */
-    fun apply(context: Context, bitmap: Bitmap) {
-        WallpaperManager.getInstance(context).setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK)
+    fun apply(context: Context, bitmap: Bitmap) = apply(context, bitmap, WallpaperTarget.BOTH)
+
+    /** Sets the [target] screen(s); needs only the normal SET_WALLPAPER permission. */
+    fun apply(context: Context, bitmap: Bitmap, target: WallpaperTarget) {
+        WallpaperManager.getInstance(context).setBitmap(bitmap, null, true, target.flags)
     }
 
     fun longSide(context: Context): Int {

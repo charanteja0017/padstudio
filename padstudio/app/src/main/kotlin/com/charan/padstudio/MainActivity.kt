@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,6 +39,7 @@ import com.charan.padstudio.pen.KeyMapperBridge
 import com.charan.padstudio.pen.PenStudioScreen
 import com.charan.padstudio.setup.SetupScreen
 import com.charan.padstudio.today.TodayScreen
+import com.charan.padstudio.ui.LocalStudioSnackbar
 import com.charan.padstudio.ui.PadStudioShell
 import com.charan.padstudio.ui.PadStudioTheme
 import com.charan.padstudio.ui.ShellDestination
@@ -47,7 +49,7 @@ import kotlinx.coroutines.launch
 
 /**
  * PadStudio's places, in rail order. The names are protected (plan §4): `--es tab <name>` matches them in any case.
- * ABOUT isn't in the rail: it opens Setup, which gets an About section in W3 (see openAboutSection).
+ * ABOUT isn't in the rail: it opens Setup scrolled to its About section (openAboutSection).
  */
 internal enum class Tab(val label: String, @param:DrawableRes val icon: Int, @param:DrawableRes val selectedIcon: Int) {
     TODAY("Today", R.drawable.sym_today, R.drawable.sym_today_fill),
@@ -176,7 +178,6 @@ class MainActivity : ComponentActivity() {
             }
         }
         ColorsDumpEffect(colorsDumpRequests)
-        // TODO(W3 Setup): pass `scrollToAbout = openAboutSection` to SetupScreen once it has its About section.
         val openAboutSection: Boolean = tab == Tab.ABOUT
         // Each tab keeps its own saved state (scroll position, open pickers) while another is showing.
         val tabStates = rememberSaveableStateHolder()
@@ -188,14 +189,17 @@ class MainActivity : ComponentActivity() {
             statusLine = { KeyMapperStatusLine() },
             snackbarHost = { SnackbarHost(snackbar) },
         ) {
-            tabStates.SaveableStateProvider(tab.name) {
-                val content = Modifier.fillMaxSize()
-                when (tab) {
-                    Tab.TODAY -> TodayScreen(model, start, onOpenTab = { tab = it }, modifier = content)
-                    Tab.PEN -> PenStudioScreen(model, start, content)
-                    Tab.HOME -> HomeKitScreen(model, content)
-                    Tab.LOOKS -> LooksScreen(model, content)
-                    Tab.SETUP, Tab.ABOUT -> SetupScreen(model, start, content)
+            // Screens post their own timed results into the same host (LocalStudioSnackbar), so messages queue.
+            CompositionLocalProvider(LocalStudioSnackbar provides snackbar) {
+                tabStates.SaveableStateProvider(tab.name) {
+                    val content = Modifier.fillMaxSize()
+                    when (tab) {
+                        Tab.TODAY -> TodayScreen(model, start, onOpenTab = { tab = it }, modifier = content)
+                        Tab.PEN -> PenStudioScreen(model, start, content)
+                        Tab.HOME -> HomeKitScreen(model, content)
+                        Tab.LOOKS -> LooksScreen(model, content)
+                        Tab.SETUP, Tab.ABOUT -> SetupScreen(model, start, content, scrollToAbout = openAboutSection, onOpenLooks = { tab = Tab.LOOKS })
+                    }
                 }
             }
         }
