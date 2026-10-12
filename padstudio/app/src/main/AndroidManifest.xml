@@ -71,6 +71,7 @@
             android:name=".home.EditGroupWidgetActivity"
             android:excludeFromRecents="true"
             android:exported="true"
+            android:taskAffinity="com.charan.padstudio.edit"
             android:theme="@style/Theme.PadStudio.Panel">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
