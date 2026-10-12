@@ -78,8 +78,9 @@ internal fun PenByAppCard(
         SectionHeader(title = "Pen by app", actionLabel = "Manage", onAction = onOpen)
         when {
             lines == null -> Text("Reading your apps…", style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+            // Configuration only (plan §7): the app can't see whether the pen works, so it never says it does.
             lines.isEmpty() -> Text(
-                "None of the apps the pen profile knows are installed. The pen still works everywhere else.",
+                "None of the apps with their own pen actions are installed, so every app uses your Everywhere else actions.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = scheme.onSurfaceVariant,
             )
