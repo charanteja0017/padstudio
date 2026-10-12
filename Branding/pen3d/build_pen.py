@@ -8,7 +8,7 @@ Run headless with Blender 5.1.2 from the repository root:
 Without --source it builds a PLACEHOLDER pen from math: a lathe profile scaled from the owner's
 motion kit (docs/redesign/pen-motion-kit.html) to a NOMINAL length of 0.165 m (not a measurement).
 With --source it wraps the owner's own model (.glb, .gltf, .fbx or .blend), which must contain the
-five marker empties. Either way the script attaches the gesture effects to the markers, makes sure
+six marker empties. Either way the script attaches the gesture effects to the markers, makes sure
 the clips idle, squeeze, slide_up, slide_down, double_tap and write exist, and writes
 focus_pen_pro.glb into every output directory (default: docs/redesign/assets/pen and
 padstudio/app/src/main/assets/pen). See Branding/pen3d/README.md.
@@ -36,7 +36,7 @@ CLIPS = ("idle", "squeeze", "slide_up", "slide_down", "double_tap", "write")
 CLIP_SECONDS = {"idle": 6.0, "squeeze": 1.7, "slide_up": 1.7, "slide_down": 1.7,
                 "double_tap": 1.7, "write": 1.7}
 MARKERS = ("marker_squeeze", "marker_slide_top", "marker_slide_bottom", "marker_double_tap",
-           "marker_nib")
+           "marker_nib", "marker_top")  # six: four gesture spots, then the two ends of the pen
 FX_PREFIX = "fx_"  # objects with this prefix belong to this script and are rebuilt on every run
 FX_ARC_L, FX_ARC_R = "fx_squeeze_arc_left", "fx_squeeze_arc_right"
 FX_DOT, FX_RING = "fx_slide_dot", "fx_tap_ring"
@@ -56,7 +56,8 @@ DEFAULT_OUTS = (os.path.join(REPO, "docs", "redesign", "assets", "pen"),
 #   body   rect x 134..166 (32 wide), y 48..534 (486 long), rx 12: a rounded top end
 #   collar rect y 520..534 (14 units) that squares off the tip end of the body
 #   tip    path 534 -> 568, half-width 16 -> 3 (34 long), then the nib, a quadratic to y 575.5
-#   seams  hairlines at y 65 (end cap) ; wordmark at y 109 ; squeeze arcs centred on y 372
+#   seams  hairlines at y 65 (end cap) ; wordmark at y 109 ; squeeze arcs centred on y 372 (the squeeze
+#          marker no longer follows that: every gesture sits in the grip band, see "Gesture spots")
 # Kit y runs down the pen. Pen space here uses glTF axes: +Y toward the end cap, tip at -Y,
 # +Z toward the default camera, origin at the pen centre, metres.
 # ------------------------------------------------------------------------------------------------
@@ -77,36 +78,57 @@ Y_TOP = kit_y(48.0)         # end-cap top
 Y_CAP_ARC = kit_y(60.0)     # centre height of the rx 12 corner
 Y_SEAM = kit_y(65.0)        # end-cap seam
 Y_BAND = kit_y(109.0)       # logo band (the kit's wordmark position)
-Y_SQUEEZE = kit_y(372.0)    # squeeze arcs
 Y_COLLAR = kit_y(520.0)     # collar groove
 Y_BODY_END = kit_y(534.0)   # body / tip cone
 Y_CONE_END = kit_y(568.0)   # tip cone / nib
 Y_APEX = kit_y(KIT_APEX)    # nib apex
 
+# Gesture spots. The kit put them up the barrel; the owner wants every function close to the nib, so
+# they sit in the grip band, 24 to 50 mm above the apex (docs/redesign/ROUND2-BRIEF.md has the table).
+# The barrel markers are at z = 0.005 exactly, as in that table (the barrel surface is at 0.0050047).
+Y_SLIDE_BOTTOM, Y_SLIDE_TOP = -56.5 * MM, -34.5 * MM  # 2 mm inside the strip's two ends
+Y_SQUEEZE = -50.5 * MM
+Y_DOUBLE_TAP = -38.5 * MM
+MARKER_Z = 5.0 * MM
+
 # Design choices that the kit does not fix (placeholder only)
 SEAM_W, SEAM_D = 0.20 * MM, 0.12 * MM       # end-cap seam: a V-groove, half on each part
 GROOVE_HW, GROOVE_D = 0.25 * MM, 0.12 * MM  # collar groove
 BAND_W, BAND_D = 0.90 * MM, 0.15 * MM       # logo band: an engraved ring, no text
-STRIP_Y0, STRIP_Y1 = -6.0 * MM, 22.0 * MM   # slide strip (a pill) on the camera-facing side
+STRIP_Y0, STRIP_Y1 = -58.5 * MM, -32.5 * MM  # slide strip (a pill) on the camera-facing side
 STRIP_HW = 1.7 * MM                          # half-width, as arc length on the barrel
 STRIP_D, STRIP_C = 0.22 * MM, 0.15 * MM      # recess depth and chamfer inset
-Y_SLIDE_BOTTOM, Y_SLIDE_TOP = STRIP_Y0 + STRIP_HW, STRIP_Y1 - STRIP_HW
-Y_DOUBLE_TAP = 40.0 * MM                     # upper barrel
-SEGS = 72                                    # lathe segments (5 degrees)
-WIN_HALF = 6                                 # strip window half-width in segments (30 degrees)
+PILL_Y0, PILL_Y1 = STRIP_Y0 + STRIP_HW, STRIP_Y1 - STRIP_HW  # centres of the pill's two end caps
+# Grip band: six shallow ring grooves, each a cosine dip (smooth, so the strip's window can follow it),
+# 4 mm apart and centred in the band between Y -58 and -34 mm. The strip's recess cuts through them.
+GRIP_YS = tuple((-46.0 + 4.0 * (k - 2.5)) * MM for k in range(6))
+GRIP_W, GRIP_D = 0.4 * MM, 0.1 * MM          # groove width (rim to rim) and depth
+GRIP_STEPS = 4                               # profile intervals across one groove (rings 0.1 mm apart)
+SEGS = 128                                   # lathe segments (2.8125 degrees)
+WIN_HALF = 11                                # strip window half-width in segments (about 31 degrees)
 WIN_Y0, WIN_Y1 = STRIP_Y0 - 1.5 * MM, STRIP_Y1 + 1.5 * MM
-WIN_DY = 1.0 * MM                            # ring spacing inside the window band
+WIN_DY = 1.0 * MM                            # largest ring spacing inside the window band
+assert WIN_Y0 < GRIP_YS[0] - GRIP_W and GRIP_YS[-1] + GRIP_W < WIN_Y1, "grip grooves leave the window"
+assert PILL_Y0 < GRIP_YS[0] - GRIP_W and GRIP_YS[-1] + GRIP_W < PILL_Y1, "grip grooves reach a strip cap"
 
 # Gesture effects, in units of the barrel radius (the kit's half-width 16), from the kit's SVG:
 #   squeeze arcs "M114 352 Q99 372 114 392": chord 40, sagitta 7.5, apex 43.5 from the axis,
 #   moving 13 inward; tap ring r 18..30; slide dot r 6 (smaller here so it sits on the strip).
-_ARC_CHORD, _ARC_SAG = 40.0, 7.5
-ARC_RHO = (_ARC_CHORD ** 2 / (8 * _ARC_SAG) + _ARC_SAG / 2) / 16.0
-ARC_HALF_ANGLE = math.asin((_ARC_CHORD / 2) / (ARC_RHO * 16.0))
-ARC_APEX = 43.5 / 16.0
-ARC_TRAVEL = 13.0 / 16.0
+# Two effects are drawn smaller than the kit's for the close-up on the grip band: the tap ring has
+# radius 6 mm (the kit's 9.38), and the squeeze arcs keep their shape at 0.588 of the kit's size, apex
+# 8 mm from the axis (the kit's 13.61). The kit's 4.07 mm of inward travel no longer fits (it would
+# carry an 8 mm apex to 3.9 mm, inside the 5 mm barrel), so the arcs close in only until their tube
+# is 0.1 mm off the barrel at the arcs' ends, the nearest point: about 1.0 mm, and never inside the pen.
 FX_TUBE = 0.10
-RING_RADIUS = 30.0 / 16.0
+_ARC_CHORD, _ARC_SAG = 40.0, 7.5
+_ARC_RHO_KIT = _ARC_CHORD ** 2 / (8 * _ARC_SAG) + _ARC_SAG / 2   # kit units
+ARC_HALF_ANGLE = math.asin((_ARC_CHORD / 2) / _ARC_RHO_KIT)      # 82 degree span, as in the kit
+ARC_APEX = 8.0 * MM / R                                          # apex distance from the axis
+ARC_CLOSE = ARC_APEX / (43.5 / 16.0)                             # close-up scale against the kit
+ARC_RHO = _ARC_RHO_KIT / 16.0 * ARC_CLOSE
+ARC_GAP = 0.1 * MM / R                                           # clearance left at the squeeze's peak
+ARC_TRAVEL = ARC_APEX - 1.0 - FX_TUBE - ARC_RHO * (1.0 - math.cos(ARC_HALF_ANGLE)) - ARC_GAP
+RING_RADIUS = 6.0 * MM / R
 RING_LIFT = 0.12
 DOT_RADIUS = 0.26
 DOT_LIFT = 0.076
@@ -256,9 +278,52 @@ def seg_line(p0, p1, n=1):
     return [(p0[0] + dr * i / n, p0[1] + dy * i / n, nr / ln, ny / ln) for i in range(n + 1)]
 
 
+def refine(anchors, step):
+    """Ascending heights -> the same heights with extra ones between, so no gap exceeds `step`.
+    The anchors themselves are kept exactly."""
+    out = [anchors[0]]
+    for a, b in zip(anchors, anchors[1:]):
+        n = max(1, math.ceil((b - a) / step - 1e-9))
+        out += [a + (b - a) * i / n for i in range(1, n)] + [b]
+    return out
+
+
+def grip_rows():
+    """Ascending heights of the profile rings across the six grip grooves (rim, quarter, centre,
+    quarter, rim: 0.1 mm apart)."""
+    return [yc + 0.5 * GRIP_W * (2.0 * i / GRIP_STEPS - 1.0) for yc in GRIP_YS for i in range(GRIP_STEPS + 1)]
+
+
+def grip_depth(y):
+    """How far the grip grooves cut the barrel in at height y, and the slope of that cut (d depth / dy)."""
+    d = ds = 0.0
+    for yc in GRIP_YS:
+        t = (y - yc) / (0.5 * GRIP_W)
+        if -1.0 < t < 1.0:
+            d += 0.5 * GRIP_D * (1.0 + math.cos(math.pi * t))
+            ds -= GRIP_D * math.pi / GRIP_W * math.sin(math.pi * t)
+    return d, ds
+
+
+def barrel_point(y):
+    """The barrel's profile point at height y, grooves included: (r, y, nr, ny) with the exact unit
+    normal. The surface is r = R - depth(y), so its outward normal is (1, depth'(y)) / length."""
+    d, ds = grip_depth(y)
+    n = math.hypot(1.0, ds)
+    return (R - d, y, 1.0 / n, ds / n)
+
+
+def barrel_vert(g, s, y):
+    """A vertex on the barrel surface at arc length s (measured at radius R) and height y."""
+    r, _y, nr, ny = barrel_point(y)
+    a = s / R
+    return g.vert((r * math.sin(a), y, r * math.cos(a)), (nr * math.sin(a), ny, nr * math.cos(a)))
+
+
 def window_levels():
-    n = round((WIN_Y1 - WIN_Y0) / WIN_DY)
-    return [WIN_Y1 - (WIN_Y1 - WIN_Y0) * i / n for i in range(n + 1)]
+    """Heights of the barrel rings in the strip window, top to bottom: at most WIN_DY apart, with the
+    rings that shape each grip groove among them."""
+    return refine([WIN_Y0] + grip_rows() + [WIN_Y1], WIN_DY)[::-1]
 
 
 def on_barrel(s, y, rho):
@@ -273,18 +338,19 @@ def radial(s):
 
 
 def pill_outline(hw):
-    """Counter-clockwise outline of the slide strip in (s, y): (s, y, outward ns, outward ny)."""
-    yc0, yc1 = Y_SLIDE_BOTTOM, Y_SLIDE_TOP
-    n_side = max(2, round((yc1 - yc0) / (0.5 * MM)))
+    """Counter-clockwise outline of the slide strip in (s, y): (s, y, outward ns, outward ny). Each
+    straight side has a vertex at every grip-groove ring, so the strip's rim follows the grooves."""
+    yc0, yc1 = PILL_Y0, PILL_Y1
+    ys = refine([yc0] + grip_rows() + [yc1], 0.5 * MM)
     n_cap = 12
     pts = []
-    for i in range(n_side):
-        pts.append((hw, yc0 + (yc1 - yc0) * i / n_side, 1.0, 0.0))
+    for y in ys[:-1]:  # right side, up (the top corner belongs to the cap)
+        pts.append((hw, y, 1.0, 0.0))
     for i in range(n_cap):
         a = math.pi * i / n_cap
         pts.append((hw * math.cos(a), yc1 + hw * math.sin(a), math.cos(a), math.sin(a)))
-    for i in range(n_side):
-        pts.append((-hw, yc1 - (yc1 - yc0) * i / n_side, -1.0, 0.0))
+    for y in reversed(ys[1:]):  # left side, down (the bottom corner belongs to the cap)
+        pts.append((-hw, y, -1.0, 0.0))
     for i in range(n_cap):
         a = math.pi + math.pi * i / n_cap
         pts.append((hw * math.cos(a), yc0 + hw * math.sin(a), math.cos(a), math.sin(a)))
@@ -293,7 +359,7 @@ def pill_outline(hw):
 
 def pill_distance(s, y):
     """Distance from (s, y) to the strip's centre line; < half-width means inside the strip."""
-    yc = min(max(y, Y_SLIDE_BOTTOM), Y_SLIDE_TOP)
+    yc = min(max(y, PILL_Y0), PILL_Y1)
     return math.hypot(s, y - yc)
 
 
@@ -335,7 +401,7 @@ def build_barrel_window(g, rings, i_top, i_bot):
 
     outline = []
     for s, y, _ns, _ny in pill_outline(STRIP_HW):
-        outline.append(add(s, y, g.vert(on_barrel(s, y, R), radial(s))))
+        outline.append(add(s, y, barrel_vert(g, s, y)))
 
     margin = 0.2 * MM
     for y in y_of[1:-1]:
@@ -343,7 +409,7 @@ def build_barrel_window(g, rings, i_top, i_bot):
             s = R * 2.0 * math.pi * j / SEGS
             if pill_distance(s, y) < STRIP_HW + margin:
                 continue
-            add(s, y, g.vert(on_barrel(s, y, R), radial(s)))
+            add(s, y, barrel_vert(g, s, y))
 
     for tri in cdt(pts, loop, [outline]):
         cs = sum(pts[i][0] for i in tri) / 3.0
@@ -360,16 +426,18 @@ def build_strip():
     inner = pill_outline(STRIP_HW - STRIP_C)
     top_ids, bot_ids = [], []
     for (s, y, ns, ny), (s2, y2, _a, _b) in zip(outer, inner):
+        d_rim, _ds = grip_depth(y)  # the rim follows the barrel, so a groove under it shortens the wall
+        h = STRIP_D - d_rim
         a = s / R
         e_s = Vector((math.cos(a), 0.0, -math.sin(a)))
         n_out = e_s * ns + Vector((0.0, ny, 0.0))
-        wall_n = (-n_out * STRIP_D + radial(s) * STRIP_C).normalized()
-        top_ids.append(g.vert(on_barrel(s, y, R), wall_n))
+        wall_n = (-n_out * h + radial(s) * STRIP_C).normalized()
+        top_ids.append(g.vert(on_barrel(s, y, R - d_rim), wall_n))
         a2 = s2 / R
         e_s2 = Vector((math.cos(a2), 0.0, -math.sin(a2)))
         n_out2 = e_s2 * ns + Vector((0.0, ny, 0.0))
         bot_ids.append(g.vert(on_barrel(s2, y2, R - STRIP_D),
-                              (-n_out2 * STRIP_D + radial(s2) * STRIP_C).normalized()))
+                              (-n_out2 * h + radial(s2) * STRIP_C).normalized()))
     n = len(top_ids)
     for i in range(n):
         k = (i + 1) % n
@@ -381,8 +449,8 @@ def build_strip():
         ids.append(g.vert(on_barrel(s, y, R - STRIP_D), radial(s)))
         loop.append(len(pts) - 1)
     hw_in = STRIP_HW - STRIP_C
-    y = Y_SLIDE_BOTTOM - hw_in
-    while y <= Y_SLIDE_TOP + hw_in + 1e-9:
+    y = PILL_Y0 - hw_in
+    while y <= PILL_Y1 + hw_in + 1e-9:
         for j in range(-4, 5):
             s = R * math.radians(5.0 * j)
             if pill_distance(s, y) < hw_in - 0.12 * MM:
@@ -545,7 +613,7 @@ def make_object(name, data, parent=None, location=(0.0, 0.0, 0.0)):
 
 
 def build_placeholder():
-    """The math pen: named parts, materials and the five markers, under one root."""
+    """The math pen: named parts, materials and the six markers, under one root."""
     root = make_object("pen", None)
     root.empty_display_type, root.empty_display_size = "PLAIN_AXES", 0.02
     root.rotation_mode = "QUATERNION"
@@ -560,7 +628,7 @@ def build_placeholder():
     lathe(g, seg_line((R - SEAM_D, Y_SEAM), (R, Y_SEAM - SEAM_W)))
     lathe(g, [(R, Y_SEAM - SEAM_W, 1.0, 0.0), (R, Y_BAND + BAND_W / 2, 1.0, 0.0)])
     levels = window_levels()
-    barrel = ([(R, Y_BAND - BAND_W / 2, 1.0, 0.0)] + [(R, y, 1.0, 0.0) for y in levels]
+    barrel = ([(R, Y_BAND - BAND_W / 2, 1.0, 0.0)] + [barrel_point(y) for y in levels]
               + [(R, Y_COLLAR + GROOVE_HW, 1.0, 0.0)])
     i_top, i_bot = 1, len(levels)
     win = set(range(SEGS - WIN_HALF, SEGS)) | set(range(0, WIN_HALF))
@@ -591,11 +659,12 @@ def build_placeholder():
         make_object(name, make_mesh(name, g, material(mat)), parent=root)
         log(f"part {name}: {len(g.p)} vertices, {g.triangles()} triangles")
 
-    for name, p in (("marker_squeeze", (0.0, Y_SQUEEZE, R)),
-                    ("marker_slide_top", (0.0, Y_SLIDE_TOP, R)),
-                    ("marker_slide_bottom", (0.0, Y_SLIDE_BOTTOM, R)),
-                    ("marker_double_tap", (0.0, Y_DOUBLE_TAP, R)),
-                    ("marker_nib", (0.0, Y_APEX, 0.0))):
+    for name, p in (("marker_squeeze", (0.0, Y_SQUEEZE, MARKER_Z)),
+                    ("marker_slide_top", (0.0, Y_SLIDE_TOP, MARKER_Z)),
+                    ("marker_slide_bottom", (0.0, Y_SLIDE_BOTTOM, MARKER_Z)),
+                    ("marker_double_tap", (0.0, Y_DOUBLE_TAP, MARKER_Z)),
+                    ("marker_nib", (0.0, Y_APEX, 0.0)),
+                    ("marker_top", (0.0, Y_TOP, 0.0))):
         e = make_object(name, None, parent=root, location=bl(p))
         e.empty_display_type, e.empty_display_size = "SPHERE", 0.0015
 
@@ -1108,6 +1177,10 @@ def summarize(path):
             raise BuildError(f"export lost {name}")
         p = world[name].translation
         log(f"{name:20s} position (m) {p.x:+.5f} {p.y:+.5f} {p.z:+.5f}")
+    found = sum(1 for n in nodes if n.get("name") in MARKERS)
+    if found != len(MARKERS):
+        raise BuildError(f"expected {len(MARKERS)} marker nodes in the export, found {found}")
+    log(f"markers {found} of {len(MARKERS)}")
     for name in CLIPS:
         if name not in anims:
             raise BuildError(f"export lost clip {name}")
