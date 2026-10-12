@@ -98,6 +98,20 @@ class WidgetGridLogicTest {
         assertEquals(Density.CALM, densityFor(null, Density.CALM))
     }
 
+    @Test fun `a widget has a density of its own only when it saved a valid one`() {
+        assertEquals(Density.DENSE, ownDensity(wide42.copy(density = "DENSE")))
+        assertEquals(Density.CALM, ownDensity(wide42.copy(density = "CALM")))
+        assertNull(ownDensity(wide42))
+        assertNull(ownDensity(wide42.copy(density = "HUGE")))
+        assertNull(ownDensity(wide42.copy(density = "dense")))
+        assertNull(ownDensity(null))
+        // The two agree: PadStudio's density only stands in where the widget has none.
+        for (density in listOf(null, "DENSE", "HUGE")) {
+            val widget = wide42.copy(density = density)
+            assertEquals(ownDensity(widget) ?: Density.COMPACT, densityFor(widget, Density.COMPACT))
+        }
+    }
+
     // --- The chips -------------------------------------------------------------------------------
 
     @Test fun `the saved Default selects its chip, and anything unreadable selects Auto as the widgets show it`() {
@@ -201,6 +215,25 @@ class WidgetGridLogicTest {
         assertTrue(previewCaption(roomy, GridSpec(6, 3), Density.COMPACT).endsWith("names shown"))
         val one = GroupPlanner.layoutFor(80f, 120f, Density.CALM, null, labelLine)
         assertEquals("Auto at Roomy: 1 × 1 · 1 space · names shown", previewCaption(one, null, Density.CALM))
+    }
+
+    @Test fun `the Auto caption names a widget that has its own density, and only then`() {
+        val dense = GroupPlanner.layoutFor(776f, 300f, Density.DENSE, null, labelLine)
+        val own = wide42.copy(density = "DENSE")
+        assertEquals("Your Study widget uses Dense: 10 × 4 · 40 spaces · names hidden", previewCaption(dense, null, Density.DENSE, own, "Study"))
+        assertEquals("Your widget uses Dense: 10 × 4 · 40 spaces · names hidden", previewCaption(dense, null, Density.DENSE, own, null))
+        // No density of its own, or one that isn't a density: the widget follows PadStudio's, as Auto says.
+        val standard = GroupPlanner.layoutFor(776f, 300f, Density.COMPACT, null, labelLine)
+        assertEquals("Auto at Standard: 10 × 3 · 30 spaces · names shown", previewCaption(standard, null, Density.COMPACT, wide42, "Study"))
+        assertEquals("Auto at Standard: 10 × 3 · 30 spaces · names shown", previewCaption(standard, null, Density.COMPACT, wide42.copy(density = "HUGE"), "Study"))
+        // The example widget (no widget) is PadStudio's too.
+        assertEquals("Auto at Standard: 10 × 3 · 30 spaces · names shown", previewCaption(standard, null, Density.COMPACT, null, "Study"))
+        // An exact grid doesn't depend on the density, so its line doesn't mention one.
+        val exact = GroupPlanner.layoutFor(776f, 300f, Density.DENSE, GridSpec(8, 4), labelLine)
+        val line = previewCaption(exact, GridSpec(8, 4), Density.DENSE, own, "Study")
+        assertTrue(line.startsWith("8 × 4 · 32 spaces · names "), line)
+        assertEquals(previewCaption(exact, GridSpec(8, 4), Density.DENSE), line)
+        assertFalse("Dense" in line || "Your" in line || "Auto" in line, line)
     }
 
     @Test fun `Custom says the largest grid that fits, or why none does`() {

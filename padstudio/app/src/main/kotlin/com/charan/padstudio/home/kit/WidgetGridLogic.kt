@@ -119,9 +119,12 @@ fun previewSourceLine(target: PreviewTarget, groupTitle: String?): String {
     }
 }
 
+/** The icon density a widget saved for itself (its `DENSITY`); null when it has none or the saved name isn't a density. */
+fun ownDensity(widget: PlacedWidget?): Density? =
+    widget?.density?.let { name -> Density.entries.firstOrNull { it.name == name } }
+
 /** A widget's own icon density (its saved `DENSITY`) when valid, else PadStudio's. */
-fun densityFor(widget: PlacedWidget?, saved: Density): Density =
-    widget?.density?.let { name -> Density.entries.firstOrNull { it.name == name } } ?: saved
+fun densityFor(widget: PlacedWidget?, saved: Density): Density = ownDensity(widget) ?: saved
 
 /** One chip of the Default widget grid picker. */
 sealed interface GridOption {
@@ -202,12 +205,25 @@ fun refusalDetail(spec: GridSpec, target: PreviewTarget, density: Density, label
     return "On your biggest widget set to Default: $reason"
 }
 
-/** "8 × 4 · 32 spaces · names hidden", or for Auto "Auto at Standard: 7 × 3 · 21 spaces · names shown". */
-fun previewCaption(layout: WidgetLayout, spec: GridSpec?, density: Density): String {
+/**
+ * "8 × 4 · 32 spaces · names hidden", or for Auto "Auto at Standard: 7 × 3 · 21 spaces · names shown". When the
+ * previewed [widget] has an icon density of its own, the Auto line names the widget instead, because the density
+ * control shows PadStudio's: "Your Study widget uses Dense: 10 × 4 · 40 spaces · names hidden" ([densityLead];
+ * [groupTitle] is the widget's group). [density] is the one the layout was drawn at ([densityFor]). An exact grid
+ * doesn't depend on the density, so its line says nothing about it.
+ */
+fun previewCaption(
+    layout: WidgetLayout,
+    spec: GridSpec?,
+    density: Density,
+    widget: PlacedWidget? = null,
+    groupTitle: String? = null,
+): String {
     val spaces = layout.columns * layout.rows
     val grid = "${layout.columns} × ${layout.rows} · $spaces ${if (spaces == 1) "space" else "spaces"}"
     val names = if (layout.showLabels) "names shown" else "names hidden"
-    return if (spec == null) "Auto at ${density.label}: $grid · $names" else "$grid · $names"
+    if (spec != null) return "$grid · $names"
+    return "${densityLead(density, widgetOwns = ownDensity(widget) != null, groupTitle = groupTitle)}: $grid · $names"
 }
 
 /** Custom's "Up to 9 × 4 on this widget" (GroupPlanner.largestFit), or why not even 4 × 2 fits. */

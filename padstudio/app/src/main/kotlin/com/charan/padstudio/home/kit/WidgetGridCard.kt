@@ -111,7 +111,10 @@ internal fun WidgetGridCard(
             description = "Preview of a widget set to Default",
         )
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(previewCaption(layout, savedSpec, previewDensity), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                previewCaption(layout, savedSpec, previewDensity, widget = target.widget, groupTitle = group?.group?.title),
+                style = MaterialTheme.typography.bodyMedium,
+            )
             layout.note?.let { FitNote(it) }
             Text(
                 previewSourceLine(target, group?.group?.title),
