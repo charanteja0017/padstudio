@@ -183,6 +183,7 @@ private fun ColorScheme.isDark() = surface.luminance() < 0.5f
  * The rail: a [FloatSpan] wide column at the start, under the system bars, with one glass pill of icon buttons
  * centred in it (scrolling when the window is shorter than the pill).
  */
+@OptIn(ExperimentalMaterial3Api::class) // TooltipAnchorPosition, for RailIconButton's tooltip side
 @Composable
 private fun <T> FloatingRail(destinations: List<ShellDestination<T>>, selected: T, onSelect: (T) -> Unit) {
     Box(
@@ -212,6 +213,7 @@ private fun <T> FloatingRail(destinations: List<ShellDestination<T>>, selected: 
  * The narrow window's navigation: the same buttons in a horizontal glass pill, 16 dp above the bottom insets
  * (give [modifier] the alignment; scrolls sideways when the window is narrower than the pill).
  */
+@OptIn(ExperimentalMaterial3Api::class) // TooltipAnchorPosition, for RailIconButton's tooltip side
 @Composable
 private fun <T> FloatingBar(
     destinations: List<ShellDestination<T>>,

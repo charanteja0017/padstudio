@@ -361,11 +361,11 @@ class GroupWidgetTest {
     @Test fun `each glass has one fixed set of inks`() {
         val dark = glassPalette(WidgetGlass.DARK)
         assertEquals(Color.White, dark.text, "dark glass: white text and icons")
-        assertEquals(Color.White.copy(alpha = 0.7f), dark.secondary, "dark glass: secondary text, white at 70 per cent")
+        assertEquals(Color.White.copy(alpha = 0.86f), dark.secondary, "dark glass: secondary text, white at 86 per cent")
         assertEquals(Color.White.copy(alpha = 0.14f), dark.chip, "dark glass: the pill and the +N tile, white at 14 per cent")
         val light = glassPalette(WidgetGlass.LIGHT)
         assertEquals(Color(0xFF1B1C1C), light.text, "light glass: dark text and icons")
-        assertEquals(Color(0xFF4A4A55), light.secondary, "light glass: secondary text")
+        assertEquals(Color(0xFF34343E), light.secondary, "light glass: secondary text")
         assertEquals(Color.Black.copy(alpha = 0.08f), light.chip, "light glass: the pill and the +N tile, black at 8 per cent")
         // The main action (Choose) is the text colour turned over, so it reads on its own button.
         assertAtLeast(4.5f, dark.onAction, dark.action, "Choose on dark glass")

@@ -35,6 +35,8 @@ object UsageRanking {
     /** Whether the user has given PadStudio Usage access (Settings > Usage access). */
     fun hasAccess(context: Context): Boolean {
         val ops = context.getSystemService(AppOpsManager::class.java) ?: return false
+        // Deprecated in the API 37 SDK without a replacement that reads another uid's mode; still the documented check.
+        @Suppress("DEPRECATION")
         val mode = ops.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), context.packageName)
         return when (mode) {
             AppOpsManager.MODE_ALLOWED -> true
