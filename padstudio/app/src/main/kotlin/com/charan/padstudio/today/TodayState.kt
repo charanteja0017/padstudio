@@ -138,6 +138,34 @@ private fun gesture(control: PenControl, bindings: List<Binding>, clip: String?,
     return HeroGesture(control.id, control.label, action, (everywhere ?: camera)?.intent, clip, marker)
 }
 
+/**
+ * How much of a pen gesture has played, counted as PenModelView's own clock counts it: frame time while the pen
+ * moves, at most [MAX_FRAME_STEP_NANOS] a frame, and nothing across a [hold]. So a gesture held by Pause, by the
+ * app going to the background (no frames come) or by the pen being scrolled out of sight ends here when the pen
+ * finishes it, rather than on a wall-clock timer that runs on while the pen stands still.
+ */
+internal class GestureClock(private val lengthNanos: Long) {
+    private var lastFrame = 0L
+
+    var playedNanos = 0L
+        private set
+
+    val done: Boolean get() = playedNanos >= lengthNanos
+
+    fun frame(frameNanos: Long) {
+        if (lastFrame != 0L) playedNanos += (frameNanos - lastFrame).coerceIn(0L, MAX_FRAME_STEP_NANOS)
+        lastFrame = frameNanos
+    }
+
+    /** The pen stopped moving: the next frame starts counting afresh. */
+    fun hold() {
+        lastFrame = 0L
+    }
+}
+
+/** PenModelView's clip clock counts at most 0.1 s a frame. */
+internal const val MAX_FRAME_STEP_NANOS = 100_000_000L
+
 /** The bindings in force: the saved ones, else the defaults for this pen and mode (as PenStudio.bindings()). */
 internal fun currentBindings(config: StudioConfig): List<Binding> = config.bindings ?: DefaultProfiles.bindings(config.penKind, config.penMode)
 

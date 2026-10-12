@@ -128,6 +128,29 @@ class TodayStateTest {
         assertTrue(gestures.all { it.clip == null && it.marker == null })
     }
 
+    @Test fun `a gesture's time is the pen's frame time, not time the pen stood still`() {
+        val frame = 16_666_667L
+        val clock = GestureClock(lengthNanos = 1_850_000_000L)
+        var now = 5_000_000_000L
+        repeat(61) { clock.frame(now); now += frame } // the first frame starts the count: 60 steps, about 1 s
+        assertEquals(60 * frame, clock.playedNanos)
+        assertFalse(clock.done)
+        // Paused, or the pen scrolled away, for 5 s: nothing counts, and the first frame back starts afresh.
+        clock.hold()
+        now += 5_000_000_000L
+        clock.frame(now)
+        assertEquals(60 * frame, clock.playedNanos)
+        // In the background no frames come at all: the first one back counts at most 100 ms, as the pen's clock does.
+        now += 3_000_000_000L
+        clock.frame(now)
+        assertEquals(60 * frame + MAX_FRAME_STEP_NANOS, clock.playedNanos)
+        while (!clock.done) {
+            now += frame
+            clock.frame(now)
+        }
+        assertTrue(clock.playedNanos in 1_850_000_000L until 1_850_000_000L + frame)
+    }
+
     @Test fun `the bindings in force are the saved ones, else this pen's defaults`() {
         val saved = listOf(Binding("camera", "pinch", Press.SHORT, PenIntent.SCREENSHOT))
         assertEquals(saved, currentBindings(StudioConfig(bindings = saved)))

@@ -1,6 +1,5 @@
 package com.charan.padstudio.today
 
-import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -36,6 +35,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onVisibilityChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -88,7 +89,6 @@ import com.charan.padstudio.ui.theme.Tokens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
@@ -228,7 +228,8 @@ internal fun TodayHero(
                 val sink = controller.sink
                 val ignore = remember { { _: Map<String, Offset> -> } }
                 PenModelView(
-                    modifier = Modifier,
+                    // PenModelView's own test for "on screen", so the gesture clock stops when the pen's does.
+                    modifier = Modifier.onVisibilityChanged(minFractionVisible = 0.01f) { pen.visible = it },
                     clip = clip,
                     playing = pen.playing,
                     onMarkers = if (arrangement == HeroArrangement.LIST) ignore else sink,
@@ -506,10 +507,14 @@ private data class ClipRequest(val clip: String, val serial: Int)
  * The clip PenModelView plays, its replay counter, and whether it plays. A callout's gesture plays once
  * (even while the idle sway is paused, as the mock does) and then the pen rests; Pause holds the pen. Each
  * request bumps [replay], so tapping the same callout again plays the gesture again from its start. [clip]
- * goes back to `idle` when the gesture is over, which the view never treats as cutting it short.
+ * goes back to `idle` when the gesture is over, which the view never treats as cutting it short. How long a
+ * gesture lasts is counted as the pen counts it ([GestureClock]): in frames, while it plays and is [visible].
  */
 @Stable
 private class PenStageState(private val paused: MutableState<Boolean>) {
+    /** Whether any of the pen is on screen, as PenModelView judges it (it stops its clock otherwise). */
+    var visible by mutableStateOf(true)
+
     var clip by mutableStateOf(IDLE)
         private set
 
@@ -549,14 +554,17 @@ private class PenStageState(private val paused: MutableState<Boolean>) {
         oneShot = paused.value
         clip = target
         replay++
-        // The clip's length counts only while the pen plays.
-        var remaining = GESTURE_MS
-        while (remaining > 0) {
-            snapshotFlow { playing }.first { it }
-            val started = SystemClock.uptimeMillis()
-            val stopped = withTimeoutOrNull(remaining) { snapshotFlow { playing }.first { !it } }
-            remaining -= SystemClock.uptimeMillis() - started
-            if (stopped == null) break
+        // The clip lasts as long as the pen takes to play it: frames only, while it plays and is on screen. A
+        // wall-clock timer ran on while the pen stood still (the app in the background, the pen scrolled away),
+        // so `clip` went back to idle mid-gesture: the callouts showed again over a pen still tilted by `write`,
+        // and its moved markers could push the hero into the stacked or list layout for good.
+        val time = GestureClock(GESTURE_MS * NANOS_PER_MS)
+        while (!time.done) {
+            if (!(playing && visible)) {
+                time.hold()
+                snapshotFlow { playing && visible }.first { it }
+            }
+            withFrameNanos(time::frame)
         }
     }
 }
@@ -904,6 +912,7 @@ internal const val WRITE = "write"
 
 /** The bundled model's gesture clips last 1.7 s (task E's PenModelView); a little more so the pen is back at rest. */
 private const val GESTURE_MS = 1_850L
+private const val NANOS_PER_MS = 1_000_000L
 
 /** The ink is drawn over the first 68 % of `write`, as the motion kit draws it. */
 private const val INK_SHARE = 0.68f
