@@ -242,8 +242,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Looks → Apply to Home, Lock or Both (plan §10). The three-argument form above sets both, as before. */
     fun applyWallpaper(seed: Long, dark: Boolean, accent: Int, target: WallpaperTarget) {
         viewModelScope.launch(Dispatchers.Default) {
-            val bitmap = WallpaperGenerator.render(WallpaperGenerator.longSide(studio), seed, accent, dark)
-            runCatching { WallpaperGenerator.apply(studio, bitmap, target) }
+            // Rendering is inside runCatching too: a square bitmap at the long side can run out of memory.
+            runCatching {
+                val bitmap = WallpaperGenerator.render(WallpaperGenerator.longSide(studio), seed, accent, dark)
+                WallpaperGenerator.apply(studio, bitmap, target)
+            }
                 .onSuccess {
                     studio.config.update { it.copy(wallpaperApplied = true) }
                     _message.value = when (target) {

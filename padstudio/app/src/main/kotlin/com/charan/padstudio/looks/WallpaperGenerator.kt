@@ -12,11 +12,6 @@ import android.graphics.Shader
 import androidx.core.graphics.createBitmap
 import kotlin.random.Random
 
-/**
- * Calm wallpapers that match the accent colour: a diagonal two-tone gradient, a few large soft
- * light pools, and fine grain so it doesn't band on the tablet's display. Square at the screen's
- * long side, so portrait and landscape crop the same picture.
- */
 /** Where Looks → Apply puts the wallpaper. */
 enum class WallpaperTarget(val flags: Int) {
     HOME(WallpaperManager.FLAG_SYSTEM),
@@ -24,6 +19,11 @@ enum class WallpaperTarget(val flags: Int) {
     BOTH(WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK),
 }
 
+/**
+ * Calm wallpapers that match the accent colour: a diagonal two-tone gradient, a few large soft
+ * light pools, and fine grain so it doesn't band on the tablet's display. Square at the screen's
+ * long side, so portrait and landscape crop the same picture.
+ */
 object WallpaperGenerator {
     fun render(size: Int, seed: Long, accent: Int, dark: Boolean): Bitmap {
         val bitmap = createBitmap(size, size)
