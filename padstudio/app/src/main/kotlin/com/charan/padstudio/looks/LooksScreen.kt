@@ -159,8 +159,11 @@ fun LooksScreen(model: MainViewModel, modifier: Modifier = Modifier) {
     LaunchedEffect(pendingUntil) {
         val until = pendingUntil ?: return@LaunchedEffect
         delay(applyWaitLeft(until, SystemClock.elapsedRealtime()))
-        pendingUntil = null
-        outcome = ApplyOutcome.Requested
+        // An answer taken in the same frame has already ended this wait; never overwrite what it said.
+        if (pendingUntil == until) {
+            pendingUntil = null
+            outcome = ApplyOutcome.Requested
+        }
     }
     // Queued behind whatever the host shows now; null (no shell host) only outside MainActivity, where Looks isn't.
     LaunchedEffect(notice) {
