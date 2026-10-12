@@ -124,6 +124,14 @@ class SetupChecksTest {
         assertTrue(words(CheckTitles.KEY_MAPPER_SEES_PEN, false).startsWith("Turn on its accessibility service."))
         assertEquals("Sent to Key Mapper 14:05.", words(CheckTitles.PROFILE_CURRENT, true))
         assertEquals(
+            "Sent to Key Mapper 14:05, with no changes since.",
+            words(CheckTitles.PROFILE_CURRENT, true, known.copy(sentIsCurrent = true)),
+        )
+        assertEquals(
+            "Last sent to Key Mapper 14:05.",
+            words(CheckTitles.PROFILE_CURRENT, false, known.copy(sentText = "Last sent to Key Mapper 14:05")),
+        )
+        assertEquals(
             "Changes not sent yet. Use Send to Key Mapper on Today or Pen.",
             words(CheckTitles.PROFILE_CURRENT, false, known.copy(sentText = "Changes not sent yet", needsSend = true)),
         )
@@ -147,11 +155,39 @@ class SetupChecksTest {
         assertEquals("Not applied yet, and it’s optional: pick one in Looks for Home, Lock or both.", words(CheckTitles.WALLPAPER, false))
     }
 
+    @Test fun `every Fix the old Setup showed stays, ready or not, quieter when ready`() {
+        // The old screen showed a check's Fix whenever it had a label and an intent, whatever its state (plan §4).
+        val seesPen = CheckTitles.KEY_MAPPER_SEES_PEN
+        val settings = "Open accessibility settings"
+        assertEquals(CheckButton.Fix(settings, quiet = false), checkButton(seesPen, false, settings, hasFixIntent = true, canOpenLooks = false))
+        assertEquals(CheckButton.Fix(settings, quiet = true), checkButton(seesPen, true, settings, hasFixIntent = true, canOpenLooks = false))
+        assertEquals(
+            CheckButton.Fix("Open Key Mapper’s app info", quiet = false),
+            checkButton(CheckTitles.HYPEROS_KEEPS_KEY_MAPPER, null, "Open Key Mapper's app info", hasFixIntent = true, canOpenLooks = true),
+        )
+        // A label without an intent, or neither, is no button, as before.
+        assertNull(checkButton(seesPen, false, settings, hasFixIntent = false, canOpenLooks = false))
+        assertNull(checkButton(CheckTitles.KEY_MAPPER_INSTALLED, false, null, hasFixIntent = false, canOpenLooks = true))
+    }
+
+    @Test fun `Open Looks is on the wallpaper check while it needs attention, when the shell can open Looks`() {
+        val wallpaper = CheckTitles.WALLPAPER
+        assertEquals(CheckButton.OpenLooks, checkButton(wallpaper, false, null, hasFixIntent = false, canOpenLooks = true))
+        assertNull(checkButton(wallpaper, false, null, hasFixIntent = false, canOpenLooks = false), "no shell callback, no button")
+        assertNull(checkButton(wallpaper, true, null, hasFixIntent = false, canOpenLooks = true), "an applied wallpaper has nothing to open")
+        assertNull(checkButton(CheckTitles.WIDGETS_PLACED, false, null, hasFixIntent = false, canOpenLooks = true), "only the wallpaper")
+        // A Fix of its own, should the view model give it one, comes first.
+        assertEquals(
+            CheckButton.Fix("Apply", quiet = false),
+            checkButton(wallpaper, false, "Apply", hasFixIntent = true, canOpenLooks = true),
+        )
+    }
+
     @Test fun `no sentence claims what the app can't see`() {
-        val known = CheckFacts("4.6.1", "Sent to Key Mapper 14:05", false, 2, true, FactsFile.parse(FACTS).summary())
-        for (title in vmTitles) for (ok in listOf(true, false, null)) {
+        val sent = CheckFacts("4.6.1", "Sent to Key Mapper 14:05", false, 2, true, FactsFile.parse(FACTS).summary())
+        for (known in listOf(sent, sent.copy(sentIsCurrent = true))) for (title in vmTitles) for (ok in listOf(true, false, null)) {
             val words = plainWords(title, ok, "", known).lowercase()
-            listOf("verified", "running", "expert mode on", "probe-device.sh").forEach { banned ->
+            listOf("verified", "running", "expert mode on", "working", "probe-device.sh").forEach { banned ->
                 assertFalse(banned in words, "\"$title\" ($ok) says \"$banned\": $words")
             }
         }

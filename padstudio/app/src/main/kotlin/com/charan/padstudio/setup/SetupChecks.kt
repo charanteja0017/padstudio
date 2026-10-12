@@ -116,6 +116,35 @@ fun tally(oks: Iterable<Boolean?>): SetupTally {
 /** The check to show first in the summary: the first that needs attention (the view model lists the pen's first). */
 fun <T> topIssue(items: List<T>, ok: (T) -> Boolean?): T? = items.firstOrNull { ok(it) == false }
 
+/** The button under a check, chosen by [checkButton]. */
+sealed interface CheckButton {
+    /**
+     * MainViewModel's own Fix: its [label] (typographic), started through onStart with its intent. [quiet] on a
+     * ready check, where it's there to reopen the setting rather than to fix anything.
+     */
+    data class Fix(val label: String, val quiet: Boolean) : CheckButton
+
+    /** The mock-up's "Open Looks", on the wallpaper check while it needs attention. */
+    data object OpenLooks : CheckButton
+}
+
+/**
+ * The button a check shows, if any.
+ * - A check with a Fix (a label and an intent) keeps it in every state, as the old Setup showed it (plan §4).
+ *   "Open accessibility settings" still matters when Key Mapper's service reads as on: Android keeps a crashed
+ *   service in the enabled list, and turning it off and on again in that screen is the way back.
+ * - Otherwise the wallpaper check offers "Open Looks" while it needs attention, when the shell can open Looks
+ *   ([canOpenLooks]).
+ */
+fun checkButton(title: String, ok: Boolean?, fix: String?, hasFixIntent: Boolean, canOpenLooks: Boolean): CheckButton? {
+    val ready = checkState(ok) == CheckState.READY
+    return when {
+        fix != null && hasFixIntent -> CheckButton.Fix(typographic(fix), quiet = ready)
+        canOpenLooks && !ready && isCheck(title, CheckTitles.WALLPAPER) -> CheckButton.OpenLooks
+        else -> null
+    }
+}
+
 /** The page subtitle: "Eight checks for your pen, home screen and looks." */
 fun setupSubtitle(count: Int): String {
     val what = "for your pen, home screen and looks."
@@ -137,6 +166,7 @@ private val COUNT_WORDS = mapOf(
  *
  * @property sentText PenStatus.sentText: "Sent to Key Mapper 14:05", "Changes not sent yet", ...
  * @property needsSend PenStatus.needsSend: there is a profile Key Mapper doesn't have yet.
+ * @property sentIsCurrent PenStatus.sent is SENT: what Key Mapper has is what the setup builds now.
  */
 data class CheckFacts(
     val keyMapperVersion: String? = null,
@@ -145,6 +175,7 @@ data class CheckFacts(
     val widgetsPlaced: Int? = null,
     val lawnicons: Boolean? = null,
     val facts: FactsSummary? = null,
+    val sentIsCurrent: Boolean = false,
 )
 
 /**
@@ -171,6 +202,7 @@ private fun words(title: String, ok: Boolean?, detail: String, known: CheckFacts
         titleKey(CheckTitles.PROFILE_CURRENT) -> when {
             known.sentText == null -> detail
             known.needsSend -> "${known.sentText}. Use Send to Key Mapper on Today or Pen."
+            known.sentIsCurrent -> "${known.sentText}, with no changes since."
             else -> "${known.sentText}."
         }
         titleKey(CheckTitles.HYPEROS_KEEPS_KEY_MAPPER) -> when (state) {

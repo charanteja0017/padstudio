@@ -106,8 +106,9 @@ import kotlinx.coroutines.withContext
  * reader's place.
  *
  * Every button does what it did before the redesign: Check again calls `refresh(force = true)`, a Fix starts the
- * check's own intent through [onStart] (shown, as in the mock-up, on checks that aren't ready), and the pen probe
- * starts [PenProbeActivity] through [onStart].
+ * check's own intent through [onStart] (on every check that has one, as before; quieter on a ready check), and
+ * the pen probe starts [PenProbeActivity] through [onStart]. With [onOpenLooks] (the shell switches to Looks), the
+ * wallpaper check and the summary offer the mock-up's "Open Looks" while the wallpaper needs attention.
  */
 @Composable
 fun SetupScreen(
@@ -115,6 +116,7 @@ fun SetupScreen(
     onStart: (Intent) -> Unit,
     modifier: Modifier = Modifier,
     scrollToAbout: Boolean = false,
+    onOpenLooks: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val checks by model.health.collectAsStateWithLifecycle()
@@ -122,6 +124,11 @@ fun SetupScreen(
     val plan by model.plan.collectAsStateWithLifecycle()
     val snapshot by model.snapshot.collectAsStateWithLifecycle()
     val readings by rememberReadings(checks)
+
+    // The checks are the view model's last refresh (on resume and on Check again). Another tab can change what they
+    // read without a resume (a binding on Pen, the wallpaper on Looks), and the "Pen profile is current" sentence
+    // reads the live plan beside its check, so the page refreshes them once when it opens, as resume does.
+    LaunchedEffect(model) { model.refresh() }
 
     // The "Pen profile is current" sentence uses the status words of plan §7.
     val status = PenStatus(readings?.listening, config.appliedProfileHash, plan?.hash, config.appliedAt, config.penEnabled)
@@ -133,6 +140,7 @@ fun SetupScreen(
         widgetsPlaced = readings?.widgetsPlaced,
         lawnicons = readings?.lawnicons,
         facts = facts,
+        sentIsCurrent = status.sent == PenStatus.Sent.SENT,
     )
     val rows = remember(checks, known) { checks.map { CheckRowUi(it, plainWords(it.title, it.ok, it.detail, known)) } }
     val groups = groupByArea(rows) { it.check.title }
@@ -183,10 +191,10 @@ fun SetupScreen(
     ) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val summaryCard: @Composable () -> Unit = {
-                SummaryCard(summary, issue, recheck.checkedAt?.let { formatWhen(context, it) }, fix)
+                SummaryCard(summary, issue, recheck.checkedAt?.let { formatWhen(context, it) }, fix, onOpenLooks)
             }
             val areaCards: @Composable () -> Unit = {
-                groups.forEach { AreaCard(it, keyMapperApp, fix) }
+                groups.forEach { AreaCard(it, keyMapperApp, fix, onOpenLooks) }
             }
             val developerCard: @Composable () -> Unit = {
                 DeveloperCard(
@@ -448,7 +456,13 @@ private fun BesideOrBelow(
 
 /** The summary: the ring, "6 of 8 ready" with its legend, then the first check that needs attention with its Fix. */
 @Composable
-private fun SummaryCard(tally: SetupTally?, issue: CheckRowUi?, checkedAt: String?, onFix: (HealthCheck) -> Unit) {
+private fun SummaryCard(
+    tally: SetupTally?,
+    issue: CheckRowUi?,
+    checkedAt: String?,
+    onFix: (HealthCheck) -> Unit,
+    onOpenLooks: (() -> Unit)?,
+) {
     val type = MaterialTheme.typography
     val scheme = MaterialTheme.colorScheme
     StudioCard(Modifier.fillMaxWidth(), spacing = Tokens.GapM) {
@@ -487,7 +501,7 @@ private fun SummaryCard(tally: SetupTally?, issue: CheckRowUi?, checkedAt: Strin
                 }
             }
         }
-        if (issue != null) TopIssue(issue, onFix)
+        if (issue != null) TopIssue(issue, onFix, onOpenLooks)
     }
 }
 
@@ -510,9 +524,9 @@ private fun LegendLine(level: StatusLevel, words: String) {
     }
 }
 
-/** The first check that needs attention, as the mock-up's callout: name, sentence and its Fix when it has one. */
+/** The first check that needs attention, as the mock-up's callout: name, sentence and its button when it has one. */
 @Composable
-private fun TopIssue(row: CheckRowUi, onFix: (HealthCheck) -> Unit) {
+private fun TopIssue(row: CheckRowUi, onFix: (HealthCheck) -> Unit, onOpenLooks: (() -> Unit)?) {
     val type = MaterialTheme.typography
     val scheme = MaterialTheme.colorScheme
     StudioCard(Modifier.fillMaxWidth(), tone = CardTone.High, contentPadding = PaddingValues(16.dp), spacing = 6.dp) {
@@ -526,36 +540,66 @@ private fun TopIssue(row: CheckRowUi, onFix: (HealthCheck) -> Unit) {
                 Text(row.words, style = type.bodyMedium, color = scheme.onSurfaceVariant)
             }
         }
-        FixButton(row.check, onFix, PillStyle.Filled, Modifier.padding(start = 24.dp + Tokens.GapS))
+        CheckAction(row.check, onFix, onOpenLooks, PillStyle.Filled, Modifier.padding(start = 24.dp + Tokens.GapS))
     }
 }
 
-/** The check's own Fix (MainViewModel's label and intent), when it has one. */
+/**
+ * A check's button ([checkButton]): its own Fix (MainViewModel's label and intent, through [onFix]) in [style], or
+ * text style when quiet on a ready check; or the wallpaper's "Open Looks" through [onOpenLooks].
+ */
 @Composable
-private fun FixButton(check: HealthCheck, onFix: (HealthCheck) -> Unit, style: PillStyle, modifier: Modifier = Modifier) {
-    val label = check.fix ?: return
-    if (check.fixIntent == null) return
-    PillButton(text = typographic(label), onClick = { onFix(check) }, modifier = modifier, style = style, icon = Sym.open)
+private fun CheckAction(
+    check: HealthCheck,
+    onFix: (HealthCheck) -> Unit,
+    onOpenLooks: (() -> Unit)?,
+    style: PillStyle,
+    modifier: Modifier = Modifier,
+) {
+    when (val button = checkButton(check.title, check.ok, check.fix, check.fixIntent != null, onOpenLooks != null)) {
+        is CheckButton.Fix -> PillButton(
+            text = button.label,
+            onClick = { onFix(check) },
+            modifier = modifier,
+            style = if (button.quiet) PillStyle.Text else style,
+            icon = Sym.open,
+        )
+        CheckButton.OpenLooks -> if (onOpenLooks != null) {
+            PillButton(text = "Open Looks", onClick = onOpenLooks, modifier = modifier, style = style, icon = Sym.looks)
+        }
+        null -> Unit
+    }
 }
 
 /** One area's card: its title with "4 of 5 ready", then its checks. */
 @Composable
-private fun AreaCard(group: AreaGroup<CheckRowUi>, keyMapperApp: InstalledApp?, onFix: (HealthCheck) -> Unit) {
+private fun AreaCard(
+    group: AreaGroup<CheckRowUi>,
+    keyMapperApp: InstalledApp?,
+    onFix: (HealthCheck) -> Unit,
+    onOpenLooks: (() -> Unit)?,
+) {
     val count = tally(group.items.map { it.check.ok })
     StudioCard(Modifier.fillMaxWidth(), spacing = 4.dp) {
         CardTitle(group.area.title, count.headline)
         Column {
             group.items.forEachIndexed { index, row ->
                 if (index > 0) HorizontalDivider(color = hairline())
-                CheckRow(row, group.area, keyMapperApp, onFix)
+                CheckRow(row, group.area, keyMapperApp, onFix, onOpenLooks)
             }
         }
     }
 }
 
-/** A check: its icon, name, status pill and sentence (one phrase for TalkBack), then its Fix. */
+/** A check: its icon, name, status pill and sentence (one phrase for TalkBack), then its button. */
 @Composable
-private fun CheckRow(row: CheckRowUi, area: CheckArea, keyMapperApp: InstalledApp?, onFix: (HealthCheck) -> Unit) {
+private fun CheckRow(
+    row: CheckRowUi,
+    area: CheckArea,
+    keyMapperApp: InstalledApp?,
+    onFix: (HealthCheck) -> Unit,
+    onOpenLooks: (() -> Unit)?,
+) {
     val type = MaterialTheme.typography
     val scheme = MaterialTheme.colorScheme
     Column(Modifier.fillMaxWidth().padding(vertical = Tokens.GapS)) {
@@ -579,10 +623,7 @@ private fun CheckRow(row: CheckRowUi, area: CheckArea, keyMapperApp: InstalledAp
                 Text(row.words, style = type.bodyMedium, color = scheme.onSurfaceVariant)
             }
         }
-        // As the mock-up: a ready check has nothing to fix, so only the others show their Fix.
-        if (row.state != CheckState.READY) {
-            FixButton(row.check, onFix, PillStyle.Tonal, Modifier.padding(start = TileSize + Tokens.GapM, top = 6.dp))
-        }
+        CheckAction(row.check, onFix, onOpenLooks, PillStyle.Tonal, Modifier.padding(start = TileSize + Tokens.GapM, top = 6.dp))
     }
 }
 
