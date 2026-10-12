@@ -255,7 +255,10 @@ class LibraryActivity : ComponentActivity() {
  * redrawn; Done closes it.
  */
 class EditGroupWidgetActivity : ComponentActivity() {
-    /** Something was saved: the launcher then keeps a newly placed widget, even after a rotation. */
+    /**
+     * Something was chosen (its write finishes even if this activity doesn't): the launcher then keeps a
+     * newly placed widget, even after a rotation or when Back follows the choice straight away.
+     */
     private var changed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -315,8 +318,14 @@ private fun FolderPanel(request: FolderRequest, frosted: Boolean, onClose: () ->
     var widgetId by rememberSaveable(request) { mutableStateOf(request.widgetId) }
     var query by rememberSaveable(request, groupName) { mutableStateOf("") }
     var editing by rememberSaveable(request) { mutableStateOf(false) }
-    LaunchedEffect(request) {
-        if (widgetId == null && request.group != null) widgetId = onlyWidgetShowing(context.applicationContext, request.group)
+    // Without the widget's id in the intent, look for the one widget that can be showing this group. That
+    // waits for the groups that have apps: a widget whose saved group has none, or that has no saved group,
+    // shows the first of them instead (GroupWidget's fallback).
+    val shownGroups = (load as? SnapshotLoad.Ready)?.snapshot?.groups?.map { it.group.name }
+    LaunchedEffect(request, shownGroups != null) {
+        if (widgetId == null && request.group != null && shownGroups != null) {
+            widgetId = onlyWidgetShowing(context.applicationContext, request.group, shownGroups)
+        }
     }
     val messages = remember { SnackbarHostState() }
     val say = rememberSay(messages)
@@ -655,6 +664,7 @@ private fun GroupField(load: SnapshotLoad, saved: String?, onChoose: (AppGroup) 
             items = snapshot.groups,
             labels = snapshot.groups.map { "${it.group.title} ${it.apps.size}" },
             reserved = TILE_PADDING * 2,
+            minTileWidth = TILE_PADDING * 2 + GROUP_TILE_ICONS,
         ) { planned, tileModifier ->
             GroupTile(planned, snapshot, selected = planned.group.name == saved, onClick = { onChoose(planned.group) }, modifier = tileModifier)
         }
@@ -683,7 +693,7 @@ private fun GroupTile(planned: PlannedGroup, snapshot: HomeSnapshot, selected: B
             Box(Modifier.weight(1f).clearAndSetSemantics {}) {
                 AppIconStack(
                     apps = apps,
-                    size = 28.dp,
+                    size = GROUP_STACK_ICON,
                     ringColor = if (selected) scheme.secondaryContainer else scheme.surfaceContainerHigh,
                 )
             }
@@ -824,7 +834,7 @@ private fun MiniGrid(columns: Int, rows: Int) {
     val ink = LocalContentColor.current.copy(alpha = MINI_ALPHA)
     val drawnColumns = columns.coerceIn(1, GridSpec.MAX_COLUMNS)
     val drawnRows = rows.coerceIn(1, GridSpec.MAX_ROWS)
-    Canvas(Modifier.size(width = 30.dp, height = 20.dp)) {
+    Canvas(Modifier.size(width = MINI_GRID_WIDTH, height = MINI_GRID_HEIGHT)) {
         val stroke = 1.dp.toPx()
         val half = stroke / 2f
         drawRoundRect(
@@ -876,7 +886,22 @@ private fun PickRow(label: String, picks: List<CustomPick>, chosen: Int, onPick:
     Text(text = label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     FlowRow(modifier = Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         picks.forEach { pick ->
-            ChoiceChip(label = "${pick.value}", selected = pick.value == chosen, onClick = { onPick(pick.value) }, enabled = pick.enabled)
+            val selected = pick.value == chosen
+            ChoiceChip(
+                label = "${pick.value}",
+                selected = selected,
+                onClick = { onPick(pick.value) },
+                enabled = pick.enabled,
+                // A count that doesn't fit is read out with layoutFor's reason ("9 columns need a 452 dp wide
+                // widget; …"), not only as "disabled".
+                modifier = pick.reason?.let { reason ->
+                    Modifier.clearAndSetSemantics {
+                        contentDescription = reason
+                        this.selected = selected
+                        disabled()
+                    }
+                } ?: Modifier,
+            )
         }
     }
 }
@@ -966,7 +991,8 @@ private fun FailureCard(failure: EditFailure, onRetry: () -> Unit) {
 /**
  * Tiles in equal columns, at most three across, each row as tall as its tallest tile. How many fit is
  * measured from the widest of [labels] in the tiles' text style (plus [reserved] for padding and symbols),
- * so large or bold text drops to fewer columns instead of squeezing the names.
+ * so large or bold text drops to fewer columns instead of squeezing the names; no tile is narrower than
+ * [minTileWidth] (room for a row of icons).
  */
 @Composable
 private fun <T> TileGrid(
@@ -974,6 +1000,7 @@ private fun <T> TileGrid(
     labels: List<String>,
     reserved: Dp,
     modifier: Modifier = Modifier,
+    minTileWidth: Dp = 0.dp,
     tile: @Composable (item: T, modifier: Modifier) -> Unit,
 ) {
     val measurer = rememberTextMeasurer()
@@ -983,7 +1010,7 @@ private fun <T> TileGrid(
         labels.maxOfOrNull { measurer.measure(it, style, softWrap = false, maxLines = 1).size.width } ?: 0
     }
     BoxWithConstraints(modifier.fillMaxWidth()) {
-        val need = with(density) { widest.toDp() } + reserved
+        val need = maxOf(with(density) { widest.toDp() } + reserved, minTileWidth)
         val columns = ((maxWidth + TILE_GAP) / (need + TILE_GAP)).toInt().coerceIn(1, MAX_TILE_COLUMNS)
         Column(Modifier.fillMaxWidth().selectableGroup(), verticalArrangement = Arrangement.spacedBy(TILE_GAP)) {
             items.chunked(columns).forEach { row ->
@@ -1014,12 +1041,18 @@ private fun widgetLabelLineDp(context: Context): Float {
     return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, WIDGET_LABEL_SP, metrics) / metrics.density
 }
 
-/** The one placed group widget showing [group], or null when none or several do. */
-private suspend fun onlyWidgetShowing(context: Context, group: String): Int? = withContext(Dispatchers.Default) {
+/**
+ * The one placed group widget that can be showing [group], or null when none or several can
+ * ([FolderWidget.mayShow]; [shownGroups] are the groups that have apps, in order).
+ */
+private suspend fun onlyWidgetShowing(context: Context, group: String, shownGroups: List<String>): Int? = withContext(Dispatchers.Default) {
     runCatching {
         val manager = GlanceAppWidgetManager(context)
         manager.getGlanceIds(GroupWidget::class.java)
-            .filter { id -> getAppWidgetState(context, PreferencesGlanceStateDefinition, id)[GroupWidget.GROUP] == group }
+            .filter { id ->
+                val saved = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)[GroupWidget.GROUP]
+                FolderWidget.mayShow(saved, group, shownGroups)
+            }
             .singleOrNull()
             ?.let(manager::getAppWidgetId)
     }.getOrNull()
@@ -1034,7 +1067,9 @@ private data class EditFailure(val reason: String)
  * Reads one widget's settings from Glance's state, then writes each change at once and redraws the
  * widget, as Edit widget always has (GroupWidget.GROUP and DENSITY; GRID is new). The choice shows on
  * screen straight away; if storing it fails, the sheet re-reads what is really saved and offers Retry.
- * Writes run in order, outside the activity's lifetime, so Done or Back never cuts one short.
+ * Writes run in order, outside the activity's lifetime, so Done or Back never cuts one short; for the
+ * same reason [onChanged] runs when a change is asked for, not when it lands, so the launcher's
+ * configure result is already RESULT_OK if Back follows a choice before its write finishes.
  */
 @Stable
 private class WidgetEditor(private val context: Context, private val appWidgetId: Int, private val onChanged: () -> Unit) {
@@ -1094,6 +1129,7 @@ private class WidgetEditor(private val context: Context, private val appWidgetId
         state = state?.let(show)
         failure = null
         pending++
+        onChanged()
         WriteScope.launch {
             val outcome = writes.withLock {
                 runCatching {
@@ -1108,7 +1144,6 @@ private class WidgetEditor(private val context: Context, private val appWidgetId
                     .onSuccess {
                         retryLast = null
                         savedAt = System.currentTimeMillis()
-                        onChanged()
                     }
                     .onFailure { error ->
                         Log.w(TAG, "Couldn't update widget $appWidgetId", error)
@@ -1363,10 +1398,22 @@ private val LIBRARY_WIDTH = 880.dp
 private val SCRIM_GUTTER = 24.dp
 private val MIN_TITLE_WIDTH = 160.dp
 
-/** Tiles: padding, the gap between them, and the room the grid symbol, its gap and the check take beside a name. */
+/**
+ * Tiles: padding, the gap between them, and the room the grid drawing (30 dp, wider than the 20 dp
+ * symbols), its gap and the check take beside a name.
+ */
 private val TILE_PADDING = 12.dp
 private val TILE_GAP = 8.dp
-private val GRID_TILE_SYMBOLS = 20.dp + 8.dp + 8.dp + 18.dp
+private val MINI_GRID_WIDTH = 30.dp
+private val MINI_GRID_HEIGHT = 20.dp
+private val GRID_TILE_SYMBOLS = MINI_GRID_WIDTH + 8.dp + 8.dp + 18.dp
+
+/**
+ * A group tile's icon row: AppIconStack's at most 3 icons and a "+N" tile, 28 dp each and overlapping by
+ * 30 % (28 + 3 × 19.6 dp), then the 18 dp check. Narrower, the stack's icons get squeezed.
+ */
+private val GROUP_STACK_ICON = 28.dp
+private val GROUP_TILE_ICONS = GROUP_STACK_ICON * 3.1f + 18.dp
 private const val MAX_TILE_COLUMNS = 3
 
 /** The sheet's tint toward the primary container, and how see-through it is with and without blur behind. */
@@ -1434,8 +1481,8 @@ internal data class GridOption(
     val mini: Cells? = null,
 )
 
-/** One count in the custom grid's columns or rows. */
-internal data class CustomPick(val value: Int, val enabled: Boolean)
+/** One count in the custom grid's columns or rows; a count that doesn't fit has layoutFor's [reason]. */
+internal data class CustomPick(val value: Int, val enabled: Boolean, val reason: String? = null)
 
 /** The custom grid editor for [spec]: which counts fit, the verdict for [spec], and why the rest don't fit. */
 internal data class CustomGrid(
@@ -1582,17 +1629,17 @@ internal object GridPicker {
         // layoutFor keeps a count that fits and trims one that doesn't, so each dimension is judged on its own.
         val columnsFit = GridSpec.COLUMNS.filter { c -> layout(size, density, GridSpec(c, GridSpec.MIN_ROWS), labelLineDp).columns == c }
         val rowsFit = GridSpec.ROWS.filter { r -> layout(size, density, GridSpec(GridSpec.MIN_COLUMNS, r), labelLineDp).rows == r }
+        // Why a count doesn't fit, asked with the other count at one that does, so the reason is about this count.
+        fun wideReason(columns: Int) = layout(size, density, GridSpec(columns, rowsFit.firstOrNull() ?: GridSpec.MIN_ROWS), labelLineDp).reason
+        fun tallReason(rows: Int) = layout(size, density, GridSpec(columnsFit.firstOrNull() ?: GridSpec.MIN_COLUMNS, rows), labelLineDp).reason
         val firstWideMiss = GridSpec.COLUMNS.firstOrNull { it !in columnsFit }
         val firstTallMiss = GridSpec.ROWS.firstOrNull { it !in rowsFit }
-        val reasons = listOfNotNull(
-            firstWideMiss?.let { layout(size, density, GridSpec(it, rowsFit.firstOrNull() ?: GridSpec.MIN_ROWS), labelLineDp).reason },
-            firstTallMiss?.let { layout(size, density, GridSpec(columnsFit.firstOrNull() ?: GridSpec.MIN_COLUMNS, it), labelLineDp).reason },
-        ).distinct()
+        val reasons = listOfNotNull(firstWideMiss?.let(::wideReason), firstTallMiss?.let(::tallReason)).distinct()
         val current = layout(size, density, spec, labelLineDp)
         return CustomGrid(
             spec = spec,
-            columns = GridSpec.COLUMNS.map { CustomPick(it, enabled = it in columnsFit) },
-            rows = GridSpec.ROWS.map { CustomPick(it, enabled = it in rowsFit) },
+            columns = GridSpec.COLUMNS.map { if (it in columnsFit) CustomPick(it, enabled = true) else CustomPick(it, enabled = false, reason = wideReason(it)) },
+            rows = GridSpec.ROWS.map { if (it in rowsFit) CustomPick(it, enabled = true) else CustomPick(it, enabled = false, reason = tallReason(it)) },
             verdict = if (current.fits) "${spec.label} · ${fitWords(current)}" else current.note ?: spec.label,
             warning = !current.fits,
             reasons = if (reasons.isEmpty()) null else reasons.joinToString(" ") + " $MORE_ROOM",
@@ -1706,6 +1753,22 @@ internal object GridPicker {
         GroupPlanner.layoutFor(size.widthDp.toFloat(), size.heightDp.toFloat(), density, spec, labelLineDp)
 
     private fun WidgetLayout.cells() = Cells(columns, rows)
+}
+
+/**
+ * Which widget a folder came from when its intent doesn't say (no EXTRA_APPWIDGET_ID): the one widget
+ * that can be showing the folder's group, if exactly one can (tested in GridPickerTest).
+ */
+internal object FolderWidget {
+    /**
+     * Whether a group widget whose saved GroupWidget.GROUP is [saved] can be showing [group]. It shows
+     * [saved] while that group has apps ([shownGroups], the groups that do, in order); otherwise, with no
+     * saved group or an empty one, it falls back to the first of them, as GroupWidget does. A widget placed
+     * without its configuration screen (configuration_optional) has no saved group. Counting one widget
+     * too many only hides "Edit widget"; one too few could edit another widget than the one tapped.
+     */
+    fun mayShow(saved: String?, group: String, shownGroups: List<String>): Boolean =
+        saved == group || (saved !in shownGroups && group == shownGroups.firstOrNull())
 }
 
 /** The panels' plain words that depend on data (tested in GridPickerTest). */

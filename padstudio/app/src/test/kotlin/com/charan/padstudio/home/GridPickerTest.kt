@@ -16,7 +16,8 @@ import kotlin.test.assertTrue
  * Edit widget's grid picker (plan §6b): which grids are offered, which are refused and why, and what
  * Default stands for. Expected numbers are worked out by hand from the fit rule (every cell at least
  * 48 × 48 dp inside 20 dp of padding and the 28 dp header), so a picker that stopped asking
- * GroupPlanner.layoutFor, or a layoutFor that lost its 48 dp floor, fails here.
+ * GroupPlanner.layoutFor, or a layoutFor that lost its 48 dp floor, fails here. Also: which widget a
+ * folder edits when its intent doesn't name one (FolderWidget), and the panels' words (PanelText).
  */
 class GridPickerTest {
     /** The mock's example widget, 412 × 300 dp, in landscape. */
@@ -331,11 +332,68 @@ class GridPickerTest {
         assertEquals(GridSpec(4, 2), start(GridChoice.Auto, size = WidgetSizeDp(150, 100, landscape = true)))
     }
 
+    @Test fun `each count that doesn't fit carries layoutFor's reason, for TalkBack to read on its chip`() {
+        val editor = GridPicker.custom(GridSpec(7, 3), mockWidget, Density.COMPACT, line100)
+        assertEquals("9 columns need a 452 dp wide widget; this one is 412 dp.", editor.columns.single { it.value == 9 }.reason)
+        assertEquals("10 columns need a 500 dp wide widget; this one is 412 dp.", editor.columns.single { it.value == 10 }.reason)
+        assertEquals("6 rows need a 336 dp tall widget; this one is 300 dp.", editor.rows.single { it.value == 6 }.reason)
+        assertEquals("8 rows need a 432 dp tall widget; this one is 300 dp.", editor.rows.single { it.value == 8 }.reason)
+        assertTrue((editor.columns + editor.rows).filter { it.enabled }.all { it.reason == null })
+    }
+
+    @Test fun `every refused count says why, and only refused ones, across sizes`() {
+        var refused = 0
+        for (width in 150..760 step 23) {
+            for (height in 100..640 step 29) {
+                val editor = GridPicker.custom(GridSpec(4, 2), WidgetSizeDp(width, height, landscape = true), Density.COMPACT, line100)
+                for (pick in editor.columns + editor.rows) assertEquals(!pick.enabled, pick.reason != null, "$pick on $width × $height")
+                for (pick in editor.columns.filterNot { it.enabled }) {
+                    refused++
+                    val words = "${pick.value} columns need a ${GroupPlanner.widthNeededDp(pick.value)} dp wide widget; this one is $width dp."
+                    assertTrue(pick.reason!!.startsWith(words), "${pick.reason} on $width × $height")
+                }
+                for (pick in editor.rows.filterNot { it.enabled }) {
+                    refused++
+                    val words = "${pick.value} rows need a ${GroupPlanner.heightNeededDp(pick.value)} dp tall widget; this one is $height dp."
+                    assertTrue(pick.reason!!.contains(words), "${pick.reason} on $width × $height")
+                }
+            }
+        }
+        assertTrue(refused > 100, "refused $refused")
+    }
+
     @Test fun `with no size the custom editor offers every count and claims no fit`() {
         val editor = GridPicker.custom(GridSpec(10, 8), null, Density.DENSE, line100)
         assertTrue(editor.columns.all { it.enabled } && editor.rows.all { it.enabled })
         assertEquals("10 × 8 · fit not known yet", editor.verdict)
         assertNull(editor.reasons)
+    }
+
+    // --- The folder's widget when the intent doesn't name it ---
+
+    @Test fun `a widget shows its saved group while it has apps, otherwise the first group`() {
+        val shown = listOf("STUDY", "SOCIAL", "MORE")
+        assertTrue(FolderWidget.mayShow("SOCIAL", "SOCIAL", shown))
+        assertFalse(FolderWidget.mayShow("STUDY", "SOCIAL", shown))
+        // GroupWidget's fallback: no saved group, or a saved group with no apps now, shows the first group.
+        assertTrue(FolderWidget.mayShow(null, "STUDY", shown))
+        assertTrue(FolderWidget.mayShow("GAMES", "STUDY", shown))
+        assertFalse(FolderWidget.mayShow(null, "SOCIAL", shown))
+        assertFalse(FolderWidget.mayShow("GAMES", "SOCIAL", shown))
+        // A folder opened for the empty group itself still finds the widgets that saved it.
+        assertTrue(FolderWidget.mayShow("GAMES", "GAMES", shown))
+        assertFalse(FolderWidget.mayShow(null, "STUDY", emptyList()))
+    }
+
+    @Test fun `a widget placed without a saved group makes the folder's widget unknown, never another one`() {
+        val shown = listOf("STUDY", "SOCIAL")
+        fun candidates(widgets: Map<Int, String?>, group: String) = widgets.filter { (_, saved) -> FolderWidget.mayShow(saved, group, shown) }.keys.toList()
+        // Widget 1 was placed from the widget picker (configuration_optional: nothing saved) and shows Study,
+        // the first group; widget 2 was pinned as Study. Tapping widget 1 must not offer to edit widget 2.
+        assertEquals(listOf(1, 2), candidates(mapOf(1 to null, 2 to "STUDY"), "STUDY"))
+        // On its own, the unsaved widget is the one showing Study, and Social's widget is still found.
+        assertEquals(listOf(1), candidates(mapOf(1 to null), "STUDY"))
+        assertEquals(listOf(2), candidates(mapOf(1 to null, 2 to "SOCIAL"), "SOCIAL"))
     }
 
     // --- Words ---
