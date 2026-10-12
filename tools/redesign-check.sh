@@ -82,9 +82,8 @@ widget_bound() { # widget_bound <file> <id> <receiver>
 
 cmd_check() {
   local ok=0 tag="${1:-after}"
-  [[ "$tag" == "after" ]] && snapshot after
   echo "• config fields kept:"
-  if [[ -s "$STATE_DIR/config-before.json" ]]; then
+  if [[ "$tag" == "after" && -s "$STATE_DIR/config-before.json" ]]; then
     python3 -I -B - "$STATE_DIR/config-before.json" "$STATE_DIR/config-after.json" <<'PY' || ok=1
 import json, sys
 old, new = (json.load(open(p)) for p in sys.argv[1:3])
@@ -96,17 +95,37 @@ for k in bad:
 sys.exit(1 if bad else 0)
 PY
   else
-    echo "  (no pre-install snapshot; showing current keys)"
+    echo "  (not right after an install; showing current keys)"
     python3 -I -B -c 'import json,sys; print("  ", sorted(json.load(open(sys.argv[1]))))' "$STATE_DIR/config-after.json"
   fi
-  echo "• widgets:"
-  for pair in 42:GroupWidgetReceiver 49:GroupWidgetLargeReceiver; do
-    if widget_bound "$STATE_DIR/appwidget-after.txt" "${pair%%:*}" "${pair#*:}"; then
-      echo "  id ${pair%%:*} bound to ${pair#*:}"
-    else
-      echo "  FAIL id ${pair%%:*} not bound to ${pair#*:}"; ok=1
-    fi
-  done
+  echo "• widgets (every PadStudio widget placed before the install is still bound to the same receiver):"
+  python3 -I -B - "$STATE_DIR/appwidget-before.txt" "$STATE_DIR/appwidget-after.txt" "$tag" <<'PY2' || ok=1
+import re, sys, os
+def widgets(path):
+    if not os.path.exists(path):
+        return None
+    found, current = {}, None
+    for line in open(path):
+        m = re.match(r"\s+\[\d+\] id=(\d+)$", line)
+        if m:
+            current = m.group(1)
+            continue
+        m = re.search(r"provider=.*cmp:ComponentInfo\{com\.charan\.padstudio/com\.charan\.padstudio\.home\.(\w+)\}", line)
+        if m and current:
+            found[current] = m.group(1)
+            current = None
+    return found
+before, after = widgets(sys.argv[1]), widgets(sys.argv[2]) or {}
+if sys.argv[3] != "after" or before is None:
+    print("  now:", ", ".join(f"{i} {r}" for i, r in sorted(after.items())) or "none")
+    sys.exit(0)
+bad = [i for i, r in before.items() if after.get(i) != r]
+for i, r in sorted(before.items()):
+    print(f"  id {i} {r}: " + ("bound" if after.get(i) == r else "FAIL missing after install"))
+for i in sorted(set(after) - set(before)):
+    print(f"  id {i} {after[i]}: new since the snapshot")
+sys.exit(1 if bad else 0)
+PY2
   return $ok
 }
 
@@ -118,6 +137,7 @@ cmd_install() {
   echo "Installing $(basename "$apk") ($(stat -f %z "$apk") bytes) …"
   adb install -r "$apk" || { echo "install failed" >&2; return 1; }
   sleep 2
+  snapshot after
   cmd_check after
 }
 
@@ -191,7 +211,7 @@ pad_require_device || exit 1
 case "${1:-}" in
   state) cmd_state ;;
   install) shift; cmd_install "$@" ;;
-  check) cmd_check after ;;
+  check) snapshot after; cmd_check now ;;
   dump) cmd_dump ;;
   shots) shift; cmd_shots "$@" ;;
   demo) shift; cmd_demo "$@" ;;
