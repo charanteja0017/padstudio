@@ -681,13 +681,14 @@ private val LightInk = GlassInk(glassPalette(WidgetGlass.LIGHT))
 private fun inkFor(glass: WidgetGlass): GlassInk = if (glass == WidgetGlass.LIGHT) LightInk else DarkInk
 
 /** What the home wallpaper says about itself: its colour hints and its main colour, each null where it can't tell. */
-private class WallpaperLook(val hints: Int?, val primary: Color?)
+internal class WallpaperLook(val hints: Int?, val primary: Color?)
 
 /**
  * The home wallpaper's colour hints and main colour (no permission needed; the picture itself can't be read).
  * It asks the system, so provideGlance runs it on IO. When the colours can't be read the widget draws dark glass.
+ * The app's widget previews (home/kit/WidgetPreview.kt) read it too, so they show the same glass.
  */
-private fun readWallpaper(context: Context): WallpaperLook {
+internal fun readWallpaper(context: Context): WallpaperLook {
     val colors = runCatching { WallpaperManager.getInstance(context).getWallpaperColors(WallpaperManager.FLAG_SYSTEM) }
         .onFailure { warnOnce("wallpaper", "Couldn't read the wallpaper's colours; drawing the dark glass", it) }
         .getOrNull()

@@ -1,7 +1,5 @@
 package com.charan.padstudio.today
 
-import android.app.WallpaperManager
-import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.util.TypedValue
@@ -18,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -106,9 +103,6 @@ internal fun TodayScreen(
 
     val facts by produceState<HomeScreenFacts?>(null) {
         value = withContext(Dispatchers.IO) { runCatching { context.studio.pen.factsFile()?.homeScreen }.getOrNull() }
-    }
-    val wallpaperColors by produceState<List<Color>?>(null, resumes) {
-        value = withContext(Dispatchers.IO) { readWallpaperColors(context) }
     }
     val iconStyle = config.iconStyle
     val savedPack = config.iconPack
@@ -254,7 +248,6 @@ internal fun TodayScreen(
                         preview = preview,
                         defaultGrid = defaultGridText(config.widgetGrid),
                         launcherGrid = launcherGrid,
-                        wallpaperColors = wallpaperColors,
                         onOpen = { onOpenTab(Tab.HOME) },
                     )
                     MakeItYoursCard(
@@ -315,12 +308,6 @@ private fun dayPattern(locale: Locale, sameYear: Boolean): String =
 
 private fun formatDay(date: LocalDate, sameYear: Boolean, locale: Locale): String =
     DateTimeFormatter.ofPattern(dayPattern(locale, sameYear), locale).format(date)
-
-/** The home wallpaper's main colours (no permission needed); the picture itself can't be read by apps. */
-private fun readWallpaperColors(context: Context): List<Color>? = runCatching {
-    val colors = WallpaperManager.getInstance(context).getWallpaperColors(WallpaperManager.FLAG_SYSTEM) ?: return@runCatching null
-    listOfNotNull(colors.primaryColor, colors.secondaryColor, colors.tertiaryColor).map { Color(it.toArgb()) }
-}.getOrNull()
 
 /** At least this long on "Opening Key Mapper…", so it doesn't flash. */
 private const val PENDING_MIN_MS = 600L

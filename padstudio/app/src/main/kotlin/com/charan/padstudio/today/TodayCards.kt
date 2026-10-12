@@ -5,14 +5,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,22 +34,20 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.charan.padstudio.HealthCheck
 import com.charan.padstudio.core.home.PlannedGroup
 import com.charan.padstudio.core.pen.DefaultProfiles
 import com.charan.padstudio.data.HomeSnapshot
 import com.charan.padstudio.data.InstalledApp
+import com.charan.padstudio.home.kit.SizeDp
+import com.charan.padstudio.home.kit.WidgetPreview
 import com.charan.padstudio.looks.WallpaperGenerator
 import com.charan.padstudio.ui.Sym
-import com.charan.padstudio.ui.components.AppIcon
 import com.charan.padstudio.ui.components.AppIconStack
 import com.charan.padstudio.ui.components.ListRow
 import com.charan.padstudio.ui.components.PillButton
@@ -165,7 +161,6 @@ internal fun HomeScreenCard(
     preview: PreviewWidget,
     defaultGrid: String,
     launcherGrid: String?,
-    wallpaperColors: List<Color>?,
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -195,7 +190,7 @@ internal fun HomeScreenCard(
         when {
             snapshot == null -> PreviewPlaceholder("Sorting your apps…")
             snapshot.groups.isEmpty() -> PreviewPlaceholder("No app groups yet.")
-            shown == HomePreview.WIDGETS -> WidgetPreview(snapshot, previewGroup(snapshot.groups), preview, defaultGrid, wallpaperColors)
+            shown == HomePreview.WIDGETS -> DefaultWidgetPreview(snapshot, previewGroup(snapshot.groups), preview, defaultGrid)
             else -> GroupTiles(snapshot)
         }
         ListRow(
@@ -235,124 +230,29 @@ private fun PreviewPlaceholder(text: String) {
 
 /**
  * The fullest group as a widget set to Default would show it: core's layout at the preview size, its first
- * apps' real icons, and "+N" in the last cell when they don't all fit; scaled down to the card, over your
- * wallpaper's colours. One picture for TalkBack.
+ * apps' real icons, and "+N" in the last cell when they don't all fit, drawn in the real widget's glass by Home
+ * Kit's [WidgetPreview]. One picture for TalkBack.
  */
 @Composable
-private fun WidgetPreview(
-    snapshot: HomeSnapshot,
-    group: PlannedGroup?,
-    preview: PreviewWidget,
-    defaultGrid: String,
-    wallpaperColors: List<Color>?,
-) {
-    val scheme = MaterialTheme.colorScheme
+private fun DefaultWidgetPreview(snapshot: HomeSnapshot, group: PlannedGroup?, preview: PreviewWidget, defaultGrid: String) {
     val layout = preview.layout
-    val apps = group?.apps.orEmpty()
-    val overflow = layout.overflow(apps.size)
-    val shownApps = apps.take(overflow.shown)
+    val members = group?.apps.orEmpty()
+    val named = members.take(minOf(layout.overflow(members.size).shown, 6))
     val description = buildString {
         append("Preview: a widget set to Default (")
         append(defaultGrid)
         append(") showing ")
         append(group?.group?.title ?: "a group")
         append(", ${layout.columns} × ${layout.rows}: ")
-        val named = shownApps.take(6)
         append(named.joinToString { it.label })
-        if (apps.size > named.size) append(" and ${apps.size - named.size} more")
+        if (members.size > named.size) append(" and ${members.size - named.size} more")
     }
-    BoxWithConstraints(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Tokens.CornerM))
-            .background(wallpaperBrush(wallpaperColors))
-            .padding(Tokens.GapM)
-            .clearAndSetSemantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        val scale = (maxWidth.value / preview.widthDp).coerceAtMost(1f)
-        fun Float.scaled(): Dp = (this * scale).dp
-        Column(
-            Modifier
-                .size(preview.widthDp.scaled(), preview.heightDp.scaled())
-                .clip(RoundedCornerShape(WIDGET_CORNER_DP.scaled()))
-                .background(scheme.surfaceContainer.copy(alpha = 0.92f))
-                .padding(PADDING_DP.scaled()),
-        ) {
-            Row(Modifier.height(HEADER_DP.scaled()), verticalAlignment = Alignment.CenterVertically) {
-                Row(
-                    Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(scheme.secondaryContainer)
-                        .padding(horizontal = 8f.scaled(), vertical = 3f.scaled()),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4f.scaled()),
-                ) {
-                    SymIcon(Sym.widgets, contentDescription = null, size = 14f.scaled(), tint = scheme.onSecondaryContainer)
-                    FixedText(group?.group?.title ?: "Group", 12f * scale, scheme.onSecondaryContainer)
-                }
-            }
-            val cellW = layout.cellWidthDp.scaled()
-            val cellH = layout.cellHeightDp.scaled()
-            val icon = layout.iconDp.scaled()
-            for (row in 0 until layout.rows) {
-                Row {
-                    for (column in 0 until layout.columns) {
-                        val index = row * layout.columns + column
-                        Column(
-                            Modifier.size(cellW, cellH),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            when {
-                                overflow.moreIndex == index -> MoreTile(overflow.more, icon)
-                                index < shownApps.size -> {
-                                    val app = snapshot.app(shownApps[index])
-                                    if (app != null) AppIcon(app, size = icon, contentDescription = null) else Spacer(Modifier.size(icon))
-                                    if (layout.showLabels) {
-                                        Spacer(Modifier.height(4f.scaled()))
-                                        Box(
-                                            Modifier
-                                                .size(cellW * 0.6f, 3f.scaled())
-                                                .clip(RoundedCornerShape(50))
-                                                .background(scheme.onSurfaceVariant.copy(alpha = 0.35f)),
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** The "+N" tile in the last cell, at the icons' size and shape. */
-@Composable
-private fun MoreTile(count: Int, size: Dp) {
-    val scheme = MaterialTheme.colorScheme
-    Box(
-        Modifier
-            .size(size)
-            .clip(SuperellipseShape())
-            .background(scheme.secondaryContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        FixedText("+$count", size.value * 0.34f, scheme.onSecondaryContainer)
-    }
-}
-
-/** Text drawn at a fixed size in dp: part of a scaled-down picture, so it follows the picture, not the text setting. */
-@Composable
-private fun FixedText(text: String, sizeDp: Float, color: Color) {
-    val size = with(LocalDensity.current) { sizeDp.dp.toSp() }
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge.copy(fontSize = size, lineHeight = size, fontFeatureSettings = "tnum"),
-        color = color,
-        maxLines = 1,
-        softWrap = false,
+    WidgetPreview(
+        layout = layout,
+        widgetSize = SizeDp(preview.widthDp, preview.heightDp),
+        apps = members.mapNotNull { snapshot.app(it) },
+        title = group?.group?.title ?: "Group",
+        description = description,
     )
 }
 
@@ -539,6 +439,3 @@ private const val THUMB_RENDER_PX = 192
 private const val THUMB_SEED = 7L
 
 // The widget's own measures (GroupWidget and core's GroupPlanner): padding, header and corners, in dp before scaling.
-private const val PADDING_DP = 10f
-private const val HEADER_DP = 28f
-private const val WIDGET_CORNER_DP = 24f
