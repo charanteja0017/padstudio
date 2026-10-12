@@ -13,7 +13,7 @@ import com.charan.padstudio.ui.StudioFont
  *     adb shell am start -n com.charan.padstudio/.MainActivity --es theme dark|light|system
  *     adb shell am start -n com.charan.padstudio/.MainActivity --es fontscale 1.25|2|reset
  *     adb shell am start -n com.charan.padstudio/.MainActivity --es boldtext on|off|reset
- *     adb shell am start -n com.charan.padstudio/.MainActivity --es font manrope|jakarta|outfit|reset
+ *     adb shell am start -n com.charan.padstudio/.MainActivity --es font jakarta|reset
  *
  * Each value is kept in a debug SharedPreferences file until reset, so recreate(), rotation and later launches
  * keep it. MainActivity applies it in attachBaseContext as a Configuration override: uiMode's night bits,
@@ -170,13 +170,11 @@ internal fun parseFontScale(value: String): OverrideChange<Float> {
     }
 }
 
-/** `font`: manrope, jakarta (Plus Jakarta Sans) or outfit; reset (or default) goes back to the app's typeface. */
+/** `font`: jakarta (Plus Jakarta Sans, the app's typeface since the owner's pick); reset (or default) clears the override. */
 internal fun parseFont(value: String): OverrideChange<StudioFont> = when (value.trim().lowercase().replace(" ", "")) {
-    "manrope" -> OverrideChange.SetTo(StudioFont.MANROPE)
     "jakarta", "plusjakarta", "plusjakartasans" -> OverrideChange.SetTo(StudioFont.JAKARTA)
-    "outfit" -> OverrideChange.SetTo(StudioFont.OUTFIT)
     "reset", "default" -> OverrideChange.Reset
-    else -> OverrideChange.Invalid("font \"$value\" ignored: use manrope, jakarta, outfit or reset")
+    else -> OverrideChange.Invalid("font \"$value\" ignored: use jakarta or reset")
 }
 
 /** `boldtext`: on (+300, like Settings → Bold text), off (0, even if the system's Bold text is on), or reset. */

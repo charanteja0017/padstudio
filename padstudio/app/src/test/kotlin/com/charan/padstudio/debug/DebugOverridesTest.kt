@@ -25,14 +25,12 @@ class DebugOverridesTest {
         }
     }
 
-    @Test fun `font takes the three candidates by short name, or reset`() {
-        assertEquals(OverrideChange.SetTo(StudioFont.MANROPE), parseFont("manrope"))
+    @Test fun `font takes jakarta by short or full name or reset, and the dropped candidates are invalid`() {
         assertEquals(OverrideChange.SetTo(StudioFont.JAKARTA), parseFont("Jakarta"))
         assertEquals(OverrideChange.SetTo(StudioFont.JAKARTA), parseFont("plus jakarta sans"))
-        assertEquals(OverrideChange.SetTo(StudioFont.OUTFIT), parseFont("OUTFIT"))
         assertEquals(OverrideChange.Reset, parseFont("reset"))
         assertEquals(OverrideChange.Reset, parseFont("default"))
-        listOf("", "inter", "comic").forEach { assertIs<OverrideChange.Invalid>(parseFont(it), "font \"$it\"") }
+        listOf("", "manrope", "outfit", "comic").forEach { assertIs<OverrideChange.Invalid>(parseFont(it), "font \"$it\"") }
     }
 
     @Test fun `boldtext on adds 300, off forces 0, reset follows the system`() {

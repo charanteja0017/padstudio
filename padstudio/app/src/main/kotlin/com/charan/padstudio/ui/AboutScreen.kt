@@ -60,7 +60,7 @@ private val credits = listOf(
     "**FocusPen Pro X** (HMQYHM, GPL-3.0-only) documented how HyperOS reports Focus Pen Pro gestures.",
     "**Lawnicons** (Apache-2.0) and **Arcticons** (GPL-3.0 / CC BY-SA 4.0) supply themed icons when installed.",
     "**Material Symbols** (Apache-2.0): PadStudio’s icons.",
-    "**Manrope** (SIL Open Font License 1.1): PadStudio’s typeface.",
+    "**Plus Jakarta Sans** (SIL Open Font License 1.1): PadStudio’s typeface.",
 )
 
 /**

@@ -32,8 +32,7 @@ import com.charan.padstudio.ui.theme.Tokens
  * - **Colours:** the brand schemes from [Tokens] for [Tokens.DefaultPalette]. While Looks → "Match wallpaper
  *   colours" ([com.charan.padstudio.data.StudioConfig.matchWallpaperColours]) is on, Material You colours from
  *   the wallpaper instead (minSdk 31 always has them).
- * - **Text:** [studioTypography] in PadStudio's own typeface, [StudioFont.DEFAULT] (Manrope), not the system font.
- *   Debug builds can probe the other candidates with `--es font` until the owner picks (plan round 2, §3.1).
+ * - **Text:** [studioTypography] in PadStudio's own typeface, [StudioFont.DEFAULT] (Plus Jakarta Sans), not the system font.
  * - **Corners:** [StudioShapes], the token radii.
  * - **Status colours:** [PadStudioTheme.semantic].
  */
@@ -86,32 +85,16 @@ private val LocalSemanticColors = staticCompositionLocalOf {
  * PadStudio's own typefaces (plan round 2, §3.1: "it should have its own font"), bundled in res/font as static
  * instances cut from google/fonts' variable files at pinned commits (OFL 1.1; texts in assets/licenses). The
  * variable files rendered at their default instance on the tablet (Manrope ExtraLight, Outfit Thin) because the
- * `wght` variation was ignored, so each weight is its own file. [MANROPE] is the app's font; the other two are
- * candidates a debug build can show (`--es font jakarta|outfit`) until the owner picks one.
+ * `wght` variation was ignored, so each weight is its own file. The owner asked for one to be picked (12 Oct):
+ * Plus Jakarta Sans, the most legible of the three at small sizes and a little narrower than Manrope or Outfit.
  */
 enum class StudioFont(val label: String, private val files: Map<Int, Int>) {
-    MANROPE(
-        "Manrope",
-        mapOf(
-            400 to com.charan.padstudio.R.font.manrope_w400, 500 to com.charan.padstudio.R.font.manrope_w500,
-            600 to com.charan.padstudio.R.font.manrope_w600, 700 to com.charan.padstudio.R.font.manrope_w700,
-            800 to com.charan.padstudio.R.font.manrope_w800,
-        ),
-    ),
     JAKARTA(
         "Plus Jakarta Sans",
         mapOf(
             400 to com.charan.padstudio.R.font.jakarta_w400, 500 to com.charan.padstudio.R.font.jakarta_w500,
             600 to com.charan.padstudio.R.font.jakarta_w600, 700 to com.charan.padstudio.R.font.jakarta_w700,
             800 to com.charan.padstudio.R.font.jakarta_w800,
-        ),
-    ),
-    OUTFIT(
-        "Outfit",
-        mapOf(
-            400 to com.charan.padstudio.R.font.outfit_w400, 500 to com.charan.padstudio.R.font.outfit_w500,
-            600 to com.charan.padstudio.R.font.outfit_w600, 700 to com.charan.padstudio.R.font.outfit_w700,
-            800 to com.charan.padstudio.R.font.outfit_w800, 900 to com.charan.padstudio.R.font.outfit_w900,
         ),
     ),
     ;
@@ -123,7 +106,7 @@ enum class StudioFont(val label: String, private val files: Map<Int, Int>) {
     fun resFor(weight: Int): Int = files[weight] ?: files.getValue(maxWeight)
 
     companion object {
-        val DEFAULT = MANROPE
+        val DEFAULT = JAKARTA
     }
 }
 

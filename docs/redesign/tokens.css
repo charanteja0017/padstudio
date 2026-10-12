@@ -5,22 +5,22 @@
 
 :root {
   /* Type scale at font scale 1.0; fontscale.js rewrites the sizes for other scales. */
-  --t-display-size: 30px;
-  --t-display-line: 38px;
-  --t-headline-size: 24px;
-  --t-headline-line: 32px;
-  --t-title-size: 18px;
-  --t-title-line: 26px;
-  --t-body-size: 15px;
-  --t-body-line: 22px;
-  --t-label-size: 12px;
+  --t-display-size: 26px;
+  --t-display-line: 34px;
+  --t-headline-size: 21px;
+  --t-headline-line: 28px;
+  --t-title-size: 16px;
+  --t-title-line: 22px;
+  --t-body-size: 14px;
+  --t-body-line: 20px;
+  --t-label-size: 11px;
   --t-label-line: 16px;
-  --t-label-small-size: 11px;
-  --t-label-small-line: 16px;
-  --t-title-medium-size: 15px;
-  --t-title-medium-line: 22px;
-  --t-body-medium-size: 13px;
-  --t-body-medium-line: 20px;
+  --t-label-small-size: 10px;
+  --t-label-small-line: 14px;
+  --t-title-medium-size: 14px;
+  --t-title-medium-line: 20px;
+  --t-body-medium-size: 12px;
+  --t-body-medium-line: 18px;
   /* Weights: body regular, titles medium, never above 600 (Bold text adds 300). */
   --w-regular: 400;
   --w-medium: 500;
