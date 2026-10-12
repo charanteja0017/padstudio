@@ -12,16 +12,20 @@ import com.charan.padstudio.core.home.Placement
 import com.charan.padstudio.ui.theme.BrandPalette
 import com.charan.padstudio.ui.theme.Tokens
 import java.io.File
+import java.io.IOException
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 
 /** The group widget's rules (plan §6b, §10 Widget): grid choice, designed states, header, colours, picker. */
 class GroupWidgetTest {
@@ -285,6 +289,33 @@ class GroupWidgetTest {
     @Test fun `old widgets keep their group only after an update`() {
         assertTrue(isUpdate(firstInstallTime = 1_000L, lastUpdateTime = 2_000L))
         assertFalse(isUpdate(firstInstallTime = 1_000L, lastUpdateTime = 1_000L), "a first install has no old widgets")
+    }
+
+    @Test fun `the once-only group step waits until it can tell, and a first install is done at once`() {
+        assertEquals(LegacyStep.Keep("STUDY"), legacyStep(updated = true, firstGroup = "STUDY"))
+        assertEquals(LegacyStep.FirstInstall, legacyStep(updated = false, firstGroup = "STUDY"), "a first install has no old widgets")
+        assertEquals(LegacyStep.FirstInstall, legacyStep(updated = false, firstGroup = null))
+        // Marked done here, widgets 42 and 49 would ask for a group for good: try again on the next draw.
+        assertEquals(LegacyStep.NotYet, legacyStep(updated = true, firstGroup = null), "no group to give yet")
+        assertEquals(LegacyStep.NotYet, legacyStep(updated = null, firstGroup = "STUDY"), "install times unreadable")
+    }
+
+    @Test fun `keeping old groups is unfinished after a failed write, and never swallows cancellation`(): Unit = runBlocking {
+        val kept = mutableListOf<Int>()
+        assertTrue(keepAll(listOf(42, 49), keep = { kept += it }, onError = { _, _ -> }))
+        assertEquals(listOf(42, 49), kept)
+
+        kept.clear()
+        val failed = mutableListOf<Int>()
+        val done = keepAll(listOf(42, 49), keep = { if (it == 42) throw IOException("disk full") else kept += it }, onError = { id, _ -> failed += id })
+        assertFalse(done, "widget 42 still has no group: not done, so the next draw tries again")
+        assertEquals(listOf(42), failed)
+        assertEquals(listOf(49), kept, "the other widgets still get theirs")
+
+        // A cancelled session must not reach "done" with widgets left without their group.
+        assertFailsWith<CancellationException> {
+            keepAll(listOf(42, 49), keep = { throw CancellationException("session closed") }, onError = { _, _ -> })
+        }
     }
 
     // --- Colours -----------------------------------------------------------------------------------

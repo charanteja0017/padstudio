@@ -86,6 +86,7 @@ import com.charan.padstudio.ui.theme.Tokens
 import com.charan.padstudio.ui.themedIconColors
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.ceil
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -739,30 +740,46 @@ private val keptGroups = ConcurrentHashMap<Int, String>()
  * showing, so it keeps drawing the same apps (plan §5.5: widgets 42 and 49). From then on, a widget
  * without a group is new or restored and asks for one ("Choose a group", plan §6b).
  *
+ * It's marked done only when it has finished. When it can't tell yet ([legacyStep]), a widget's group
+ * couldn't be saved, or the session was cancelled, the next draw tries again; a widget that has a group
+ * by then is left alone, so trying again never changes a group already kept or chosen. Glance calls
+ * provideGlance on the main thread, so the preferences are read and written on the IO dispatcher.
+ *
  * Returns the groups given out in this process. Glance reads a widget's state before it calls
  * provideGlance, so a widget drawn in this same process falls back to its entry here; later sessions
  * read the saved group.
  */
 private suspend fun keepLegacyGroups(context: Context, snapshot: HomeSnapshot): Map<Int, String> = legacyLock.withLock {
-    val prefs = context.getSharedPreferences(LEGACY_PREFS, Context.MODE_PRIVATE)
-    if (prefs.getBoolean(LEGACY_DONE, false)) return@withLock keptGroups
-    val firstGroup = snapshot.groups.firstOrNull()?.group?.name
-    val info = runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
-    if (firstGroup != null && info != null && isUpdate(info.firstInstallTime, info.lastUpdateTime)) {
-        val manager = GlanceAppWidgetManager(context)
-        for (appWidgetId in WidgetPinning.placedIds(context)) {
-            runCatching {
-                updateAppWidgetState(context, manager.getGlanceIdBy(appWidgetId)) { state ->
-                    if (state[GroupWidget.GROUP] == null) {
-                        state[GroupWidget.GROUP] = firstGroup
-                        keptGroups[appWidgetId] = firstGroup
-                    }
-                }
-            }.onFailure { Log.w(TAG, "Widget $appWidgetId: couldn't keep it on $firstGroup", it) }
+    withContext(Dispatchers.IO) {
+        val prefs = context.getSharedPreferences(LEGACY_PREFS, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(LEGACY_DONE, false)) return@withContext
+        val info = runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
+        val step = legacyStep(info?.let { isUpdate(it.firstInstallTime, it.lastUpdateTime) }, snapshot.groups.firstOrNull()?.group?.name)
+        val done = when (step) {
+            LegacyStep.FirstInstall -> true
+            LegacyStep.NotYet -> false
+            is LegacyStep.Keep -> {
+                val manager = GlanceAppWidgetManager(context)
+                val kept = keepAll(
+                    ids = WidgetPinning.placedIds(context),
+                    keep = { appWidgetId ->
+                        updateAppWidgetState(context, manager.getGlanceIdBy(appWidgetId)) { state ->
+                            if (state[GroupWidget.GROUP] == null) {
+                                state[GroupWidget.GROUP] = step.group
+                                keptGroups[appWidgetId] = step.group
+                            }
+                        }
+                    },
+                    onError = { appWidgetId, error ->
+                        Log.w(TAG, "Widget $appWidgetId: couldn't keep it on ${step.group}; trying again on the next draw", error)
+                    },
+                )
+                if (keptGroups.isNotEmpty()) Log.i(TAG, "Kept pre-update widgets on the group they showed: $keptGroups")
+                kept
+            }
         }
-        if (keptGroups.isNotEmpty()) Log.i(TAG, "Kept pre-update widgets on the group they showed: $keptGroups")
+        if (done) prefs.edit(commit = true) { putBoolean(LEGACY_DONE, true) }
     }
-    prefs.edit { putBoolean(LEGACY_DONE, true) }
     keptGroups
 }
 
@@ -940,6 +957,45 @@ internal fun stateFit(
 
 /** Widgets are given their old group only when PadStudio was updated; a first install has none to keep. */
 internal fun isUpdate(firstInstallTime: Long, lastUpdateTime: Long): Boolean = lastUpdateTime > firstInstallTime
+
+/** What the once-only step does next (keepLegacyGroups). */
+internal sealed interface LegacyStep {
+    /** A first install: no widget can be older than this version, so there is nothing to keep. Done. */
+    data object FirstInstall : LegacyStep
+
+    /** Can't tell yet: PadStudio's install times are unreadable, or there's no group to give. Not done. */
+    data object NotYet : LegacyStep
+
+    /** An update: every widget without a group gets [group], the first group, which it was showing. */
+    data class Keep(val group: String) : LegacyStep
+}
+
+/** [updated] is null when PadStudio's package info can't be read; [firstGroup] is null when there are no groups. */
+internal fun legacyStep(updated: Boolean?, firstGroup: String?): LegacyStep = when {
+    updated == null -> LegacyStep.NotYet
+    !updated -> LegacyStep.FirstInstall
+    firstGroup == null -> LegacyStep.NotYet
+    else -> LegacyStep.Keep(firstGroup)
+}
+
+/**
+ * Runs [keep] for each widget id and says whether every one succeeded. A failure goes to [onError] and the
+ * rest still run; cancellation is passed on, never counted as done (runCatching would swallow it).
+ */
+internal suspend fun keepAll(ids: List<Int>, keep: suspend (Int) -> Unit, onError: (Int, Exception) -> Unit): Boolean {
+    var all = true
+    for (id in ids) {
+        try {
+            keep(id)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            all = false
+            onError(id, e)
+        }
+    }
+    return all
+}
 
 private const val TAG = "GroupWidget"
 private const val LEGACY_PREFS = "group_widget"
