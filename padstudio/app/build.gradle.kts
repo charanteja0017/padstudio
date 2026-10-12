@@ -32,6 +32,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    lint {
+        // Built for Xiaomi pads (arm64 only, see abiFilters); ChromeOS's x86_64 isn't a target.
+        disable += "ChromeOsAbiSupport"
+    }
 }
 
 kotlin {
