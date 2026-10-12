@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -37,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.charan.padstudio.ui.PadStudioTheme
 import com.charan.padstudio.ui.Sym
 import com.charan.padstudio.ui.theme.Tokens
 
@@ -68,22 +68,19 @@ val StatusLevel.symbol: Int
  * The colour of a level's symbol (a status dot, a pill's icon): the good and warn inks, the scheme's
  * error colour for bad, on-surface-variant for unknown. Text next to it stays on-surface.
  *
- * Good and warn: Material 3 has no such roles. W2 task A's theme adds `PadStudioTheme.semantic.good` /
- * `.warn` / `.bad` (ui/Theme.kt), which this branch (18e4a71) doesn't have yet, so until the merge these
- * come from the private fallback below, which holds the same values as task A's `Tokens.goodInk(dark)` /
- * `Tokens.warnInk(dark)`: the base colours in dark themes, darker inks in light ones that keep 3 : 1 on
- * every surface container. After the merge, return `PadStudioTheme.semantic.good` / `.warn` / `.bad` here.
+ * Good and warn: Material 3 has no such roles, so they come from the theme's `PadStudioTheme.semantic`
+ * (ui/Theme.kt): the base colours in dark themes, darker inks in light ones that keep 3 : 1 on every
+ * surface container (make_tokens.mjs checks).
  */
 @Composable
 @ReadOnlyComposable
 fun statusInk(level: StatusLevel): Color {
-    val scheme = MaterialTheme.colorScheme
-    val dark = scheme.surface.luminance() < 0.5f
+    val semantic = PadStudioTheme.semantic
     return when (level) {
-        StatusLevel.Good -> if (dark) Tokens.Good else GOOD_INK_LIGHT
-        StatusLevel.Warn -> if (dark) Tokens.Warn else WARN_INK_LIGHT
-        StatusLevel.Bad -> scheme.error
-        StatusLevel.Unknown -> scheme.onSurfaceVariant
+        StatusLevel.Good -> semantic.good
+        StatusLevel.Warn -> semantic.warn
+        StatusLevel.Bad -> semantic.bad
+        StatusLevel.Unknown -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }
 
@@ -213,6 +210,3 @@ fun EmptyState(
 
 private const val PILL_TINT = 0.16f
 
-// Fallback status inks for light themes, equal to W2 task A's Tokens.GoodInkLight and Tokens.WarnInkLight.
-private val GOOD_INK_LIGHT = Color(0xFF16672B)
-private val WARN_INK_LIGHT = Color(0xFF714D00)
