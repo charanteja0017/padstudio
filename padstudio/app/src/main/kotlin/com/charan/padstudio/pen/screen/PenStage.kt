@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -30,11 +31,13 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.charan.padstudio.pen.PenModelView
 import com.charan.padstudio.ui.components.BindingChip
 import com.charan.padstudio.ui.theme.Tokens
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
@@ -56,6 +59,8 @@ data class StageChip(
  * calls [onChip] with its control. The live pen's markers move every animated frame; they reach only the dots and
  * hairlines, in the draw phase. The chips are placed from a steady copy that changes only when the pen moves
  * further than a sway ([STEADY_THRESHOLD], a resize does), so they never jump or flip while the pen sways.
+ * When the stage itself is resized (the side sheet opening, a window resize), the pen view re-frames a frame or
+ * two later; until its new markers arrive the chips are hidden rather than placed from the old ones.
  *
  * When the chips can't fit beside the pen (large text, a narrow stage), the stage shows them as a list next to
  * a smaller pen instead: a measured decision ([placeCallouts] with the chips' measured sizes), not a font-scale
@@ -82,6 +87,16 @@ fun PenStage(
         delay(MARKER_WAIT_MS)
         waited = true
     }
+    // After a resize, should the pen view's re-framed markers not come (a parked renderer), the last ones it
+    // reported stand after the same wait, so the chips never stay hidden.
+    LaunchedEffect(board) {
+        snapshotFlow { board.awaiting }.collectLatest { size ->
+            if (size != null) {
+                delay(MARKER_WAIT_MS)
+                board.settle()
+            }
+        }
+    }
     val scheme = MaterialTheme.colorScheme
     val lineColor = scheme.onSurface.copy(alpha = LINE_ALPHA)
     val dotColor = scheme.primary
@@ -95,6 +110,8 @@ fun PenStage(
         val height = if (constraints.hasBoundedHeight) constraints.maxHeight else FALLBACK_SIZE.roundToPx()
         val full = Constraints.fixed(width, height)
         board.threshold = STEADY_THRESHOLD.toPx()
+        // Markers taken at another stage size (before a resize) would misplace the chips: the pen re-frames.
+        val stale = !board.measured(IntSize(width, height))
 
         // The chips' natural sizes, from copies that are never placed (no semantics, so TalkBack never finds them).
         val sizes = subcompose(StageSlot.Measure) {
@@ -104,7 +121,7 @@ fun PenStage(
         }.map { it.measure(Constraints()) }
 
         val markers = board.steady
-        val haveMarkers = chips.isNotEmpty() && chips.all { it.marker in markers }
+        val haveMarkers = !stale && chips.isNotEmpty() && chips.all { it.marker in markers }
         val spots = if (haveMarkers && !hideCallouts) {
             val anchors = chips.map { chip -> markers.getValue(chip.marker) }
             val from = markers[NIB_MARKER] ?: anchors.maxBy { it.y }
@@ -133,6 +150,7 @@ fun PenStage(
         val form = when {
             hideCallouts -> StageForm.PenOnly
             spots != null -> StageForm.Callouts
+            stale -> StageForm.PenOnly // just resized: the pen's markers at its new size are a frame or two away
             haveMarkers || waited || chips.isEmpty() -> StageForm.List
             else -> StageForm.PenOnly // the first frames, before the pen has reported its markers
         }
@@ -243,16 +261,57 @@ private fun CalloutLines(
 /**
  * Where the pen's markers are: [live] as last reported (read only while drawing), and [steady], which follows
  * only moves larger than [threshold] pixels, for laying out the chips.
+ *
+ * [steady] also remembers the stage size it was taken at. After the stage is resized by more than
+ * [RESIZE_SLACK] thresholds, the pen view re-frames a frame or two later, and in between it may still report
+ * markers from its old framing (an animated frame runs before it recomposes). Those have moved only by the sway,
+ * so they're not taken; the first report that has moved further is the re-framed pen. Until then
+ * [measured] says the steady copy is stale, and [awaiting] holds the new size for the fallback ([settle]).
+ * A smaller resize moves the markers by less than about a threshold, the sway's own tolerance, so it waits for
+ * nothing. Main thread only (measure and PenModelView's callbacks).
  */
 @Stable
-private class MarkerBoard {
+internal class MarkerBoard {
     var live: Map<String, Offset> by mutableStateOf(emptyMap())
+        private set
     var steady: Map<String, Offset> by mutableStateOf(emptyMap())
+        private set
+    private var steadySize: IntSize by mutableStateOf(IntSize.Zero)
+
+    /** A resized stage waiting for the pen's re-framed markers, or null. */
+    var awaiting: IntSize? by mutableStateOf(null)
+        private set
     var threshold: Float = 0f
+    private var stageSize = IntSize.Zero
+
+    /** The stage was measured at [size]; false while [steady] belongs to another size (wait for new markers). */
+    fun measured(size: IntSize): Boolean {
+        stageSize = size
+        val current = steady.isEmpty() || fits(steadySize, size)
+        awaiting = if (current) null else size
+        return current
+    }
 
     fun report(markers: Map<String, Offset>) {
         live = markers
-        if (movedMoreThan(steady, markers, threshold)) steady = markers
+        if (movedMoreThan(steady, markers, threshold)) take(markers)
+    }
+
+    /** No re-framed markers came: the last reported ones stand for the current size. */
+    fun settle() {
+        if (live.isNotEmpty()) take(live)
+        awaiting = null
+    }
+
+    private fun take(markers: Map<String, Offset>) {
+        steady = markers
+        steadySize = stageSize
+        awaiting = null
+    }
+
+    private fun fits(taken: IntSize, size: IntSize): Boolean {
+        val slack = threshold * RESIZE_SLACK
+        return abs(taken.width - size.width) <= slack && abs(taken.height - size.height) <= slack
     }
 
     private fun movedMoreThan(old: Map<String, Offset>, new: Map<String, Offset>, limit: Float): Boolean {
@@ -261,6 +320,14 @@ private class MarkerBoard {
             val before = old.getValue(name)
             abs(before.x - offset.x) > limit || abs(before.y - offset.y) > limit
         }
+    }
+
+    private companion object {
+        /**
+         * A resize bigger than this many thresholds re-frames the pen far enough that some marker moves by more
+         * than one threshold (the frame's centre moves by half the change), so its new markers are always taken.
+         */
+        const val RESIZE_SLACK = 3f
     }
 }
 

@@ -1,6 +1,7 @@
 package com.charan.padstudio.pen.screen
 
 import kotlin.math.hypot
+import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -64,6 +65,66 @@ class CalloutLayoutTest {
         assertTrue(spots.any { it.beforePen } && spots.any { !it.beforePen })
         assertTrue(spots.all { it.x >= rules.margin && it.x + it.width <= 600 - rules.margin })
         assertNoOverlaps(spots)
+    }
+
+    /**
+     * The live pen as PenModelView frames it (centred, 36° from vertical) in the tablet's Pen tab at density 1:
+     * 585 × 388 with the action picker closed, 303 × 388 with it open. Chips 170 × 61 are 125 % bold text.
+     */
+    private fun tabletChips(width: Int, height: Int): Pair<List<CalloutChip>, CalloutRules>? {
+        val (nibAt, anchors) = when (width) {
+            585 -> StagePoint(176.6f, 353.1f) to mapOf(
+                "double_tap" to StagePoint(344.6f, 121.8f),
+                "slide_up" to StagePoint(316.2f, 161.0f),
+                "slide_down" to StagePoint(281.2f, 209.1f),
+                "pinch" to StagePoint(260.8f, 237.2f),
+            )
+            303 -> StagePoint(82.4f, 288.9f) to mapOf(
+                "double_tap" to StagePoint(183.2f, 150.2f),
+                "slide_up" to StagePoint(166.4f, 173.3f),
+                "slide_down" to StagePoint(145.6f, 201.8f),
+                "pinch" to StagePoint(133.5f, 218.6f),
+            )
+            else -> return null
+        }
+        val top = anchors.getValue("double_tap")
+        val rules = CalloutRules(margin = 12, gap = 8, lead = 20, penHalfWidth = 0.05f * hypot(top.x - nibAt.x, top.y - nibAt.y))
+        return anchors.map { (id, anchor) -> CalloutChip(id, width = 170, height = 61, anchor = anchor) } to rules
+    }
+
+    @Test fun `on the tablet the chips sit beside the centred pen, clear of it`() {
+        val (chips, rules) = assertNotNull(tabletChips(585, 388))
+        val nib = StagePoint(176.6f, 353.1f)
+        val top = StagePoint(344.6f, 121.8f)
+        val spots = assertNotNull(placeCallouts(585, 388, chips, nib, top, rules))
+        assertEquals(4, spots.size)
+        assertNoOverlaps(spots)
+        // The pen as a band: its axis, widened by the half-width measured across a horizontal line.
+        val slope = (top.x - nib.x) / (top.y - nib.y)
+        val across = rules.penHalfWidth * sqrt(1f + slope * slope)
+        fun axisX(y: Float) = nib.x + (y - nib.y) * slope
+        spots.forEach { spot ->
+            val upper = spot.y.toFloat()
+            val lower = (spot.y + spot.height).toFloat()
+            if (spot.beforePen) {
+                assertTrue(spot.x + spot.width <= minOf(axisX(upper), axisX(lower)) - across, "${spot.id} touches the pen")
+            } else {
+                assertTrue(spot.x >= maxOf(axisX(upper), axisX(lower)) + across, "${spot.id} touches the pen")
+            }
+            assertTrue(spot.x >= rules.margin && spot.x + spot.width <= 585 - rules.margin, "${spot.id} leaves the stage")
+            assertTrue(upper >= rules.margin && lower <= 388 - rules.margin, "${spot.id} leaves the stage")
+        }
+        // Each side keeps its markers' order, top to bottom.
+        val order = listOf("double_tap", "slide_up", "slide_down", "pinch")
+        listOf(true, false).forEach { side ->
+            val ids = spots.filter { it.beforePen == side }.sortedBy { it.y }.map { it.id }
+            assertEquals(order.filter { it in ids }, ids)
+        }
+    }
+
+    @Test fun `on the tablet with the picker open the same chips are listed`() {
+        val (chips, rules) = assertNotNull(tabletChips(303, 388))
+        assertNull(placeCallouts(303, 388, chips, StagePoint(82.4f, 288.9f), StagePoint(183.2f, 150.2f), rules))
     }
 
     @Test fun `close markers are pushed apart by the gap`() {
