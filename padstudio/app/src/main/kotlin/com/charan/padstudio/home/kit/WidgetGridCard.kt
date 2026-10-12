@@ -19,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -53,8 +52,10 @@ import com.charan.padstudio.ui.theme.Tokens
  * widget, and the icon density Auto uses. Choosing saves at once (plan §13), through [onDefaultGrid] with
  * GridSpec's stored form or null for Auto, and [onDensity].
  *
- * A preset that no widget set to Default can show is disabled, with the reason. Custom opens a dialog whose
- * draft changes nothing until Use.
+ * A preset that no widget set to Default can show is disabled, with the reason. Custom calls [onCustom]: the
+ * screen shows [CustomDefaultGridDialog] outside its one- and two-column layouts, so the dialog and its draft
+ * survive a rotation across the two-column breakpoint (this card moves between the layouts, and state kept
+ * here would not).
  */
 @Composable
 internal fun WidgetGridCard(
@@ -63,20 +64,20 @@ internal fun WidgetGridCard(
     placed: List<PlacedWidget>?,
     snapshot: HomeSnapshot?,
     onDefaultGrid: (String?) -> Unit,
+    onCustom: () -> Unit,
     onDensity: (Density) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val labelLine = rememberLabelLineDp()
-    val target = previewTarget(placed, landscape)
-    val previewDensity = densityFor(target.widget, density)
+    val source = previewSource(density, placed, snapshot)
+    val target = source.target
+    val previewDensity = source.density
+    val labelLine = source.labelLine
     val savedSpec = GridSpec.parse(saved)
     val layout = GroupPlanner.layoutFor(target.size.width, target.size.height, previewDensity, savedSpec, labelLine)
-    val refused = refusedPresets(placed, landscape, previewDensity, labelLine)
+    val refused = refusedPresets(placed, source.landscape, previewDensity, labelLine)
     val selected = selectedOption(saved)
-    val group = previewGroup(target, snapshot?.groups.orEmpty())
-    val apps = group?.apps.orEmpty().mapNotNull { snapshot?.app(it) }
-    var customOpen by rememberSaveable { mutableStateOf(false) }
+    val group = source.group
+    val apps = source.apps
 
     StudioCard(modifier, spacing = Tokens.GapS) {
         SectionHeader(title = "Widget grid", supporting = defaultScopeLine(placed))
@@ -90,7 +91,7 @@ internal fun WidgetGridCard(
                     selected = option == selected,
                     onClick = {
                         when (option) {
-                            is GridOption.Custom -> customOpen = true
+                            is GridOption.Custom -> onCustom()
                             else -> onDefaultGrid(storedValue(option))
                         }
                     },
@@ -120,23 +121,64 @@ internal fun WidgetGridCard(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         DensityChoice(density, onDensity)
     }
+}
 
-    if (customOpen) {
-        CustomGridDialog(
-            start = customStart(saved, layout),
-            target = target,
-            density = previewDensity,
-            labelLine = labelLine,
-            fitsSomeWidget = { fitsSomeDefaultWidget(it, placed, landscape, previewDensity, labelLine) },
-            apps = apps,
-            title = group?.group?.title ?: "Preview",
-            onUse = {
-                customOpen = false
-                onDefaultGrid(it.toString())
-            },
-            onDismiss = { customOpen = false },
-        )
-    }
+/**
+ * Custom for the Default grid (see [CustomGridDialog]), previewed on the same widget as [WidgetGridCard].
+ * [onUse] gets the chosen grid; the caller saves it with GridSpec's stored form (`spec.toString()`).
+ *
+ * Call it where the screen's layout doesn't change with the window width, and keep its open flag there with
+ * rememberSaveable: then a rotation keeps the dialog open with its draft.
+ */
+@Composable
+internal fun CustomDefaultGridDialog(
+    saved: String?,
+    density: Density,
+    placed: List<PlacedWidget>?,
+    snapshot: HomeSnapshot?,
+    onUse: (GridSpec) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val source = previewSource(density, placed, snapshot)
+    val target = source.target
+    val shown = GroupPlanner.layoutFor(target.size.width, target.size.height, source.density, GridSpec.parse(saved), source.labelLine)
+    CustomGridDialog(
+        start = customStart(saved, shown),
+        target = target,
+        density = source.density,
+        labelLine = source.labelLine,
+        fitsSomeWidget = { fitsSomeDefaultWidget(it, placed, source.landscape, source.density, source.labelLine) },
+        apps = source.apps,
+        title = source.group?.group?.title ?: "Preview",
+        onUse = onUse,
+        onDismiss = onDismiss,
+    )
+}
+
+/** What the Default grid is previewed on: the widget ([target]), its icon [density], the label line, and the group shown. */
+private class PreviewSource(
+    val landscape: Boolean,
+    val labelLine: Float,
+    val target: PreviewTarget,
+    val density: Density,
+    val group: PlannedGroup?,
+    val apps: List<InstalledApp>,
+)
+
+@Composable
+private fun previewSource(density: Density, placed: List<PlacedWidget>?, snapshot: HomeSnapshot?): PreviewSource {
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val labelLine = rememberLabelLineDp()
+    val target = previewTarget(placed, landscape)
+    val group = previewGroup(target, snapshot?.groups.orEmpty())
+    return PreviewSource(
+        landscape = landscape,
+        labelLine = labelLine,
+        target = target,
+        density = densityFor(target.widget, density),
+        group = group,
+        apps = group?.apps.orEmpty().mapNotNull { snapshot?.app(it) },
+    )
 }
 
 /** The group the preview shows: the previewed widget's own, as the widget picks it, else your biggest group. */

@@ -98,6 +98,11 @@ class HomeKitTextTest {
             "Couldn't open HyperOS's Home screen settings: HyperOS refused the request.",
             openFailedLine(HyperOsScreen.HOME_SETTINGS, OpenFailure.REFUSED),
         )
+        // ActivityNotFoundException after a successful resolve: the screen went away, nothing timed out.
+        assertEquals(
+            "Couldn't open HyperOS's icon background setting: the launcher no longer offers that screen.",
+            openFailedLine(HyperOsScreen.ICON_BACKGROUND, OpenFailure.NOT_FOUND),
+        )
     }
 
     // --- Groups ----------------------------------------------------------------------------------

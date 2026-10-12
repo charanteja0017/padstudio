@@ -47,9 +47,12 @@ fun hyperosGridLine(gridSetting: Boolean?): String =
 fun hyperosGridNote(gridSetting: Boolean?): String? =
     if (gridSetting == true) "PadStudio can't read HyperOS's grid. Record it again after you change it." else null
 
-/** Shown when no home-screen record has been pushed to the tablet. */
+/**
+ * Shown when no home-screen record has been pushed to the tablet. The grid is measured by hand (gate G5,
+ * docs/device/home-grid.json); tools/facts.sh only builds device-facts.json with it and pushes it.
+ */
 const val NOT_RECORDED_LINE = "No recorded baseline on this tablet yet"
-const val NOT_RECORDED_HINT = "Record one with tools/facts.sh, then come back to this screen."
+const val NOT_RECORDED_HINT = "Push one from a Mac with tools/facts.sh, then come back to this screen."
 
 /** HyperOS launcher screens PadStudio may open (ADR-005, plan Appendix A). */
 enum class HyperOsScreen(val action: String, val title: String) {
@@ -87,11 +90,11 @@ fun unavailableLine(screen: HyperOsScreen, state: LinkState): String? = when (st
     LinkState.BLOCKED -> "Can't open ${screen.title}: HyperOS doesn't let other apps open it."
 }
 
-/** Why opening a resolved screen still failed. */
+/** Why opening a resolved screen still failed: no activity matched any more (ActivityNotFoundException), or HyperOS refused (SecurityException). */
 enum class OpenFailure { NOT_FOUND, REFUSED }
 
 fun openFailedLine(screen: HyperOsScreen, failure: OpenFailure): String = when (failure) {
-    OpenFailure.NOT_FOUND -> "Couldn't open ${screen.title}: the launcher didn't answer."
+    OpenFailure.NOT_FOUND -> "Couldn't open ${screen.title}: the launcher no longer offers that screen."
     OpenFailure.REFUSED -> "Couldn't open ${screen.title}: HyperOS refused the request."
 }
 

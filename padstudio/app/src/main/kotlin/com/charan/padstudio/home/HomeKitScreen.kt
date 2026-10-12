@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.charan.padstudio.MainViewModel
 import com.charan.padstudio.core.home.AppGroup
+import com.charan.padstudio.home.kit.CustomDefaultGridDialog
 import com.charan.padstudio.home.kit.GroupsCard
 import com.charan.padstudio.home.kit.HomeGridCard
 import com.charan.padstudio.home.kit.HyperOsScreen
@@ -83,6 +84,8 @@ fun HomeKitScreen(model: MainViewModel, modifier: Modifier = Modifier) {
     var organizing by rememberSaveable { mutableStateOf(false) }
     var organizeGroup by rememberSaveable { mutableStateOf<String?>(null) }
     var linkFailure by rememberSaveable { mutableStateOf<Pair<HyperOsScreen, OpenFailure>?>(null) }
+    // Kept here, not in the card: the card changes place at WIDE_LAYOUT, which every rotation on the tablet crosses.
+    var customGridOpen by rememberSaveable { mutableStateOf(false) }
     val overviewScroll = rememberScrollState()
     val gridCard = remember { BringIntoViewRequester() }
     BackHandler(enabled = organizing) { organizing = false }
@@ -150,6 +153,7 @@ fun HomeKitScreen(model: MainViewModel, modifier: Modifier = Modifier) {
                             placed = placed,
                             snapshot = snapshot,
                             onDefaultGrid = model::setDefaultWidgetGrid,
+                            onCustom = { customGridOpen = true },
                             onDensity = model::setDensity,
                             modifier = Modifier.bringIntoViewRequester(gridCard),
                         )
@@ -185,6 +189,21 @@ fun HomeKitScreen(model: MainViewModel, modifier: Modifier = Modifier) {
             }
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+    }
+
+    // Outside the one- and two-column layouts, so the dialog and its draft stay through a rotation.
+    if (customGridOpen) {
+        CustomDefaultGridDialog(
+            saved = config.widgetGrid,
+            density = config.density,
+            placed = placed,
+            snapshot = snapshot,
+            onUse = { spec ->
+                customGridOpen = false
+                model.setDefaultWidgetGrid(spec.toString())
+            },
+            onDismiss = { customGridOpen = false },
+        )
     }
 }
 
