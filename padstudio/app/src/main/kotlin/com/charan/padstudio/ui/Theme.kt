@@ -21,7 +21,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
@@ -84,17 +83,44 @@ private val LocalSemanticColors = staticCompositionLocalOf {
 }
 
 /**
- * PadStudio's own typefaces (plan round 2, §3.1: "it should have its own font"), bundled in res/font from
- * google/fonts at pinned commits (OFL 1.1; texts in assets/licenses). [MANROPE] is the app's font; the other
- * two are candidates a debug build can show (`--es font jakarta|outfit`) until the owner picks one.
- *
- * [maxWeight] is the end of the font's weight axis: with Bold text on (+300), a 500 or 600 request is clamped there.
+ * PadStudio's own typefaces (plan round 2, §3.1: "it should have its own font"), bundled in res/font as static
+ * instances cut from google/fonts' variable files at pinned commits (OFL 1.1; texts in assets/licenses). The
+ * variable files rendered at their default instance on the tablet (Manrope ExtraLight, Outfit Thin) because the
+ * `wght` variation was ignored, so each weight is its own file. [MANROPE] is the app's font; the other two are
+ * candidates a debug build can show (`--es font jakarta|outfit`) until the owner picks one.
  */
-enum class StudioFont(val label: String, @param:androidx.annotation.FontRes val res: Int, val maxWeight: Int) {
-    MANROPE("Manrope", com.charan.padstudio.R.font.manrope_variable, 800),
-    JAKARTA("Plus Jakarta Sans", com.charan.padstudio.R.font.plusjakartasans_variable, 800),
-    OUTFIT("Outfit", com.charan.padstudio.R.font.outfit_variable, 900),
+enum class StudioFont(val label: String, private val files: Map<Int, Int>) {
+    MANROPE(
+        "Manrope",
+        mapOf(
+            400 to com.charan.padstudio.R.font.manrope_w400, 500 to com.charan.padstudio.R.font.manrope_w500,
+            600 to com.charan.padstudio.R.font.manrope_w600, 700 to com.charan.padstudio.R.font.manrope_w700,
+            800 to com.charan.padstudio.R.font.manrope_w800,
+        ),
+    ),
+    JAKARTA(
+        "Plus Jakarta Sans",
+        mapOf(
+            400 to com.charan.padstudio.R.font.jakarta_w400, 500 to com.charan.padstudio.R.font.jakarta_w500,
+            600 to com.charan.padstudio.R.font.jakarta_w600, 700 to com.charan.padstudio.R.font.jakarta_w700,
+            800 to com.charan.padstudio.R.font.jakarta_w800,
+        ),
+    ),
+    OUTFIT(
+        "Outfit",
+        mapOf(
+            400 to com.charan.padstudio.R.font.outfit_w400, 500 to com.charan.padstudio.R.font.outfit_w500,
+            600 to com.charan.padstudio.R.font.outfit_w600, 700 to com.charan.padstudio.R.font.outfit_w700,
+            800 to com.charan.padstudio.R.font.outfit_w800, 900 to com.charan.padstudio.R.font.outfit_w900,
+        ),
+    ),
     ;
+
+    /** The heaviest bundled instance; Bold text (+300) on a 500 or 600 request is clamped to it. */
+    val maxWeight: Int get() = files.keys.max()
+
+    /** The file for [weight]: its own instance, or the heaviest one above [maxWeight]. */
+    fun resFor(weight: Int): Int = files[weight] ?: files.getValue(maxWeight)
 
     companion object {
         val DEFAULT = MANROPE
@@ -105,19 +131,11 @@ enum class StudioFont(val label: String, @param:androidx.annotation.FontRes val 
 internal val STUDIO_FONT_WEIGHTS = (400..900 step 100).toList()
 
 /**
- * [font] as a Compose family with one entry per weight in [STUDIO_FONT_WEIGHTS], each pinned to that point on the
- * variable font's `wght` axis. Naming `variationSettings` matters: the overload without it renders every weight
- * at the file's default instance (Manrope's is 200, ExtraLight). Bold text needs the 700-900 entries, or a
- * 400 + 300 request falls back to the nearest lighter one.
+ * [font] as a Compose family with one static file per weight in [STUDIO_FONT_WEIGHTS]. Bold text needs the
+ * 700-900 entries, or a 400 + 300 request falls back to the nearest lighter one.
  */
 internal fun studioFontFamily(font: StudioFont): FontFamily = FontFamily(
-    STUDIO_FONT_WEIGHTS.map { w ->
-        Font(
-            resId = font.res,
-            weight = FontWeight(w),
-            variationSettings = FontVariation.Settings(FontVariation.weight(w.coerceAtMost(font.maxWeight))),
-        )
-    },
+    STUDIO_FONT_WEIGHTS.map { w -> Font(resId = font.resFor(w), weight = FontWeight(w)) },
 )
 
 /**

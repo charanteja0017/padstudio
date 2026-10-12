@@ -48,17 +48,16 @@ class ThemeTest {
         }
     }
 
-    /** Without an explicit wght setting a variable font renders at its default instance (Manrope's is 200). */
-    @Test fun `every font entry pins the wght axis to its own weight, clamped to the font's range`() {
+    /** Each weight Compose may ask for (Bold text adds 300) gets its own static file, clamped to the heaviest one. */
+    @Test fun `every weight maps to its own static instance, clamped to the font's heaviest`() {
         for (font in StudioFont.entries) {
             val family = studioFontFamily(font) as FontListFontFamily
             assertEquals(STUDIO_FONT_WEIGHTS, family.fonts.map { it.weight.weight }, "$font weights")
             for (entry in family.fonts) {
-                val settings = (entry as ResourceFont).variationSettings.settings
-                val wght = settings.single { it.axisName == "wght" }.toVariationValue(null)
-                assertEquals(minOf(entry.weight.weight, font.maxWeight).toFloat(), wght, "$font ${entry.weight}")
-                assertEquals(font.res, entry.resId, "$font resource")
+                val expected = font.resFor(minOf(entry.weight.weight, font.maxWeight))
+                assertEquals(expected, (entry as ResourceFont).resId, "$font ${entry.weight}")
             }
+            assertTrue(font.maxWeight >= 800, "$font needs instances up to at least 800 for Bold text on 500")
         }
     }
 
