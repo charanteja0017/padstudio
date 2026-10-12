@@ -12,6 +12,9 @@ serialization = "1.11.0"
 coroutines = "1.11.0"
 junit = "4.13.2"
 aboutLibraries = "15.2.0"
+# The live 3D pen (redesign plan decision 15): Filament 1.72.1 and gltfio behind a Compose API, built on
+# the same Compose BOM as the app.
+sceneview = "4.53.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -32,6 +35,7 @@ kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutine
 junit = { module = "junit:junit", version.ref = "junit" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
+sceneview = { module = "io.github.sceneview:sceneview", version.ref = "sceneview" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

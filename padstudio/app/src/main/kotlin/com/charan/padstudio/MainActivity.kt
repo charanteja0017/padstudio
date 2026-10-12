@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,6 +39,7 @@ import com.charan.padstudio.pen.KeyMapperBridge
 import com.charan.padstudio.pen.PenStudioScreen
 import com.charan.padstudio.setup.SetupScreen
 import com.charan.padstudio.today.TodayScreen
+import com.charan.padstudio.ui.LocalStudioSnackbar
 import com.charan.padstudio.ui.PadStudioShell
 import com.charan.padstudio.ui.PadStudioTheme
 import com.charan.padstudio.ui.ShellDestination
@@ -188,14 +190,17 @@ class MainActivity : ComponentActivity() {
             statusLine = { KeyMapperStatusLine() },
             snackbarHost = { SnackbarHost(snackbar) },
         ) {
-            tabStates.SaveableStateProvider(tab.name) {
-                val content = Modifier.fillMaxSize()
-                when (tab) {
-                    Tab.TODAY -> TodayScreen(model, start, onOpenTab = { tab = it }, modifier = content)
-                    Tab.PEN -> PenStudioScreen(model, start, content)
-                    Tab.HOME -> HomeKitScreen(model, content)
-                    Tab.LOOKS -> LooksScreen(model, content)
-                    Tab.SETUP, Tab.ABOUT -> SetupScreen(model, start, content)
+            // Screens post their own timed results into the same host (LocalStudioSnackbar), so messages queue.
+            CompositionLocalProvider(LocalStudioSnackbar provides snackbar) {
+                tabStates.SaveableStateProvider(tab.name) {
+                    val content = Modifier.fillMaxSize()
+                    when (tab) {
+                        Tab.TODAY -> TodayScreen(model, start, onOpenTab = { tab = it }, modifier = content)
+                        Tab.PEN -> PenStudioScreen(model, start, content)
+                        Tab.HOME -> HomeKitScreen(model, content)
+                        Tab.LOOKS -> LooksScreen(model, content)
+                        Tab.SETUP, Tab.ABOUT -> SetupScreen(model, start, content)
+                    }
                 }
             }
         }
