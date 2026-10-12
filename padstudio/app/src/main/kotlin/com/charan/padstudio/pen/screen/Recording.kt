@@ -124,7 +124,12 @@ class RecordingTracker internal constructor(
             RecordingOutcome.Cancelled -> null
             is RecordingOutcome.Recorded -> RecordingResult(session.controlId, RecordingResult.Kind.RECORDED, at = System.currentTimeMillis())
             RecordingOutcome.TimedOut -> RecordingResult(session.controlId, RecordingResult.Kind.TIMED_OUT)
-            is RecordingOutcome.Failed -> RecordingResult(session.controlId, RecordingResult.Kind.FAILED, outcome.reason)
+            is RecordingOutcome.Failed -> {
+                // The card shows the reason with Try again, so it's taken from the shell's snackbar rather than shown
+                // twice. That also keeps the same failure again from looking like no new message (a "recorded" key).
+                if (outcome.reason != null && model.message.value == outcome.reason) model.clearMessage()
+                RecordingResult(session.controlId, RecordingResult.Kind.FAILED, outcome.reason)
+            }
             RecordingOutcome.Stopped -> RecordingResult(session.controlId, RecordingResult.Kind.STOPPED)
         }
     }
@@ -158,7 +163,9 @@ fun rememberRecordingTracker(model: MainViewModel): RecordingTracker {
 /**
  * The recording card (plan §13 "Recording"): while listening, the instruction and a 15 s countdown with Cancel;
  * then the result: "Nothing pressed" with Try again after a timeout, the reason after a failure, or the time the
- * control was recorded. [label] names a control id; [timeLabel] formats the time.
+ * control was recorded. [label] names a control id; [timeLabel] formats the time. With [onRecorded] (the shell's
+ * snackbar) a recording is a timed result there, "Squeeze recorded 14:05", and the card is only for what needs
+ * Try again; without it the card shows that line for a few seconds.
  */
 @Composable
 fun RecordingCard(
@@ -167,6 +174,7 @@ fun RecordingCard(
     label: (String) -> PenControl,
     timeLabel: (Long) -> String,
     modifier: Modifier = Modifier,
+    onRecorded: ((String) -> Unit)? = null,
 ) {
     val type = MaterialTheme.typography
     val scheme = MaterialTheme.colorScheme
@@ -207,6 +215,14 @@ fun RecordingCard(
     }
     if (result == null) return
     val control = label(result.controlId)
+    if (result.kind == RecordingResult.Kind.RECORDED && onRecorded != null) {
+        val text = "${control.label} recorded ${timeLabel(result.at)}"
+        LaunchedEffect(result) {
+            tracker.dismiss()
+            onRecorded(text)
+        }
+        return
+    }
     LaunchedEffect(result) {
         if (result.kind == RecordingResult.Kind.RECORDED) {
             delay(RECORDED_SHOWN_MS)

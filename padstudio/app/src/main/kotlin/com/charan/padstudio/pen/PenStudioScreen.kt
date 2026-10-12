@@ -111,6 +111,7 @@ import com.charan.padstudio.pen.screen.screenContexts
 import com.charan.padstudio.pen.screen.sentTimeLabel
 import com.charan.padstudio.pen.screen.switchLoses
 import com.charan.padstudio.pen.screen.warningsFor
+import com.charan.padstudio.ui.LocalStudioSnackbar
 import com.charan.padstudio.ui.Sym
 import com.charan.padstudio.ui.components.BindingChip
 import com.charan.padstudio.ui.components.ConfirmDialog
@@ -195,18 +196,39 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
     var gesture by remember { mutableStateOf(IDLE) }
     var replays by remember { mutableIntStateOf(0) }
 
-    // Where the last Send or Pause/Resume stands (plan §13).
+    // Where the last Send or Pause/Resume stands (plan §13). Timed results go to the shell's snackbar.
     var note by remember { mutableStateOf<ActionNote?>(null) }
     var retry by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val snackbar = LocalStudioSnackbar.current
+    val showResult: ((String) -> Unit)? = snackbar?.let { host -> { text -> scope.launch { host.showSnackbar(text) } } }
     LaunchedEffect(note) {
         if (note is ActionNote.Pending || note is ActionNote.Requested) {
             delay(NOTE_SHOWN_MS)
             note = null
         }
     }
+    // Send opened Key Mapper's restore dialog: back here, the hand-over's result with its time ("Sent to Key Mapper
+    // 14:05", PenStatus's words), unless the setup has changed since.
+    var sentAway by remember { mutableStateOf(false) }
+    val currentShowResult by rememberUpdatedState(showResult)
+    val currentTimeLabel by rememberUpdatedState(timeLabel)
     LifecycleResumeEffect(Unit) {
+        if (sentAway) {
+            sentAway = false
+            val saved = model.config.value
+            val handed = PenStatus(null, saved.appliedProfileHash, model.plan.value?.hash, saved.appliedAt, saved.penEnabled)
+            if (handed.sent == PenStatus.Sent.SENT) currentShowResult?.invoke(handed.sentText(currentTimeLabel))
+        }
         if (note is ActionNote.Pending) note = null
-        onPauseOrDispose { }
+        onPauseOrDispose { if (note is ActionNote.Pending) sentAway = true }
+    }
+
+    // Why the view model refused, from its message. The note shows it with Retry, so it's taken from the shell's
+    // snackbar rather than shown twice.
+    fun refusal(): String {
+        val reason = model.message.value ?: return PROFILE_NOT_READY
+        model.clearMessage()
+        return reason
     }
 
     fun openPicker(contextId: String, controlId: String, press: Press) {
@@ -237,8 +259,9 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
         note = ActionNote.Pending("Opening Key Mapper…")
         val intent = model.applyToKeyMapper()
         if (intent == null) {
-            // applyToKeyMapper says why in its message (Key Mapper missing, no key maps); without a profile it can't run.
-            note = ActionNote.Failed(model.message.value ?: PROFILE_NOT_READY)
+            // applyToKeyMapper says why in its message (Key Mapper missing, no key maps). Without a profile it returns
+            // at once and says nothing, so any message then is an older one.
+            note = ActionNote.Failed(if (model.plan.value == null) PROFILE_NOT_READY else refusal())
         } else {
             onStart(intent)
         }
@@ -246,10 +269,10 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
 
     fun setPen(enabled: Boolean) {
         retry = { setPen(enabled) }
-        // The view model's own conditions for sending nothing (MainViewModel.setPenEnabled).
-        val refused = !KeyMapperBridge.isInstalled(context) || plan?.generated?.groups.isNullOrEmpty()
+        // The view model's own conditions for sending nothing (MainViewModel.setPenEnabled), on its current plan.
+        val refused = !KeyMapperBridge.isInstalled(context) || model.plan.value?.generated?.groups.isNullOrEmpty()
         model.setPenEnabled(enabled)
-        note = if (refused) ActionNote.Failed(model.message.value ?: PROFILE_NOT_READY) else ActionNote.Requested("Requested")
+        note = if (refused) ActionNote.Failed(refusal()) else ActionNote.Requested("Requested")
     }
 
     val ownActions = config.bindings != null
@@ -496,7 +519,14 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
     }
 
     val recordingCard: @Composable (Modifier) -> Unit = { cardModifier ->
-        RecordingCard(tracker = tracker, capturing = capturing, label = { PenControl.byId(it) }, timeLabel = timeLabel, modifier = cardModifier)
+        RecordingCard(
+            tracker = tracker,
+            capturing = capturing,
+            label = { PenControl.byId(it) },
+            timeLabel = timeLabel,
+            onRecorded = showResult,
+            modifier = cardModifier,
+        )
     }
 
     BoxWithConstraints(modifier) {
