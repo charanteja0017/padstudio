@@ -69,9 +69,10 @@ class CalloutLayoutTest {
 
     /**
      * The live pen as PenModelView frames it (centred, 36° from vertical) in the tablet's Pen tab at density 1:
-     * 585 × 388 with the action picker closed, 303 × 388 with it open. Chips 170 × 61 are 125 % bold text.
+     * 585 × 388 with the action picker closed, 303 × 388 with it open. Chips 61 tall are 125 % bold text; their
+     * width depends on the action's name (about 120 to 200).
      */
-    private fun tabletChips(width: Int, height: Int): Pair<List<CalloutChip>, CalloutRules>? {
+    private fun tabletChips(width: Int, height: Int, chipWidth: Int = 170): Pair<List<CalloutChip>, CalloutRules>? {
         val (nibAt, anchors) = when (width) {
             585 -> StagePoint(176.6f, 353.1f) to mapOf(
                 "double_tap" to StagePoint(344.6f, 121.8f),
@@ -88,8 +89,27 @@ class CalloutLayoutTest {
             else -> return null
         }
         val top = anchors.getValue("double_tap")
-        val rules = CalloutRules(margin = 12, gap = 8, lead = 20, penHalfWidth = 0.05f * hypot(top.x - nibAt.x, top.y - nibAt.y))
-        return anchors.map { (id, anchor) -> CalloutChip(id, width = 170, height = 61, anchor = anchor) } to rules
+        // As PenStage sets them, with the animation's pause button (a 56 dp corner) as the obstacle.
+        val rules = CalloutRules(
+            margin = 12,
+            gap = 8,
+            lead = 20,
+            penHalfWidth = 0.05f * hypot(top.x - nibAt.x, top.y - nibAt.y),
+            obstacles = listOf(StageRect(width - 56f, height - 56f, width.toFloat(), height.toFloat())),
+        )
+        return anchors.map { (id, anchor) -> CalloutChip(id, width = chipWidth, height = 61, anchor = anchor) } to rules
+    }
+
+    @Test fun `narrower chips never fall back to the list where wider ones fit`() {
+        // Four chips 61 tall can't stack on one side of the centred pen, so they must be split. Only four side
+        // assignments were tried, so 120 to 150 wide were listed while 170 and 200 wide got callouts.
+        val fits = (80..260 step 10).map { w ->
+            val (chips, rules) = assertNotNull(tabletChips(585, 388, chipWidth = w))
+            w to (placeCallouts(585, 388, chips, StagePoint(176.6f, 353.1f), StagePoint(344.6f, 121.8f), rules) != null)
+        }
+        val widest = fits.last { it.second }.first
+        assertTrue(widest >= 200, "fits up to $widest: $fits")
+        fits.forEach { (w, fit) -> assertEquals(w <= widest, fit, "$w wide: $fits") }
     }
 
     @Test fun `on the tablet the chips sit beside the centred pen, clear of it`() {

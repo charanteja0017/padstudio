@@ -53,7 +53,9 @@ data class CalloutRules(
  *
  * Chips keep the vertical order of their markers and sit as near their marker's height as the [CalloutRules.gap]
  * allows. All of them go on the pen's left if they fit, else all on its right, else each on the side with room
- * at its marker. On a side, chips line up in one column like the mock-up's when that fits, else each hugs the pen.
+ * at its marker, else any other split between the sides (fewest changes of side first), so a layout that fits
+ * is always found and narrower chips never fit worse than wider ones. On a side, chips line up in one column like
+ * the mock-up's when that fits, else each hugs the pen.
  */
 fun placeCallouts(
     width: Int,
@@ -69,17 +71,39 @@ fun placeCallouts(
     val sorted = chips.sortedBy { it.anchor.y }
     val fitsBefore = sorted.map { chip -> axis.roomBefore(chip.anchor.y, chip.height, rules) >= chip.width }
     val fitsAfter = sorted.map { chip -> axis.roomAfter(chip.anchor.y, chip.height, width, rules) >= chip.width }
-    val assignments = listOf(
-        sorted.map { true },
-        sorted.map { false },
-        sorted.indices.map { i -> fitsBefore[i] || !fitsAfter[i] },
-        sorted.indices.map { i -> !fitsAfter[i] },
-    ).distinct()
+    val assignments = (
+        listOf(
+            sorted.map { true },
+            sorted.map { false },
+            sorted.indices.map { i -> fitsBefore[i] || !fitsAfter[i] },
+            sorted.indices.map { i -> !fitsAfter[i] },
+        ) + otherSplits(sorted.size)
+        ).distinct()
     for (assignment in assignments) {
         arrange(sorted, assignment, axis, width, height, rules)?.let { return it }
     }
     return null
 }
+
+/**
+ * Every way to share [count] chips (top to bottom) between the sides, true for before the pen: one change of side
+ * first, then two, and so on; then more chips before the pen; then the top chip before it. A pen has at most four
+ * callouts (16 ways); more than [MAX_SPLIT_SEARCH] get none.
+ */
+private fun otherSplits(count: Int): List<List<Boolean>> {
+    if (count > MAX_SPLIT_SEARCH) return emptyList()
+    return (0 until (1 shl count))
+        .map { bits -> List(count) { i -> bits and (1 shl i) != 0 } }
+        .sortedWith(
+            compareBy<List<Boolean>>(
+                { sides -> sides.zipWithNext().count { (a, b) -> a != b } },
+                { sides -> -sides.count { it } },
+                { sides -> if (sides.first()) 0 else 1 },
+            ),
+        )
+}
+
+private const val MAX_SPLIT_SEARCH = 6
 
 /** The pen as a straight band: its axis and its half-width measured across a horizontal line. */
 private class PenAxis private constructor(private val from: StagePoint, private val slope: Float, val halfAcross: Float) {
