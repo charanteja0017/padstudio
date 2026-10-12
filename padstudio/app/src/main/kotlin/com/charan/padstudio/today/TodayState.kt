@@ -19,6 +19,8 @@ import com.charan.padstudio.core.pen.PenStatus
 import com.charan.padstudio.core.pen.Press
 import com.charan.padstudio.data.IconStyle
 import com.charan.padstudio.data.StudioConfig
+import com.charan.padstudio.setup.CheckFacts
+import com.charan.padstudio.setup.plainWords
 import com.charan.padstudio.ui.components.StatusLevel
 import java.time.Instant
 import java.time.LocalDate
@@ -359,6 +361,23 @@ internal fun healthSummary(checks: List<HealthCheck>): HealthSummary = HealthSum
     attention = checks.count { it.ok == false },
     byHand = checks.count { it.ok == null },
     top = checks.firstOrNull { it.ok == false },
+)
+
+/**
+ * The top issue's sentence on the Health card, in the Setup screen's plain words for the same check
+ * (setup/SetupChecks.kt), so Today never shows the view model's developer detail ("Applied bfa1ea74a187;
+ * current 9d3c0e1f2a3b.") or copy Setup has replaced. The profile check is worded from PenStatus (plan §7),
+ * as on Setup; a check Setup doesn't know keeps the view model's own detail.
+ */
+internal fun healthIssueText(check: HealthCheck, status: PenStatus, formatTime: (Long) -> String): String = plainWords(
+    title = check.title,
+    ok = check.ok,
+    detail = check.detail,
+    known = CheckFacts(
+        sentText = status.sentText(formatTime),
+        needsSend = status.needsSend,
+        sentIsCurrent = status.sent == PenStatus.Sent.SENT,
+    ),
 )
 
 // ---- Layout ------------------------------------------------------------------------------------------------

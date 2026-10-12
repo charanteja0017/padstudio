@@ -436,11 +436,13 @@ internal fun MakeItYoursCard(
 
 /**
  * The eight Setup checks as a ring, "N of 8 ready", and the first one that needs attention with its existing
- * Fix intent (through onStart). A check without one points to Setup.
+ * Fix intent (through onStart). A check without one points to Setup. [issueText] words the top issue as
+ * Setup does ([healthIssueText]).
  */
 @Composable
 internal fun HealthCard(
     summary: HealthSummary,
+    issueText: (HealthCheck) -> String,
     onFix: (Intent) -> Unit,
     onOpenSetup: () -> Unit,
     modifier: Modifier = Modifier,
@@ -469,7 +471,7 @@ internal fun HealthCard(
         }
         val top = summary.top
         if (top != null) {
-            TopIssue(top)
+            TopIssue(top, issueText(top))
         } else if (!loading) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 SymIcon(Sym.ok, contentDescription = null, size = 20.dp, tint = statusInk(StatusLevel.Good))
@@ -487,7 +489,7 @@ internal fun HealthCard(
 }
 
 @Composable
-private fun TopIssue(check: HealthCheck) {
+private fun TopIssue(check: HealthCheck, words: String) {
     val scheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.semantics(mergeDescendants = true) {},
@@ -496,7 +498,7 @@ private fun TopIssue(check: HealthCheck) {
         SymIcon(Sym.warning, contentDescription = "Needs attention", size = 20.dp, tint = statusInk(StatusLevel.Warn), modifier = Modifier.padding(top = 2.dp))
         Column(Modifier.weight(1f)) {
             Text(check.title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = Tokens.WeightMedium), color = scheme.onSurface)
-            Text(check.detail, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+            Text(words, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
         }
     }
 }

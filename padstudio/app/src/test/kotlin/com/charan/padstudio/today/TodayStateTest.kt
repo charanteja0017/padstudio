@@ -277,6 +277,24 @@ class TodayStateTest {
         assertNull(healthSummary(checks.filter { it.ok == true }).top)
     }
 
+    @Test fun `the top issue reads as Setup words it, in PenStatus's words and without profile hashes`() {
+        val profile = HealthCheck("Pen profile is current", false, "Applied bfa1ea74a187; current 9d3c0e1f2a3b.")
+        val changed = status(sent = "bfa1ea74a187", plan = "9d3c0e1f2a3b")
+        val text = healthIssueText(profile, changed) { "14:05" }
+        assertEquals("Changes not sent yet. Use Send to Key Mapper on Today or Pen.", text)
+        assertFalse("bfa1ea74a187" in text || "9d3c0e1f2a3b" in text)
+        val never = HealthCheck("Pen profile is current", false, "Not applied yet: Pen → Apply to Key Mapper.")
+        assertEquals("Not sent to Key Mapper yet. Use Send to Key Mapper on Today or Pen.", healthIssueText(never, status(sent = null)) { "14:05" })
+        // The other checks that can need attention read as on Setup, e.g. no stale tools/probe-device.sh copy.
+        val facts = HealthCheck("Device facts imported", false, "Optional. … tools/probe-device.sh, then tools/facts.sh.")
+        assertEquals(
+            "Optional. Adds your camera’s shutter button and the pen’s measured controls: see Device facts under Developer.",
+            healthIssueText(facts, status()) { "14:05" },
+        )
+        // A check Setup doesn't know keeps the view model's own words.
+        assertEquals("Something new.", healthIssueText(HealthCheck("A new check", false, "Something new."), status()) { "14:05" })
+    }
+
     // ---- Layout ----------------------------------------------------------------------------------------
 
     @Test fun `two columns from 840 dp while the side column holds 14 lines of body text`() {

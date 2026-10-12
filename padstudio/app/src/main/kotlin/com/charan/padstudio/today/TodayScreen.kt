@@ -80,6 +80,13 @@ internal fun TodayScreen(
     val snapshot by model.snapshot.collectAsStateWithLifecycle()
     val health by model.health.collectAsStateWithLifecycle()
 
+    // The checks are the view model's last refresh (on resume). Another tab can change what they read without a
+    // resume (a binding on Pen, the wallpaper on Looks), which would leave Health contradicting the hero, so they
+    // are refreshed when Today opens, as Setup does. Not while there are none yet: that first refresh is running.
+    LaunchedEffect(model) {
+        if (model.health.value.isNotEmpty()) model.refresh()
+    }
+
     // Re-read on every resume, as the shell's status line does: Settings or Key Mapper may have changed them.
     val resumes = rememberResumeCount()
     val listening = remember(resumes) { KeyMapperBridge.isAccessibilityEnabled(context) }
@@ -250,6 +257,7 @@ internal fun TodayScreen(
                     )
                     HealthCard(
                         summary = healthSummary(health),
+                        issueText = { check -> healthIssueText(check, status, formatTime) },
                         onFix = onStart,
                         onOpenSetup = { onOpenTab(Tab.SETUP) },
                     )
