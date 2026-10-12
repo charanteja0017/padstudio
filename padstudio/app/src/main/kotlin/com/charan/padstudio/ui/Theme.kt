@@ -24,7 +24,6 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import com.charan.padstudio.PadStudioApp
@@ -38,7 +37,7 @@ import com.charan.padstudio.ui.theme.Tokens
  * - **Text:** [studioTypography] in PadStudio's own typeface, [StudioFont.DEFAULT] (Plus Jakarta Sans), not the system font.
  * - **Corners:** [StudioShapes], the token radii.
  * - **Status colours:** [PadStudioTheme.semantic].
- * - **Size:** every dp at [UI_SCALE] of Android's ([ScaledDensity]); text keeps the type scale's size.
+ * - **Size:** every dp at [UI_SCALE] of Android's ([UiScaledDensity]); text keeps about the type scale's size.
  */
 @Composable
 fun PadStudioTheme(content: @Composable () -> Unit) {
@@ -60,7 +59,7 @@ fun PadStudioTheme(content: @Composable () -> Unit) {
     val typography = remember(font) { studioTypography(studioFontFamily(font)) }
     // A theme inside another one (a dialog's own content, say) must not shrink the UI a second time.
     val base = LocalDensity.current
-    val density = remember(base) { base as? ScaledDensity ?: ScaledDensity(base, UI_SCALE) }
+    val density = remember(base) { base as? UiScaledDensity ?: UiScaledDensity(base, UI_SCALE) }
     CompositionLocalProvider(LocalSemanticColors provides semantic, LocalDensity provides density) {
         MaterialTheme(colorScheme = colorScheme, typography = typography, shapes = StudioShapes, content = content)
     }
@@ -69,24 +68,27 @@ fun PadStudioTheme(content: @Composable () -> Unit) {
 /**
  * PadStudio's UI scale (owner, 12 Oct: "scale whole ui too", after "decrease font size"). Every dp in the app is
  * drawn at 87.5 % of Android's, so cards, controls, icons, the rail, the pen stage and all spacing shrink
- * together, about as much as the type scale's last cut shrank the text. Text isn't shrunk a second time: it keeps
- * the size the type scale and Android's font scaling give it. Touch targets shrink with the rest (48 dp is 42 on
- * screen). The home-screen widget is drawn by the launcher and isn't affected.
+ * together, about as much as the type scale's last cut shrank the text. Text isn't shrunk a second time
+ * ([UiScaledDensity]). Touch targets shrink with the rest (48 dp is 42 on screen). The home-screen widget is drawn
+ * by the launcher and isn't affected.
  */
 internal const val UI_SCALE = 0.875f
 
 /**
- * [base] with every dp drawn at [scale] of its size, while text lands on the same pixels as in [base]: an sp
- * converts to dp exactly as [base] converts it (Android's nonlinear font scaling included), divided by [scale],
- * which the smaller density multiplies back. Compose converts everything else through [density], [toDp] and
- * [toSp], so the whole UI scales with no change to any screen.
+ * [base] with every dp drawn at [scale] of its size, and the font scale raised by the same factor to keep text
+ * at its size. Compose's layout code sees only these two numbers (its measure scopes copy them, not a density's
+ * conversions), so the font scale is the one way to do it. Through Android's nonlinear curve, text of 15 sp and
+ * below then lands within 1 % of its unscaled size at font scales 1 to 1.25, and headings come out up to 8 %
+ * smaller. The raised scale stops at Android's largest table, 2.0: above it text grows linearly, so it would
+ * come out larger than before. At 200 % text shrinks with the UI instead.
  */
-internal class ScaledDensity(private val base: Density, private val scale: Float) : Density {
-    override val density: Float get() = base.density * scale
-    override val fontScale: Float get() = base.fontScale
-    override fun TextUnit.toDp(): Dp = with(base) { this@toDp.toDp() } / scale
-    override fun Dp.toSp(): TextUnit = with(base) { (this@toSp * scale).toSp() }
+internal class UiScaledDensity(base: Density, scale: Float) : Density {
+    override val density: Float = base.density * scale
+    override val fontScale: Float = minOf(base.fontScale / scale, maxOf(base.fontScale, LARGEST_FONT_TABLE))
 }
+
+/** The largest font scale with a nonlinear table (AOSP FontScaleConverterFactory; docs/redesign/fontscale.js). */
+private const val LARGEST_FONT_TABLE = 2f
 
 /** What [PadStudioTheme] adds to [MaterialTheme]; read it the same way, as `PadStudioTheme.semantic.good`. */
 object PadStudioTheme {
