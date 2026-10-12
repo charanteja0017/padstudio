@@ -199,7 +199,8 @@ internal const val OPENING_KEY_MAPPER = "Opening Key Mapper…"
 
 /**
  * Why Send to Key Mapper gave nothing to open, checked in the order MainViewModel.applyToKeyMapper checks it
- * (the ViewModel's own message says it too, as a snackbar).
+ * (the ViewModel's own message says it too, as a snackbar). With all three fine, the intent was made but
+ * nothing on the tablet opened it: "Key Mapper didn't open." with Retry.
  */
 internal fun sendFailure(keyMapperInstalled: Boolean, profileReady: Boolean, hasKeyMaps: Boolean): HeroNote.Failed = when {
     !profileReady -> HeroNote.Failed("The pen profile isn't ready yet.", Remedy.RETRY, HeroAction.SEND)

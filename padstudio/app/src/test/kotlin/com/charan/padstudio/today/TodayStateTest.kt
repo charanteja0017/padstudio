@@ -206,7 +206,7 @@ class TodayStateTest {
         assertEquals(HeroNote.Failed("The pen profile isn't ready yet.", Remedy.RETRY, HeroAction.SEND), sendFailure(false, false, false))
         assertEquals(HeroNote.Failed("Key Mapper isn't installed.", Remedy.OPEN_SETUP, HeroAction.SEND), sendFailure(false, true, true))
         assertEquals(HeroNote.Failed("No pen buttons are recorded or measured yet.", Remedy.OPEN_PEN, HeroAction.SEND), sendFailure(true, true, false))
-        assertEquals(Remedy.RETRY, sendFailure(true, true, true).remedy)
+        assertEquals(HeroNote.Failed("Key Mapper didn't open.", Remedy.RETRY, HeroAction.SEND), sendFailure(true, true, true))
     }
 
     @Test fun `pause and resume are only requested, and say so with the time`() {

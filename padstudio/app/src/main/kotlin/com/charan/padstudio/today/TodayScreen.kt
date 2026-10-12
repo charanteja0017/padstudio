@@ -138,6 +138,8 @@ internal fun TodayScreen(
     // Quick actions: the outcome line under the hero's buttons; a send's success goes to the shell's snackbar.
     var note by remember { mutableStateOf<HeroNote?>(null) }
     var sends by remember { mutableIntStateOf(0) }
+    // Whether anything on the tablet opens the last Send's intent: the shell's onStart swallows "nothing can".
+    var sendResolves by remember { mutableStateOf(true) }
     val snackbar = LocalStudioSnackbar.current
 
     fun send() {
@@ -150,6 +152,7 @@ internal fun TodayScreen(
                 hasKeyMaps = current?.generated?.keyMaps?.isNotEmpty() == true,
             )
         } else {
+            sendResolves = intent.resolveActivity(context.packageManager) != null
             note = HeroNote.Pending(OPENING_KEY_MAPPER)
             sends++
             onStart(intent)
@@ -190,6 +193,12 @@ internal fun TodayScreen(
     LaunchedEffect(sends) {
         if (sends == 0) return@LaunchedEffect
         delay(PENDING_MIN_MS)
+        // Nothing resolves the intent (Key Mapper disabled, or a version without its restore screen) and PadStudio
+        // never left: onStart caught the failure, so say Key Mapper didn't open rather than announce a send.
+        if (!sendResolves && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            if (note is HeroNote.Pending) note = sendFailure(keyMapperInstalled = true, profileReady = true, hasKeyMaps = true)
+            return@LaunchedEffect
+        }
         lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
         val sent = latestStatus.sentText(latestFormat)
         if (snackbar != null) {
