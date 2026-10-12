@@ -956,7 +956,7 @@ internal class GlassPalette(
 internal fun glassPalette(glass: WidgetGlass): GlassPalette = when (glass) {
     WidgetGlass.DARK -> GlassPalette(
         text = Color.White,
-        secondary = Color.White.copy(alpha = 0.7f),
+        secondary = Color.White.copy(alpha = 0.86f),
         chip = Color.White.copy(alpha = 0.14f),
         warn = Tokens.WarnInkDark,
         action = Color.White,
@@ -964,7 +964,7 @@ internal fun glassPalette(glass: WidgetGlass): GlassPalette = when (glass) {
     )
     WidgetGlass.LIGHT -> GlassPalette(
         text = Color(0xFF1B1C1C),
-        secondary = Color(0xFF4A4A55),
+        secondary = Color(0xFF34343E),
         chip = Color.Black.copy(alpha = 0.08f),
         warn = Tokens.WarnInkLight,
         action = Color(0xFF1B1C1C),
