@@ -96,8 +96,8 @@ sealed interface RowTrailing {
 
 /**
  * A list row as the kit's `.list-row`: [leading] in a 40 dp box, [headline] in the body role, optional
- * [supporting] text under it, and [trailing] at the end. At least 56 dp tall (72 dp with supporting text);
- * it grows with large text instead of clipping.
+ * [supporting] text under it, and [trailing] at the end. At least 64 dp tall (76 dp with supporting text),
+ * with 20 dp ([Tokens.GapM]) of padding at each side; it grows with large text instead of clipping.
  *
  * - With [onClick] the row is a button.
  * - With [onClick] and [selected] it is one option of a picker: when chosen, the row is secondary
@@ -157,12 +157,13 @@ fun ListRow(
     Layout(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = if (supporting != null) 72.dp else 56.dp)
+            .heightIn(min = if (supporting != null) 76.dp else 64.dp)
             .clip(shape)
             .focusRing(focused, shape, scheme.secondary)
             .then(if (chosen) Modifier.background(scheme.secondaryContainer) else Modifier)
             .then(action)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            // The same Tokens.GapM as cardBleed's default, so a row's text lines up with its card's.
+            .padding(horizontal = Tokens.GapM, vertical = 8.dp),
         content = {
             if (leading != null) {
                 Box(Modifier.layoutId(LEADING), contentAlignment = Alignment.Center) {

@@ -1,22 +1,28 @@
 package com.charan.padstudio.ui.components
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -35,21 +41,23 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -60,6 +68,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -71,15 +81,15 @@ import androidx.compose.ui.unit.dp
 import com.charan.padstudio.ui.Sym
 import com.charan.padstudio.ui.theme.Tokens
 
-/** The four button looks of the reference and the kit's `.btn`. */
+/** The four button looks of the reference and the kit's `.btn`, in round 2's glass. */
 enum class PillStyle {
-    /** Primary container colour: the one main action ("Test pen"). */
+    /** Material's filled-button colours (primary, as the kit's `.btn--filled`) with a soft glow of the primary colour: the one main action ("Test pen"). */
     Filled,
 
-    /** Secondary container: a strong second action ("Pause pen"). */
+    /** Glass: surface container high at 60 % with the highlight edge: a strong second action ("Pause pen"). */
     Tonal,
 
-    /** Outline-variant edge, on-surface text: page actions and quieter choices ("Edit controls", "Open library"). */
+    /** No fill, a 1 dp edge (white at 18 % in dark themes, outline in light ones), on-surface text: page actions and quieter choices ("Edit controls", "Open library"). */
     Outlined,
 
     /** Primary text, no container: links such as "Manage ›". */
@@ -96,11 +106,11 @@ object PillButtonDefaults {
 }
 
 /**
- * A Material 3 button in one of the reference's looks ([style]), with an optional leading [icon] and
- * [trailingIcon] (a chevron for "Manage ›"; it mirrors in right-to-left layouts). The visible shape is
- * at least 40 dp tall inside a 48 dp touch target and grows with large text; [shape] is the reference's
- * 12 dp rounded rectangle unless you pass [PillButtonDefaults.FullPill]. Keyboard focus draws the kit's
- * ring 2 dp outside the shape.
+ * A Material 3 button in one of the looks of [PillStyle] (round 2: a glow on Filled, glass edges on Tonal and
+ * Outlined), with an optional leading [icon] and [trailingIcon] (a chevron for "Manage ›"; it mirrors in
+ * right-to-left layouts). The visible shape is at least 40 dp tall inside a 48 dp touch target and grows
+ * with large text; [shape] is the reference's 12 dp rounded rectangle unless you pass
+ * [PillButtonDefaults.FullPill]. Keyboard focus draws the kit's ring 2 dp outside the shape.
  */
 @Composable
 fun PillButton(
@@ -137,20 +147,25 @@ fun PillButton(
     TouchTargetBox(modifier) {
         val ring = Modifier.focusRing(focused, shape, scheme.secondary, gap = FocusRingGap)
         when (style) {
+            // The glow is a coloured shadow. It comes after the ring, so the shadow's clip doesn't cut the ring.
             PillStyle.Filled -> Button(
                 onClick = onClick,
-                modifier = ring,
+                modifier = if (enabled) ring.shadow(GLOW_ELEVATION, shape, ambientColor = scheme.primary, spotColor = scheme.primary) else ring,
                 enabled = enabled,
                 shape = shape,
                 contentPadding = padding,
                 interactionSource = interaction,
                 content = content,
             )
+            // No elevation: a shadow would show through the translucent fill.
             PillStyle.Tonal -> FilledTonalButton(
                 onClick = onClick,
                 modifier = ring,
                 enabled = enabled,
                 shape = shape,
+                colors = ButtonDefaults.filledTonalButtonColors(containerColor = scheme.surfaceContainerHigh.copy(alpha = TONAL_BUTTON_ALPHA)),
+                elevation = null,
+                border = BorderStroke(1.dp, if (enabled) GlassDefaults.edge() else scheme.onSurface.copy(alpha = DISABLED_EDGE_ALPHA)),
                 contentPadding = padding,
                 interactionSource = interaction,
                 content = content,
@@ -161,7 +176,7 @@ fun PillButton(
                 enabled = enabled,
                 shape = shape,
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = scheme.onSurface),
-                border = BorderStroke(1.dp, if (enabled) scheme.outlineVariant else scheme.onSurface.copy(alpha = DISABLED_EDGE_ALPHA)),
+                border = BorderStroke(1.dp, if (enabled) outlinedEdge() else scheme.onSurface.copy(alpha = DISABLED_EDGE_ALPHA)),
                 contentPadding = padding,
                 interactionSource = interaction,
                 content = content,
@@ -222,14 +237,12 @@ fun SymIconButton(
 }
 
 /**
- * One choice out of a few, as Material 3's single-choice segmented buttons (outlined segments; the chosen
- * one is secondary container with a check, the kit's `.seg`). [label] names each option; [icon] may give
- * an option a symbol, shown while it isn't chosen. Each segment is a 48 dp+ radio target; add
- * `Modifier.fillMaxWidth()` for equal segments across the width. Labels wrap at large text sizes. A
- * focused segment's edge becomes the 3 dp secondary ring.
- *
- * Material 3 1.4.0 has these APIs stable: no `@OptIn(ExperimentalMaterial3Api::class)` is needed (checked
- * by compiling without it).
+ * One choice out of a few, as our own pill toggle (round 2, replacing Material's segmented buttons): equal
+ * segments in a glass track, with a primary pill that slides behind the chosen one. [label] names each
+ * option; [icon] may give an option an 18 dp symbol before its label. Each segment is a 48 dp+ radio target.
+ * The control is as wide as its labels need on one line; add `Modifier.fillMaxWidth()` for equal segments
+ * across the width. Labels never wrap or break: check [SegmentedChoiceDefaults.requiredWidth] first and offer
+ * another control when they don't fit. A focused segment gets the 3 dp secondary ring.
  */
 @Composable
 fun <T> SegmentedChoice(
@@ -242,66 +255,128 @@ fun <T> SegmentedChoice(
     icon: ((T) -> Int?)? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val colors = SegmentedButtonDefaults.colors()
-    SingleChoiceSegmentedButtonRow(modifier) {
+    val density = LocalDensity.current
+    val count = options.size
+    val selectedIndex = options.indexOf(selected)
+    // The track's width inside its padding, as last laid out; 0 until the first layout.
+    var trackPx by remember { mutableIntStateOf(0) }
+    val segment = with(density) { (trackPx.toFloat() / count.coerceAtLeast(1)).toDp() }
+    val ready = trackPx > 0 && selectedIndex >= 0
+    // A new track width starts the animation again at its target, so only a change of choice slides the pill
+    // (not the first layout, and not a resize).
+    val pillX = key(trackPx) {
+        animateDpAsState(targetValue = segment * selectedIndex.coerceAtLeast(0), label = "segmented pill")
+    }
+    val pill = scheme.primary
+    Row(
+        modifier = modifier
+            .width(IntrinsicSize.Max)
+            .alpha(if (enabled) 1f else DISABLED_ALPHA)
+            .clip(PillShape)
+            .background(GlassDefaults.fill().copy(alpha = TRACK_ALPHA))
+            .border(1.dp, GlassDefaults.edge(), PillShape)
+            .padding(SegmentedChoiceDefaults.TrackPadding)
+            .onSizeChanged { trackPx = it.width }
+            .drawBehind {
+                if (ready) {
+                    val width = size.width / count
+                    val x = pillX.value.toPx()
+                    val left = if (layoutDirection == LayoutDirection.Rtl) size.width - x - width else x
+                    drawRoundRect(
+                        color = pill,
+                        topLeft = Offset(left, 0f),
+                        size = Size(width, size.height),
+                        cornerRadius = CornerRadius(size.height / 2f),
+                    )
+                }
+            }
+            .selectableGroup(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         options.forEachIndexed { index, option ->
-            val chosen = option == selected
+            val chosen = index == selectedIndex
             val symbol = icon?.invoke(option)
             val interaction = remember { MutableInteractionSource() }
             val focused by interaction.collectIsFocusedAsState()
-            val edge = when {
-                focused -> scheme.secondary
-                !enabled && chosen -> colors.disabledActiveBorderColor
-                !enabled -> colors.disabledInactiveBorderColor
-                chosen -> colors.activeBorderColor
-                else -> colors.inactiveBorderColor
-            }
-            SegmentedButton(
-                selected = chosen,
-                onClick = { onSelect(option) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
-                enabled = enabled,
-                colors = colors,
-                border = SegmentedButtonDefaults.borderStroke(edge, if (focused) FocusRingWidth else SegmentedButtonDefaults.BorderWidth),
-                interactionSource = interaction,
-                icon = {
-                    if (symbol == null) {
-                        SegmentedButtonDefaults.Icon(active = chosen)
-                    } else {
-                        SegmentedButtonDefaults.Icon(
-                            active = chosen,
-                            inactiveContent = { SymIcon(symbol, contentDescription = null, size = SegmentedButtonDefaults.IconSize) },
-                        )
-                    }
-                },
-                label = { Text(text = label(option), textAlign = TextAlign.Center) },
+            val labelColor by animateColorAsState(
+                targetValue = if (chosen) scheme.onPrimary else scheme.onSurfaceVariant,
+                label = "segment label",
             )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .widthIn(min = SegmentedChoiceDefaults.MinSegmentWidth)
+                    .heightIn(min = 48.dp)
+                    // The ring sits outside the pill, in the track's padding: on the pill it would vanish
+                    // where secondary equals primary (violet, dark).
+                    .focusRing(focused, PillShape, scheme.secondary, gap = SEGMENT_RING_GAP)
+                    .clip(PillShape)
+                    // Until the first layout has told the pill how wide to be, the chosen segment paints it.
+                    .then(if (chosen && !ready) Modifier.background(pill) else Modifier)
+                    .selectable(
+                        selected = chosen,
+                        interactionSource = interaction,
+                        indication = ripple(),
+                        enabled = enabled,
+                        role = Role.RadioButton,
+                        onClick = { onSelect(option) },
+                    )
+                    .padding(horizontal = SegmentedChoiceDefaults.SegmentChrome / 2),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (symbol != null) {
+                        SymIcon(symbol, contentDescription = null, size = SEGMENT_ICON, tint = labelColor)
+                        Spacer(Modifier.width(SEGMENT_ICON_GAP))
+                    }
+                    Text(
+                        text = label(option),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = labelColor,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
+            }
         }
     }
 }
 
 /**
  * What a [SegmentedChoice] needs around its labels, so a screen can decide whether the control fits before
- * showing it (round 2: screens never copy Material's sizes, because the control's look can change here).
+ * showing it (round 2: screens never copy the control's sizes, because its look can change here).
  */
 object SegmentedChoiceDefaults {
     /** The narrowest a segment gets. */
-    val MinSegmentWidth: Dp = ButtonDefaults.MinWidth
+    val MinSegmentWidth: Dp = 64.dp
 
-    /** Space a segment adds beside its label: padding on both sides, the check and its gap. */
-    val SegmentChrome: Dp
-        get() = SegmentedButtonDefaults.ContentPadding.let {
-            it.calculateLeftPadding(LayoutDirection.Ltr) + it.calculateRightPadding(LayoutDirection.Ltr)
-        } + SegmentedButtonDefaults.IconSize + ButtonDefaults.IconSpacing
+    /** Space a segment adds beside its label: 16 dp of padding on each side. A segment's icon adds its own 18 dp and a gap. */
+    val SegmentChrome: Dp = 32.dp
 
-    /** Width [count] equal segments need when the widest label measures [widestLabel] on one line. */
-    fun requiredWidth(widestLabel: Dp, count: Int): Dp = maxOf(MinSegmentWidth, widestLabel + SegmentChrome) * count
+    /** Padding between the track's edge and its segments, on each side. */
+    internal val TrackPadding: Dp = 4.dp
+
+    /** Width [count] equal segments need when the widest label measures [widestLabel] on one line, track padding included. */
+    fun requiredWidth(widestLabel: Dp, count: Int): Dp =
+        maxOf(MinSegmentWidth, widestLabel + SegmentChrome) * count + TrackPadding * 2
 }
 
+/** The track and the segments in it are full pills: a corner radius of half the height. */
+private val PillShape = RoundedCornerShape(50)
+
+/** How much of the glass fill the track shows (it is quieter than a card). */
+private const val TRACK_ALPHA = 0.5f
+
+private val SEGMENT_RING_GAP = 1.dp
+private val SEGMENT_ICON = 18.dp
+private val SEGMENT_ICON_GAP = 8.dp
+
 /**
- * A filter chip (the kit's `.chip--filter`): an 8 dp-cornered 32 dp chip in a 48 dp target, outline
- * variant edge; when [selected] it turns secondary container with a check. Use it for on/off filters
- * such as the Library's group chips. [icon] shows while it isn't selected.
+ * A glass filter chip (the kit's `.chip--filter`): a 12 dp-cornered 32 dp chip in a 48 dp target, surface
+ * container high at 50 % with the highlight edge; when [selected] it turns primary at 22 % with a primary
+ * edge and a check. Use it for on/off filters such as the Library's group chips. [icon] shows while it isn't
+ * selected.
  */
 @Composable
 fun ChoiceChip(
@@ -315,7 +390,7 @@ fun ChoiceChip(
     val scheme = MaterialTheme.colorScheme
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(Tokens.CornerXs)
+    val shape = RoundedCornerShape(Tokens.CornerS)
     TouchTargetBox(modifier) {
         FilterChip(
             selected = selected,
@@ -333,16 +408,25 @@ fun ChoiceChip(
                 else -> null
             },
             shape = shape,
-            border = FilterChipDefaults.filterChipBorder(enabled = enabled, selected = selected, borderColor = scheme.outlineVariant),
+            colors = FilterChipDefaults.filterChipColors(
+                containerColor = scheme.surfaceContainerHigh.copy(alpha = CHIP_ALPHA),
+                selectedContainerColor = scheme.primary.copy(alpha = CHIP_SELECTED_ALPHA),
+            ),
+            border = FilterChipDefaults.filterChipBorder(
+                enabled = enabled,
+                selected = selected,
+                borderColor = GlassDefaults.edge(),
+                selectedBorderColor = scheme.primary,
+            ),
             interactionSource = interaction,
         )
     }
 }
 
 /**
- * An assist chip (the kit's `.chip--assist`): an 8 dp-cornered 32 dp chip in a 48 dp target with a
- * primary [icon] and on-surface [label], for a quick related action ("Don't show text", "Open in
- * HyperOS").
+ * A glass assist chip (the kit's `.chip--assist`): a 12 dp-cornered 32 dp chip in a 48 dp target, surface
+ * container high at 50 % with the highlight edge, a primary [icon] and an on-surface [label], for a quick
+ * related action ("Don't show text", "Open in HyperOS").
  */
 @Composable
 fun ActionChip(
@@ -355,7 +439,7 @@ fun ActionChip(
     val scheme = MaterialTheme.colorScheme
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(Tokens.CornerXs)
+    val shape = RoundedCornerShape(Tokens.CornerS)
     TouchTargetBox(modifier) {
         AssistChip(
             onClick = onClick,
@@ -368,7 +452,8 @@ fun ActionChip(
                 null
             },
             shape = shape,
-            border = AssistChipDefaults.assistChipBorder(enabled = enabled, borderColor = scheme.outlineVariant),
+            colors = AssistChipDefaults.assistChipColors(containerColor = scheme.surfaceContainerHigh.copy(alpha = CHIP_ALPHA)),
+            border = AssistChipDefaults.assistChipBorder(enabled = enabled, borderColor = GlassDefaults.edge()),
             interactionSource = interaction,
         )
     }
@@ -376,8 +461,8 @@ fun ActionChip(
 
 /**
  * What one pen control does in one app, as the kit's `.binding`: the action's [icon] in primary and its
- * name ([action]), with the [control] ("Squeeze") above it in small text, on surface container high,
- * 12 dp corners, 48 dp+ tall. With no [action] it is the dashed "Add action" chip ([addLabel]).
+ * name ([action]), with the [control] ("Squeeze") above it in small text, on surface container high at
+ * 55 % (glass), 12 dp corners, 48 dp+ tall. With no [action] it is the dashed "Add action" chip ([addLabel]).
  * Use [com.charan.padstudio.ui.Sym.forIntent] for the icon of a PenIntent.
  */
 @Composable
@@ -396,7 +481,11 @@ fun BindingChip(
     val shape = BindingChipDefaults.Shape
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val surface = if (adding) Modifier.dashedOutline(scheme.outline, BindingChipDefaults.Corner) else Modifier.background(scheme.surfaceContainerHigh)
+    val surface = if (adding) {
+        Modifier.dashedOutline(scheme.outline, BindingChipDefaults.Corner)
+    } else {
+        Modifier.background(scheme.surfaceContainerHigh.copy(alpha = BINDING_ALPHA))
+    }
     Row(
         modifier = modifier
             .defaultMinSize(minWidth = Tokens.TouchTarget, minHeight = Tokens.TouchTarget)
@@ -506,6 +595,22 @@ private fun Modifier.dashedOutline(color: Color, corner: Dp): Modifier = this.dr
 
 private val SWATCH_DOT = 36.dp
 private const val DISABLED_EDGE_ALPHA = 0.12f
+
+/** How high the Filled button's coloured shadow (its glow) is lifted. */
+private val GLOW_ELEVATION = 8.dp
+
+/** Glass opacities of the round 2 controls: the Tonal button, the chips and the binding chip. */
+private const val TONAL_BUTTON_ALPHA = 0.6f
+private const val CHIP_ALPHA = 0.5f
+private const val CHIP_SELECTED_ALPHA = 0.22f
+private const val BINDING_ALPHA = 0.55f
+private const val OUTLINED_DARK_EDGE_ALPHA = 0.18f
+
+/** The Outlined button's 1 dp edge: white at 18 % in dark themes, the scheme's outline in light ones. */
+@Composable
+@ReadOnlyComposable
+private fun outlinedEdge(): Color =
+    if (GlassDefaults.isDark()) Color.White.copy(alpha = OUTLINED_DARK_EDGE_ALPHA) else MaterialTheme.colorScheme.outline
 
 /** A [BindingChip]'s corners, for screens that draw beside or around it (a selected edge, a leader line). */
 object BindingChipDefaults {

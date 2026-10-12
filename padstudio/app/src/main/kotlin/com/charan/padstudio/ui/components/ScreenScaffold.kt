@@ -29,11 +29,12 @@ import com.charan.padstudio.ui.theme.Tokens
 /**
  * One PadStudio page, as in the reference (`docs/redesign/reference-today.png`): a large [title], a short
  * [subtitle] under it, [actions] at the top right (an outlined [PillButton] such as "Open library"), then
- * [content] in a column with 16 dp between items.
+ * [content] in a column with [Tokens.GapM] (20 dp) between items.
  *
- * Content is at most [ScreenDefaults.MaxContentWidth] (1040 dp) wide, start-aligned, with 24 dp gutters
- * (plan §10). When the window is too narrow for the title and the actions side by side, or the text is
- * large, the actions move under the title instead of squeezing it.
+ * Content is at most [ScreenDefaults.MaxContentWidth] (1040 dp) wide, start-aligned, with 32 dp gutters
+ * (plan §10) and round 2's roomier page padding: 20 dp above the title, 28 dp from the title block to the
+ * first card, 32 dp below the last. When the window is too narrow for the title and the actions side by
+ * side, or the text is large, the actions move under the title instead of squeezing it.
  *
  * The page scrolls with [scrollState]. Pass `scrollState = null` for a fixed page whose content gets the
  * remaining height: use that when the content scrolls itself (a lazy list or grid, or list–detail panes),
