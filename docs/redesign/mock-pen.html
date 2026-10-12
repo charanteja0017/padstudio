@@ -1,0 +1,603 @@
+<!--
+  PadStudio 2 preview: the Pen screen (plan §10 "Pen", §7 status; BRIEF.md). Owner: the pen screen agent.
+  A fragment: one section holding the 1164 × 777 dp frame. Needs tokens.css, kit.css, then fontscale.js and frame.js;
+  it loads the pinned <model-viewer> 4.3.1 itself (a module script runs once even if the page also loads it).
+  Own classes: m-pen-*. Layout language: the owner's reference, docs/redesign/reference-today.png (expanded rail
+  with mark and wordmark, large title and subtitle, outlined action top right, 24 dp cards on navy-violet).
+
+  Real data on this screen
+  - Pen: Focus Pen Pro, Expert setup, 4 controls (config.json backup 11 Oct: penKind FOCUS_PEN_PRO, penMode EXPERT,
+    keyInjection true, bindings null = defaults). Contexts, their order and the Camera bindings come from
+    core/pen/DefaultProfiles.kt focusPenPro(): in Camera, Squeeze (press) = Shutter and Double tap = Shutter; nothing
+    is bound to the slides there, and "Everywhere else" excludes Camera's apps (ProfileGenerator), so they are "Not set".
+  - App counts are the context packages installed on the tablet (docs/device/backup/2026-10-11/packages.txt):
+    Camera 1, Reading & PDF 2, Other notes 3, Video & music 4, notes with their own pen settings 1. Icons and names
+    only from assets/manifest.json (Camera, ReadEra, Notes); the other contexts use a symbol tile.
+    The pass-through context (core title "Notes with their own pen settings") is shown as "Own pen settings" with
+    "Leaves the pen to the app": the full title wraps to four lines at 125 % Bold. Core labels are unchanged (§4).
+  - Picker: the 25 PenIntent actions (PenModel.kt), grouped Camera / Reading & notes / Media / Navigation / System
+    (plan §10). Camera group: Shutter, Open camera, Flashlight; Flashlight's needs = "camera permission".
+  - Developer details: key and scan codes from docs/device/device-facts.json (device "Xiaomi Focus Pen Pro
+    Keyboard"); profile hash bfa1ea74a187 = appliedProfileHash in the 11 Oct config backup.
+  - Status copy follows §7: "Sent to Key Mapper 14:05", "Key Mapper is listening", "4 controls set". Never
+    "verified" or "running".
+  - Example states (said under the frame): the "Needs a look" chip on Reading & PDF shows the component only; the core
+    generator gives no warning for the owner's current config (Expert, key injection on, all four controls recorded).
+    Developer details opened and the recording card are insets.
+
+  3D pen: assets/pen/focus_pen_pro.glb (pen-3d agent; clips idle, squeeze, slide_up, slide_down, double_tap, write;
+  markers marker_squeeze, marker_slide_top, marker_slide_bottom, marker_double_tap, marker_nib, read from the file:
+  y = −18.85, +20.3, −4.3, +40, −82.5 mm, z = +5 mm on the front face). orientation="-18deg 0deg 0deg" tilts the pen
+  like the reference. model-viewer does not turn hotspots with orientation (measured 11 Oct: the dots stayed upright
+  while the pen tilted), so each data-position is the marker turned by the same −18° about z:
+  (x, y) → (0.309017·y, 0.951057·y). The camera attributes are fixed so the hotspots land where the chips expect
+  (measured in a 348 × 559 stage: double tap 259,199; slide top 244,248; slide bottom 224,308; squeeze 212,344; nib 162,497).
+  Without WebGL, without the script, if the model can't load (file:// pages), or with reduced motion, the drawn pen from
+  docs/redesign/pen-motion-kit.html shows instead, at the same place and size, with the same chips.
+-->
+<section class="mock" data-screen="pen" aria-label="Pen screen with the action picker open">
+<style>
+.m-pen {
+  --m-pen-canvas: color-mix(in oklab, var(--surface-container-lowest) 94%, var(--primary-container));
+  --m-pen-card: color-mix(in oklab, var(--surface-container-low) 95%, var(--primary-container));
+  --m-pen-hero: color-mix(in oklab, var(--surface-container-low) 82%, var(--primary-container));
+  --m-pen-glow: color-mix(in oklab, var(--primary-container) 70%, transparent);
+  --m-pen-line: color-mix(in oklab, var(--outline-variant) 80%, transparent);
+  --m-pen-lead: color-mix(in oklab, var(--on-surface) 55%, transparent);
+  --m-pen-chip: color-mix(in oklab, var(--surface-container-high) 88%, var(--primary-container));
+  background: var(--m-pen-canvas);
+}
+.m-pen[data-theme="light"] {
+  --m-pen-canvas: color-mix(in oklab, var(--background) 95%, var(--primary-container));
+  --m-pen-card: var(--surface-container-lowest);
+  /* The pen is white: in light mode its card is a deeper tint so the pen keeps its edge. */
+  --m-pen-hero: color-mix(in oklab, var(--primary-container) 50%, var(--surface-container-high));
+  --m-pen-glow: color-mix(in oklab, var(--surface-container-lowest) 55%, transparent);
+  --m-pen-chip: var(--surface-container-lowest);
+}
+
+/* ---- expanded rail (216 dp), as in the reference and the other screens */
+.m-pen-rail {
+  flex: none;
+  width: 216px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 12px calc(var(--nav-h, 16px) + 8px);
+  box-shadow: inset -1px 0 0 var(--m-pen-line);
+  overflow: hidden auto;
+  scrollbar-width: none;
+}
+.m-pen-brand { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 12px 0 16px; margin-bottom: 12px; color: var(--on-surface); }
+.m-pen-brand__mark { --sym-size: 28px; color: var(--primary); }
+.m-pen-brand__word {
+  min-width: 0;
+  font-size: min(var(--t-title-size, 20px), 23px);
+  line-height: min(var(--t-title-line, 28px), 32px);
+  font-weight: var(--w-medium);
+  white-space: nowrap;
+}
+.m-pen-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 16px;
+  border-radius: var(--r-m);
+  color: var(--on-surface);
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-line);
+  font-weight: var(--w-medium);
+  text-align: left;
+}
+.m-pen-nav > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.m-pen-nav .sym { color: var(--on-surface-variant); }
+.m-pen-nav:hover { background-color: var(--state-hover); }
+.m-pen-nav[aria-current="page"] { background-color: var(--secondary-container); color: var(--on-secondary-container); }
+.m-pen-nav[aria-current="page"] .sym { color: inherit; }
+.m-pen-nav--quiet { color: var(--on-surface-variant); font-weight: var(--w-regular); }
+.m-pen-rail__foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; padding-top: 12px; }
+.m-pen-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 4px 8px 4px 16px;
+  font-size: var(--t-label-size);
+  line-height: var(--t-label-line);
+  color: var(--on-surface-variant);
+}
+.m-pen-status__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: calc((var(--t-label-line, 18px) - 10px) / 2);
+  border-radius: 50%;
+  background: var(--good-ink);
+}
+
+/* ---- page: main column (title, two panes, bottom bar) beside the docked picker */
+.m-pen-body {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 288px;
+  column-gap: 12px;
+  padding: 8px 16px calc(var(--nav-h, 16px) + 4px) 24px;
+}
+.m-pen-main { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; row-gap: 12px; }
+.m-pen-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "title action" "sub sub";
+  align-items: center;
+  column-gap: 16px;
+}
+.m-pen-title {
+  grid-area: title;
+  font-size: var(--t-display-size);
+  line-height: var(--t-display-line);
+  font-weight: var(--w-medium);
+  color: var(--on-surface);
+}
+.m-pen-sub { grid-area: sub; font-size: var(--t-body-size); line-height: var(--t-body-line); color: var(--on-surface-variant); }
+/* The reference draws its outlined action as a rounded rectangle filling the 48 dp target. */
+.m-pen-action { grid-area: action; padding: 12px 20px 12px 16px; color: var(--on-surface); }
+.m-pen-action::before { inset: 0; border-radius: var(--r-m); border-color: var(--outline); }
+.m-pen-action .sym { color: var(--primary); }
+
+.m-pen-panes { min-height: 0; display: grid; grid-template-columns: 248px minmax(0, 1fr); column-gap: 12px; }
+.m-pen-card {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border-radius: var(--r-l);
+  background: var(--m-pen-card);
+  box-shadow: inset 0 0 0 1px var(--m-pen-line);
+  color: var(--on-surface);
+}
+
+/* ---- left pane: contexts */
+.m-pen-ctx { display: flex; flex-direction: column; padding: 6px; overflow: hidden; }
+.m-pen-ctx__list { flex: 1 1 auto; min-height: 0; overflow: hidden auto; scrollbar-width: none; display: flex; flex-direction: column; }
+.m-pen-ctx__list::-webkit-scrollbar { display: none; }
+.m-pen-row { gap: 12px; min-height: 60px; padding: 5px 10px; }
+.m-pen-row.list-row:has(.list-row__supporting) { min-height: 60px; }
+.m-pen-row .list-row__headline { font-weight: var(--w-medium); }
+.m-pen-row .list-row__supporting { text-wrap: balance; }
+.m-pen-row .app-icon { --size: 40px; }
+/* Category tile: a symbol on a tonal superellipse, the same shape as the app icons beside it. */
+.m-pen-cat {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  -webkit-mask: var(--kit-squircle) center / 100% 100% no-repeat;
+  mask: var(--kit-squircle) center / 100% 100% no-repeat;
+}
+.m-pen-cat--media { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+.m-pen-cat--home { background: var(--secondary-container); color: var(--on-secondary-container); }
+.m-pen-cat--pass { background: var(--surface-container-highest); color: var(--on-surface-variant); }
+.m-pen-row[aria-current="true"] .m-pen-cat { background: var(--on-secondary-container); color: var(--secondary-container); }
+/* "Needs a look": the kit's status pill, compact enough for the 160 dp text column. */
+.m-pen-needs { --sym-size: 16px; align-self: flex-start; gap: 6px; min-height: 26px; margin-top: 3px; padding: 3px 10px 3px 8px; }
+.m-pen-adv { flex: none; margin-top: 4px; background: transparent; box-shadow: inset 0 1px 0 var(--m-pen-line); border-radius: 0 0 18px 18px; }
+.m-pen-adv > summary { padding: 12px 14px; font-weight: var(--w-medium); }
+.m-pen-adv__body { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 14px; font-family: var(--font-ui); }
+.m-pen-adv__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--on-surface); }
+
+/* ---- right pane: the pen (hero) */
+.m-pen-hero {
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 55% at 62% 46%, var(--m-pen-glow), transparent 70%),
+    var(--m-pen-hero);
+}
+.m-pen-hero__head { position: relative; z-index: 3; display: flex; align-items: center; gap: 12px; padding: 16px 16px 0 20px; pointer-events: none; }
+.m-pen-hero__head .app-icon { --size: 40px; }
+.m-pen-hero__title { font-size: var(--t-title-size); line-height: var(--t-title-line); font-weight: var(--w-medium); color: var(--on-surface); }
+.m-pen-hero__meta { font-size: var(--t-label-size); line-height: var(--t-label-line); color: var(--on-surface-variant); }
+/* The stage is a fixed 348 × 559 dp box, centred in the card, so the 3D camera and the drawn pen frame the same way
+   at every text size. */
+.m-pen-stage { position: absolute; z-index: 1; left: 0; top: 50%; width: 348px; height: 559px; margin-top: -279.5px; }
+.m-pen-3d {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  visibility: hidden; /* loads unseen; shown only once the model has loaded */
+  background: transparent;
+  --poster-color: transparent;
+  --progress-bar-height: 0px;
+}
+.m-pen-stage[data-pen3d="live"] .m-pen-3d { visibility: visible; }
+.m-pen-stage[data-pen3d="live"] :is(.m-pen-pen, .m-pen-flat) { display: none; }
+/* Reduced motion: the drawn pen, still (frame.js writes data-motion on the frame). */
+.m-pen[data-motion="reduce"] .m-pen-stage .m-pen-3d { visibility: hidden; }
+.m-pen[data-motion="reduce"] .m-pen-stage :is(.m-pen-pen, .m-pen-flat) { display: block; }
+.m-pen-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.m-pen-flat { position: absolute; inset: 0; }
+
+/* A callout: a dot on the pen (the hotspot's centre), a hairline, and the binding chip at the end of it.
+   --dx, --dy: from the dot to the chip's right-hand middle; --len, --ang: the same as a line. */
+.m-pen-hot { position: absolute; z-index: 2; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 0; padding: 0; }
+model-viewer .m-pen-hot { position: relative; margin: 0; }
+.m-pen-hot::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--m-pen-hero) 70%, transparent);
+}
+.m-pen-hot__line {
+  position: absolute;
+  left: 6px;
+  top: 5.25px;
+  width: var(--len);
+  height: 1.5px;
+  background: var(--m-pen-lead);
+  transform: rotate(var(--ang));
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+.m-pen-hot > .m-pen-chip { position: absolute; right: calc(6px + var(--dx)); top: calc(6px + var(--dy)); transform: translateY(-50%); }
+
+.m-pen-chip {
+  --sym-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 6px 16px 6px 12px;
+  border-radius: var(--r-full);
+  background: var(--m-pen-chip);
+  box-shadow: inset 0 0 0 1px var(--outline);
+  color: var(--on-surface);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.m-pen-chip .sym { color: var(--primary); }
+.m-pen-chip:hover { background-image: linear-gradient(var(--state-hover), var(--state-hover)); }
+.m-pen-chip__text { display: flex; flex-direction: column; }
+.m-pen-chip__gesture { font-size: var(--t-label-small-size, 11px); line-height: var(--t-label-small-line, 16px); font-weight: var(--w-regular); color: var(--on-surface-variant); }
+.m-pen-chip__action { font-size: var(--t-label-size); line-height: var(--t-label-line); font-weight: var(--w-medium); }
+.m-pen-chip[aria-pressed="true"] { background: var(--primary-container); color: var(--on-primary-container); box-shadow: inset 0 0 0 2px var(--primary); }
+.m-pen-chip[aria-pressed="true"] :is(.sym, .m-pen-chip__gesture) { color: var(--on-primary-container); }
+.m-pen-chip--unset { box-shadow: none; outline: 1.5px dashed var(--outline); outline-offset: -1.5px; }
+.m-pen-chip--unset .sym, .m-pen-chip--unset .m-pen-chip__action { color: var(--on-surface-variant); }
+.m-pen-chip--unset[aria-pressed="true"] { outline-color: var(--primary); }
+.m-pen-chip:focus-visible { outline: 3px solid var(--secondary); outline-offset: 2px; }
+
+/* Gesture effects of the drawn pen (motion kit): only the chosen gesture's; the base style is the still pose. */
+.m-pen-fx { fill: none; stroke: var(--primary); stroke-width: 2.5px; stroke-linecap: round; display: none; }
+.m-pen-stage[data-gesture="squeeze"] .m-pen-fx--squeeze,
+.m-pen-stage[data-gesture="double_tap"] .m-pen-fx--tap,
+.m-pen-stage[data-gesture="slide_up"] .m-pen-fx--slide,
+.m-pen-stage[data-gesture="slide_down"] .m-pen-fx--slide { display: inline; }
+.m-pen-fx--squeeze path { opacity: .7; }
+.m-pen-fx--squeeze .m-pen-arc-l { transform: translateX(9px); }
+.m-pen-fx--squeeze .m-pen-arc-r { transform: translateX(-9px); }
+.m-pen-fx--tap .m-pen-ring { opacity: .78; transform: scale(1.5); transform-box: fill-box; transform-origin: center; }
+.m-pen-fx--slide .m-pen-track { stroke-opacity: .3; stroke-dasharray: 3 7; }
+.m-pen-dot { fill: var(--primary); stroke: none; }
+.m-pen-fx--slide .m-pen-dot { transform: translateY(-40px); }
+.m-pen-ink { fill: none; stroke: var(--primary); stroke-width: 3px; stroke-linecap: round; opacity: .85; }
+@keyframes m-pen-squeeze-l { 0%, 12% { opacity: 0; transform: translateX(0); } 38% { opacity: 1; transform: translateX(13px); } 64%, 100% { opacity: 0; transform: translateX(0); } }
+@keyframes m-pen-squeeze-r { 0%, 12% { opacity: 0; transform: translateX(0); } 38% { opacity: 1; transform: translateX(-13px); } 64%, 100% { opacity: 0; transform: translateX(0); } }
+@keyframes m-pen-tap { 0%, 10% { opacity: 0; transform: scale(.9); } 20% { opacity: 1; transform: scale(1.67); } 31%, 42% { opacity: 0; transform: scale(.9); } 52% { opacity: 1; transform: scale(1.67); } 63%, 100% { opacity: 0; transform: scale(.9); } }
+@keyframes m-pen-slide-up { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-80px); } }
+@keyframes m-pen-slide-down { 0% { opacity: 0; transform: translateY(-80px); } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(0); } }
+.m-pen[data-motion="full"] .m-pen-arc-l { animation: m-pen-squeeze-l 1.7s linear infinite; }
+.m-pen[data-motion="full"] .m-pen-arc-r { animation: m-pen-squeeze-r 1.7s linear infinite; }
+.m-pen[data-motion="full"] .m-pen-ring { animation: m-pen-tap 1.7s linear infinite; }
+.m-pen[data-motion="full"] .m-pen-stage[data-gesture="slide_up"] .m-pen-fx--slide .m-pen-dot { animation: m-pen-slide-up 1.7s ease-in-out infinite; }
+.m-pen[data-motion="full"] .m-pen-stage[data-gesture="slide_down"] .m-pen-fx--slide .m-pen-dot { animation: m-pen-slide-down 1.7s ease-in-out infinite; }
+.m-pen-stage[data-paused] * { animation-play-state: paused !important; }
+.m-pen-pause { position: absolute; z-index: 3; right: 10px; bottom: 10px; }
+
+/* ---- bottom bar */
+.m-pen-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 64px;
+  padding: 8px 8px 8px 20px;
+  border-radius: var(--r-l);
+  background: var(--m-pen-card);
+  box-shadow: inset 0 0 0 1px var(--m-pen-line);
+}
+.m-pen-bar__status {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--t-label-size);
+  line-height: var(--t-label-line);
+  color: var(--on-surface-variant);
+}
+.m-pen-bar__status .sym { --sym-size: 20px; color: var(--primary); }
+.m-pen-bar__status b { font-weight: var(--w-medium); color: var(--on-surface); }
+.m-pen-btn { flex: none; }
+.m-pen-btn::before { inset: 0; border-radius: var(--r-m); }
+.m-pen-btn.btn--outlined::before { border-color: var(--outline); }
+.m-pen-btn.btn--outlined { color: var(--on-surface); }
+.m-pen-btn.btn--outlined .sym { color: var(--primary); }
+
+/* ---- the action picker: a side sheet docked beside the panes (standard, so the pen stays in view) */
+.m-pen-side { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.m-pen-sheet {
+  position: relative;
+  z-index: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px 0 6px;
+  border-radius: var(--r-xl);
+  background: var(--surface-container-low);
+  box-shadow: inset 0 0 0 1px var(--m-pen-line);
+}
+.m-pen[data-theme="light"] .m-pen-sheet { background: var(--surface-container); }
+.m-pen-sheet .sheet__header { padding: 8px 4px 4px 20px; }
+.m-pen-sheet__head { flex: 1 1 0; min-width: 0; }
+.m-pen-sheet__ctx { font-size: var(--t-label-size); line-height: var(--t-label-line); color: var(--on-surface-variant); }
+.m-pen-sheet__search { padding: 0 12px; }
+.m-pen-sheet__search .search { background: var(--surface-container-highest); }
+.m-pen-cats { display: flex; flex-wrap: wrap; column-gap: 8px; padding: 4px 12px 0; }
+.m-pen-sheet .sheet__body { flex: 1 1 auto; min-height: 0; overflow: hidden auto; padding: 0 8px; }
+.m-pen-pick .list-row { gap: 14px; padding: 8px 12px; min-height: 56px; }
+.m-pen-pick .list-row__leading { width: 32px; height: 32px; color: var(--primary); }
+.m-pen-pick .list-row__headline { font-weight: var(--w-medium); }
+.m-pen-pick .list-row__trailing { visibility: hidden; color: inherit; }
+.m-pen-pick .list-row[aria-selected="true"] .list-row__trailing { visibility: visible; }
+.m-pen-pick .list-row[aria-disabled="true"] .list-row__supporting { color: var(--on-surface-variant); }
+
+/* ---- state insets (other states of this screen), below the picker */
+.m-pen-insets { flex: none; display: flex; flex-direction: column; gap: 8px; }
+.m-pen-inset { border-radius: var(--r-l); background: var(--m-pen-card); box-shadow: inset 0 0 0 1px var(--m-pen-line); }
+.m-pen-dev > summary { padding: 8px 14px; min-height: 48px; font-size: var(--t-label-size); line-height: var(--t-label-line); font-weight: var(--w-medium); }
+.m-pen-dev .disclosure__body { padding: 0 14px 10px; font-size: var(--t-label-small-size, 11px); line-height: var(--t-label-small-line, 16px); }
+.m-pen-dev dl { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; margin: 0; }
+.m-pen-dev dt { color: var(--on-surface); }
+.m-pen-dev dd { margin: 0; }
+.m-pen-rec { display: flex; flex-direction: column; padding: 10px 6px 4px 14px; }
+.m-pen-rec__text { display: flex; align-items: center; gap: 8px; text-wrap: balance; font-size: var(--t-label-size); line-height: var(--t-label-line); font-weight: var(--w-medium); color: var(--primary); }
+.m-pen-rec__text .sym { --sym-size: 20px; }
+.m-pen-rec__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.m-pen-rec__time { font-size: var(--t-title-size); line-height: var(--t-title-line); font-variant-numeric: tabular-nums; color: var(--on-surface); }
+
+/* At 200 % text the panes keep their widths; long lists scroll inside their cards. */
+.m-pen[data-fontscale="2"] .m-pen-cats { max-height: 96px; overflow: hidden; }
+
+.m-pen-note { margin: 8px 0 0; font-size: 13px; line-height: 18px; opacity: .75; }
+</style>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.3.1/dist/model-viewer.min.js"></script>
+
+<div class="mock-frame m-pen" data-theme="dark" data-palette="Violet" data-fontscale="1.25" data-bold="on">
+  <div class="mock-status" aria-hidden="true"><span>14:09</span><span>Sun, Oct 11</span><span class="mock-status__icons"><span class="mock-status__wifi"></span><span class="mock-status__battery"></span></span></div>
+  <div class="mock-app">
+
+    <nav class="m-pen-rail" aria-label="PadStudio">
+      <div class="m-pen-brand">
+        <span class="sym m-pen-brand__mark" data-icon="pen" role="img" aria-label="PadStudio logo (not picked yet)"></span>
+        <span class="m-pen-brand__word">PadStudio</span>
+      </div>
+      <button type="button" class="m-pen-nav"><span class="sym" data-icon="today"></span><span>Today</span></button>
+      <button type="button" class="m-pen-nav" aria-current="page"><span class="sym sym--fill" data-icon="pen"></span><span>Pen</span></button>
+      <button type="button" class="m-pen-nav"><span class="sym" data-icon="home"></span><span>Home</span></button>
+      <button type="button" class="m-pen-nav"><span class="sym" data-icon="looks"></span><span>Looks</span></button>
+      <button type="button" class="m-pen-nav"><span class="sym" data-icon="setup"></span><span>Setup</span></button>
+      <div class="m-pen-rail__foot">
+        <p class="m-pen-status"><span class="m-pen-status__dot" aria-hidden="true"></span><span>Key Mapper is listening</span></p>
+        <button type="button" class="m-pen-nav m-pen-nav--quiet"><span class="sym" data-icon="settings"></span><span>Settings</span></button>
+      </div>
+    </nav>
+
+    <div class="m-pen-body">
+      <main class="m-pen-main">
+        <header class="m-pen-head">
+          <h2 class="m-pen-title">Pen</h2>
+          <button type="button" class="btn btn--outlined m-pen-action"><span class="sym" data-icon="pause"></span>Pause pen</button>
+          <p class="m-pen-sub">Focus Pen Pro · Expert setup · 4 controls set</p>
+        </header>
+
+        <div class="m-pen-panes">
+          <section class="m-pen-card m-pen-ctx" aria-label="Where the pen works">
+            <ul class="m-pen-ctx__list">
+              <li><button type="button" class="list-row m-pen-row">
+                <span class="m-pen-cat"><span class="sym" data-icon="grid"></span></span>
+                <span class="list-row__text"><span class="list-row__headline">Everywhere else</span><span class="list-row__supporting">All other apps</span></span>
+              </button></li>
+              <li><button type="button" class="list-row m-pen-row" aria-current="true">
+                <span class="app-icon"><img src="assets/icons/camera.png" alt=""></span>
+                <span class="list-row__text"><span class="list-row__headline">Camera</span><span class="list-row__supporting">1 app</span></span>
+              </button></li>
+              <li><button type="button" class="list-row m-pen-row">
+                <span class="app-icon"><img src="assets/icons/readera.png" alt=""></span>
+                <span class="list-row__text"><span class="list-row__headline">Reading &amp; PDF</span><span class="status-pill m-pen-needs" data-state="warn"><span class="sym" data-icon="warning"></span>Needs a look</span></span>
+              </button></li>
+              <li><button type="button" class="list-row m-pen-row">
+                <span class="app-icon"><img src="assets/icons/notes.png" alt=""></span>
+                <span class="list-row__text"><span class="list-row__headline">Other notes</span><span class="list-row__supporting">3 apps</span></span>
+              </button></li>
+              <li><button type="button" class="list-row m-pen-row">
+                <span class="m-pen-cat m-pen-cat--media"><span class="sym" data-icon="play"></span></span>
+                <span class="list-row__text"><span class="list-row__headline">Video &amp; music</span><span class="list-row__supporting">4 apps</span></span>
+              </button></li>
+              <li><button type="button" class="list-row m-pen-row">
+                <span class="m-pen-cat m-pen-cat--home"><span class="sym" data-icon="home_action"></span></span>
+                <span class="list-row__text"><span class="list-row__headline">Home screen</span><span class="list-row__supporting">Your home screen</span></span>
+              </button></li>
+              <li><button type="button" class="list-row m-pen-row">
+                <span class="m-pen-cat m-pen-cat--pass"><span class="sym" data-icon="open_notes"></span></span>
+                <span class="list-row__text"><span class="list-row__headline">Own pen settings</span><span class="list-row__supporting">Leaves the pen to the app</span></span>
+              </button></li>
+            </ul>
+            <details class="disclosure m-pen-adv">
+              <summary><span class="sym" data-icon="settings"></span>Advanced</summary>
+              <div class="m-pen-adv__body">
+                <div class="m-pen-adv__row"><span>Setup</span><span class="seg" role="radiogroup" aria-label="Setup"><button type="button" class="seg__btn" role="radio" aria-checked="false">Basic</button><button type="button" class="seg__btn" role="radio" aria-checked="true">Expert</button></span></div>
+                <div class="m-pen-adv__row"><span>Key Mapper can press keys</span><button type="button" class="switch" role="switch" aria-checked="true" aria-label="Key Mapper can press keys"><span class="switch__thumb"></span></button></div>
+              </div>
+            </details>
+          </section>
+
+          <section class="m-pen-card m-pen-hero" aria-labelledby="m-pen-hero-title">
+            <div class="m-pen-hero__head">
+              <span class="app-icon"><img src="assets/icons/camera.png" alt=""></span>
+              <div><h3 class="m-pen-hero__title" id="m-pen-hero-title">Camera</h3><p class="m-pen-hero__meta">2 of 4 controls set</p></div>
+            </div>
+
+            <div class="m-pen-stage" data-gesture="squeeze" data-pen3d="pending">
+              <!-- The drawn pen (motion kit), placed exactly where the 3D pen is: centre 227.4, 296.7; 18°; 0.7893 per unit. -->
+              <svg class="m-pen-svg m-pen-pen" viewBox="0 0 348 559" aria-hidden="true">
+                <defs><linearGradient id="m-pen-body-grad" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#9CA6B7"/><stop offset="30%" stop-color="#FFFFFF"/><stop offset="65%" stop-color="#E7EBF1"/><stop offset="100%" stop-color="#9DA8B8"/></linearGradient></defs>
+                <g transform="translate(227.4 296.7) rotate(18) scale(0.7893) translate(-150 -315.5)">
+                  <rect x="134" y="48" width="32" height="486" rx="12" fill="url(#m-pen-body-grad)"/>
+                  <rect x="134" y="520" width="32" height="14" fill="url(#m-pen-body-grad)"/>
+                  <path d="M134 534 L147 568 Q150 579 153 568 L166 534Z" fill="url(#m-pen-body-grad)"/>
+                  <path d="M147 568 Q150 583 153 568" fill="#B2BAC6"/>
+                  <path d="M136 65 H164 M136 532 H164" stroke="#BCC5D1" stroke-width="1"/>
+                  <path d="M139 73 V522" stroke="white" stroke-opacity=".2" stroke-width="1"/>
+                  <rect x="146" y="246" width="8" height="87" rx="4" fill="#D9DEE6" stroke="#B9C1CD" stroke-width="1"/>
+                  <text x="151" y="109" transform="rotate(90 151 109)" text-anchor="middle" fill="#7D8696" font-family="sans-serif" font-size="7" letter-spacing=".5">xiaomi</text>
+                  <g class="m-pen-fx m-pen-fx--squeeze"><path class="m-pen-arc-l" d="M114 356.6 Q99 376.6 114 396.6"/><path class="m-pen-arc-r" d="M186 356.6 Q201 376.6 186 396.6"/></g>
+                  <g class="m-pen-fx m-pen-fx--tap"><circle class="m-pen-ring" cx="150" cy="185.8" r="18"/><circle class="m-pen-dot" cx="150" cy="185.8" r="5"/></g>
+                  <g class="m-pen-fx m-pen-fx--slide"><path class="m-pen-track" d="M181 249.7 V329.4"/><circle class="m-pen-dot" cx="181" cy="329.4" r="6"/></g>
+                </g>
+              </svg>
+              <div class="m-pen-flat">
+                <div class="m-pen-hot" style="left:259.3px;top:199.4px;--dx:89.3px;--dy:-17.4px;--len:90.98px;--ang:-168.97deg"><span class="m-pen-hot__line"></span>
+                  <button type="button" class="m-pen-chip" data-gesture="double_tap" data-label="Double tap" data-action="shutter" aria-pressed="false"><span class="sym" data-icon="shutter"></span><span class="m-pen-chip__text"><span class="m-pen-chip__gesture">Double tap</span><span class="m-pen-chip__action">Shutter</span></span></button></div>
+                <div class="m-pen-hot" style="left:243.5px;top:247.8px;--dx:73.5px;--dy:0.2px;--len:73.5px;--ang:179.84deg"><span class="m-pen-hot__line"></span>
+                  <button type="button" class="m-pen-chip m-pen-chip--unset" data-gesture="slide_up" data-label="Slide up" data-action="" aria-pressed="false"><span class="sym" data-icon="add"></span><span class="m-pen-chip__text"><span class="m-pen-chip__gesture">Slide up</span><span class="m-pen-chip__action">Not set</span></span></button></div>
+                <div class="m-pen-hot" style="left:223.9px;top:308.3px;--dx:53.9px;--dy:5.7px;--len:54.2px;--ang:173.96deg"><span class="m-pen-hot__line"></span>
+                  <button type="button" class="m-pen-chip m-pen-chip--unset" data-gesture="slide_down" data-label="Slide down" data-action="" aria-pressed="false"><span class="sym" data-icon="add"></span><span class="m-pen-chip__text"><span class="m-pen-chip__gesture">Slide down</span><span class="m-pen-chip__action">Not set</span></span></button></div>
+                <div class="m-pen-hot" style="left:212.3px;top:344px;--dx:42.3px;--dy:36px;--len:55.55px;--ang:139.6deg"><span class="m-pen-hot__line"></span>
+                  <button type="button" class="m-pen-chip" data-gesture="squeeze" data-label="Squeeze" data-action="shutter" aria-pressed="true"><span class="sym" data-icon="shutter"></span><span class="m-pen-chip__text"><span class="m-pen-chip__gesture">Squeeze</span><span class="m-pen-chip__action">Shutter</span></span></button></div>
+              </div>
+
+              <model-viewer class="m-pen-3d" src="assets/pen/focus_pen_pro.glb" alt="The Focus Pen Pro, turning slightly, with its four controls marked" loading="eager"
+                orientation="-18deg 0deg 0deg" camera-orbit="0deg 90deg 0.36m" field-of-view="30deg" min-field-of-view="30deg" max-field-of-view="30deg"
+                camera-target="-0.02065m 0.00705m 0m" min-camera-orbit="auto auto 0.01m" max-camera-orbit="auto auto 5m"
+                interaction-prompt="none" environment-image="neutral" shadow-intensity="0" animation-name="squeeze">
+                <div class="m-pen-hot" slot="hotspot-double-tap" data-position="0.0123607m 0.0380423m 0.005m" data-normal="0m 0m 1m" style="--dx:89.3px;--dy:-17.4px;--len:90.98px;--ang:-168.97deg"><span class="m-pen-hot__line"></span>
+                  <button type="button" class="m-pen-chip" data-gesture="double_tap" data-label="Double tap" data-action="shutter" aria-pressed="false"><span class="sym" data-icon="shutter"></span><span class="m-pen-chip__text"><span class="m-pen-chip__gesture">Double tap</span><span class="m-pen-chip__action">Shutter</span></span></button></div>
+                <div class="m-pen-hot" slot="hotspot-slide-up" data-position="0.006273m 0.0193065m 0.005m" data-normal="0m 0m 1m" style="--dx:73.5px;--dy:0.2px;--len:73.5px;--ang:179.84deg"><span class="m-pen-hot__line"></span>
+                  <button type="button" class="m-pen-chip m-pen-chip--unset" data-gesture="slide_up" data-label="Slide up" data-action="" aria-pressed="false"><span class="sym" data-icon="add"></span><span class="m-pen-chip__text"><span class="m-pen-chip__gesture">Slide up</span><span class="m-pen-chip__action">Not set</span></span></button></div>
+                <div class="m-pen-hot" slot="hotspot-slide-down" data-position="-0.0013288m -0.0040895m 0.005m" data-normal="0m 0m 1m" style="--dx:53.9px;--dy:5.7px;--len:54.2px;--ang:173.96deg"><span class="m-pen-hot__line"></span>
+                  <button type="button" class="m-pen-chip m-pen-chip--unset" data-gesture="slide_down" data-label="Slide down" data-action="" aria-pressed="false"><span class="sym" data-icon="add"></span><span class="m-pen-chip__text"><span class="m-pen-chip__gesture">Slide down</span><span class="m-pen-chip__action">Not set</span></span></button></div>
+                <div class="m-pen-hot" slot="hotspot-squeeze" data-position="-0.005825m -0.0179274m 0.005m" data-normal="0m 0m 1m" style="--dx:42.3px;--dy:36px;--len:55.55px;--ang:139.6deg"><span class="m-pen-hot__line"></span>
+                  <button type="button" class="m-pen-chip" data-gesture="squeeze" data-label="Squeeze" data-action="shutter" aria-pressed="true"><span class="sym" data-icon="shutter"></span><span class="m-pen-chip__text"><span class="m-pen-chip__gesture">Squeeze</span><span class="m-pen-chip__action">Shutter</span></span></button></div>
+              </model-viewer>
+
+              <svg class="m-pen-svg" viewBox="0 0 348 559" aria-hidden="true"><path class="m-pen-ink" d="M161 499 C 134 517, 70 509, 44 525 C 26 537, 50 550, 94 543"/></svg>
+            </div>
+
+            <button type="button" class="icon-btn icon-btn--tonal m-pen-pause" aria-label="Pause the pen animation" title="Pause the animation"><span class="sym" data-icon="pause"></span></button>
+          </section>
+        </div>
+
+        <div class="m-pen-bar">
+          <p class="m-pen-bar__status"><span class="sym" data-icon="send"></span><span><b>Sent to Key Mapper 14:05</b></span></p>
+          <button type="button" class="btn btn--outlined m-pen-btn"><span class="sym" data-icon="send"></span>Send to Key Mapper</button>
+          <button type="button" class="btn btn--filled m-pen-btn"><span class="sym" data-icon="test_pen"></span>Test pen</button>
+        </div>
+      </main>
+
+      <aside class="m-pen-side">
+        <section class="sheet m-pen-sheet" aria-labelledby="m-pen-pick-title">
+          <div class="sheet__header">
+            <div class="m-pen-sheet__head"><h3 class="sheet__title" id="m-pen-pick-title" data-m-pen-pick-title>Squeeze</h3><p class="m-pen-sheet__ctx">In Camera</p></div>
+            <button type="button" class="icon-btn" aria-label="Close"><span class="sym" data-icon="close"></span></button>
+          </div>
+          <div class="m-pen-sheet__search"><label class="search"><span class="sym" data-icon="search"></span><input class="search__input" type="search" placeholder="Search 25 actions" aria-label="Search actions"></label></div>
+          <div class="m-pen-cats" role="group" aria-label="Kinds of action">
+            <button type="button" class="chip chip--filter" aria-pressed="true">Camera</button>
+            <button type="button" class="chip chip--filter" aria-pressed="false">Reading &amp; notes</button>
+            <button type="button" class="chip chip--filter" aria-pressed="false">Media</button>
+            <button type="button" class="chip chip--filter" aria-pressed="false">Navigation</button>
+            <button type="button" class="chip chip--filter" aria-pressed="false">System</button>
+          </div>
+          <div class="sheet__body">
+            <div class="list m-pen-pick" role="listbox" aria-label="Camera actions">
+              <div class="list-row" role="option" tabindex="0" aria-selected="true" data-action="shutter"><span class="list-row__leading"><span class="sym" data-icon="shutter"></span></span><span class="list-row__text"><span class="list-row__headline">Shutter</span></span><span class="list-row__trailing"><span class="sym" data-icon="ok"></span></span></div>
+              <div class="list-row" role="option" tabindex="-1" aria-selected="false" data-action="open_camera"><span class="list-row__leading"><span class="sym" data-icon="open_camera"></span></span><span class="list-row__text"><span class="list-row__headline">Open camera</span></span><span class="list-row__trailing"><span class="sym" data-icon="ok"></span></span></div>
+              <div class="list-row" role="option" tabindex="-1" aria-selected="false" aria-disabled="true" data-action="flashlight"><span class="list-row__leading"><span class="sym" data-icon="flashlight"></span></span><span class="list-row__text"><span class="list-row__headline">Flashlight</span><span class="list-row__supporting">Unavailable: needs camera permission</span></span></div>
+            </div>
+          </div>
+        </section>
+
+        <div class="m-pen-insets">
+          <details class="disclosure m-pen-inset m-pen-dev" open>
+            <summary><span class="sym" data-icon="code"></span>Developer details</summary>
+            <div class="disclosure__body">
+              <dl>
+                <dt>Squeeze</dt><dd>key 332 · scan 189</dd>
+                <dt>Slide up</dt><dd>key 153 · scan 73</dd>
+                <dt>Profile</dt><dd>bfa1ea74a187</dd>
+              </dl>
+            </div>
+          </details>
+          <div class="m-pen-inset m-pen-rec" role="status">
+            <p class="m-pen-rec__text"><span class="sym" data-icon="squeeze"></span>Press the squeeze now…</p>
+            <div class="m-pen-rec__row"><span class="m-pen-rec__time">12 s</span><button type="button" class="btn btn--text">Cancel</button></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+  </div>
+  <div class="mock-handle" aria-hidden="true"></div>
+</div>
+<p class="m-pen-note">Example states: the “Needs a look” chip on Reading &amp; PDF (your current setup gives no warnings), Developer details opened, and the squeeze being recorded. The live 3D pen needs WebGL; without it, or with reduced motion, the pen from your motion kit is drawn instead.</p>
+<script>
+/* Pen screen: choose a gesture chip to play its clip; Pause stops the motion. Guarded, and the page works without it. */
+(function () {
+  var root = document.currentScript && document.currentScript.closest('.mock[data-screen="pen"]');
+  if (!root || root.hasAttribute("data-m-pen-live")) return;
+  root.setAttribute("data-m-pen-live", "");
+  var frame = root.querySelector(".mock-frame");
+  var stage = root.querySelector(".m-pen-stage");
+  var mv = root.querySelector("model-viewer");
+  var title = root.querySelector("[data-m-pen-pick-title]");
+  var pauseBtn = root.querySelector(".m-pen-pause");
+  var paused = false;
+  function still() { return paused || (frame && frame.getAttribute("data-motion") === "reduce"); }
+  function play() {
+    if (!mv || !mv.loaded || typeof mv.play !== "function") return;
+    var clip = stage.getAttribute("data-gesture");
+    if (mv.animationName !== clip) mv.animationName = clip;
+    if (still()) { mv.pause(); } else { mv.play(); }
+  }
+  if (mv) {
+    mv.addEventListener("load", function () { stage.setAttribute("data-pen3d", "live"); play(); });
+    mv.addEventListener("error", function () { stage.setAttribute("data-pen3d", "off"); });
+  }
+  root.addEventListener("click", function (e) {
+    var chip = e.target.closest(".m-pen-chip");
+    if (chip) {
+      var g = chip.getAttribute("data-gesture"), act = chip.getAttribute("data-action");
+      stage.setAttribute("data-gesture", g);
+      root.querySelectorAll(".m-pen-chip").forEach(function (c) { c.setAttribute("aria-pressed", String(c.getAttribute("data-gesture") === g)); });
+      if (title) title.textContent = chip.getAttribute("data-label");
+      root.querySelectorAll(".m-pen-pick [data-action]").forEach(function (r) { r.setAttribute("aria-selected", String(!!act && r.getAttribute("data-action") === act)); });
+      play();
+    } else if (pauseBtn && e.target.closest(".m-pen-pause")) {
+      paused = !paused;
+      stage.toggleAttribute("data-paused", paused);
+      pauseBtn.setAttribute("aria-label", paused ? "Play the pen animation" : "Pause the pen animation");
+      pauseBtn.querySelector(".sym").setAttribute("data-icon", paused ? "play" : "pause");
+      play();
+    }
+  });
+  if (frame && window.MutationObserver) new MutationObserver(play).observe(frame, { attributes: true, attributeFilter: ["data-motion"] });
+})();
+</script>
+</section>
