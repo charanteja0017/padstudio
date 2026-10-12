@@ -316,7 +316,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             HealthCheck(
                 "Device facts imported",
                 studio.pen.factsFile() != null,
-                "Optional. Adds camera shutter buttons and Expert-mode pen devices found by tools/probe-device.sh.",
+                "Optional. Adds camera shutter buttons and the pen's Expert-mode device, measured from a Mac: tools/probe-device.sh, then tools/facts.sh.",
             ),
             HealthCheck("Group widgets on the home screen", WidgetPinning.placedCount(studio) > 0, "${WidgetPinning.placedCount(studio)} placed."),
             HealthCheck(

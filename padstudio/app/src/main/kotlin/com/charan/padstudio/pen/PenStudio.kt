@@ -36,7 +36,7 @@ data class PenPlan(
 /** Turns PadStudio's settings and this tablet's facts into a Key Mapper pen profile. */
 class PenStudio(private val context: Context, private val config: ConfigStore, private val apps: AppRepository) {
 
-    /** device-facts.json from tools/probe-device.sh: pushed into files/ (run-as) or the app's external files dir. */
+    /** device-facts.json, built by tools/facts.sh from tools/probe-device.sh dumps: pushed into files/ (run-as) or the app's external files dir. */
     fun factsFile(): FactsFile? = listOfNotNull(File(context.filesDir, FACTS), context.getExternalFilesDir(null)?.let { File(it, FACTS) })
         .firstOrNull { it.exists() }
         ?.let { runCatching { FactsFile.parse(it.readText()) }.getOrNull() }
@@ -97,7 +97,7 @@ class PenStudio(private val context: Context, private val config: ConfigStore, p
         val match = candidates.firstOrNull { it.vendor == device.vendorId && it.product == device.productId }
             ?: candidates.singleOrNull()
             ?: return Result.failure(
-                IllegalStateException("Expert mode needs the pen's input device from the probe: run tools/probe-device.sh, then import device facts."),
+                IllegalStateException("Expert mode needs the pen's input device from the probe: run tools/probe-device.sh, then tools/facts.sh."),
             )
         return Result.success(PenTrigger.Evdev(event.keyCode, event.scanCode, match))
     }
