@@ -4,5 +4,15 @@
     <string name="group_widget_name">App group · wide</string>
     <string name="group_widget_name_small">App group · small</string>
     <string name="group_widget_name_large">App group · large</string>
-    <string name="group_widget_description">A tidy, auto-sorted group of apps (Study, Work, Reading…)</string>
+    <!-- Widget picker: what each size is for, and the example group its preview shows. -->
+    <string name="group_widget_description">One group of your apps in a wide strip, sorted for you. Tap the group\'s name to open the whole folder.</string>
+    <string name="group_widget_description_small">One group of your apps in a small square. The last tile opens the rest.</string>
+    <string name="group_widget_description_large">One group of your apps in a large square, with room for a whole folder.</string>
+    <string name="group_widget_preview_group">Study</string>
+    <string name="group_widget_preview_count_small" translatable="false">15</string>
+    <string name="group_widget_preview_count_wide" translatable="false">30</string>
+    <string name="group_widget_preview_count_large" translatable="false">60</string>
+    <string name="group_widget_preview_more_small" translatable="false">+4</string>
+    <string name="group_widget_preview_more_wide" translatable="false">+7</string>
+    <string name="group_widget_preview_more_large" translatable="false">+5</string>
 </resources>
