@@ -4,7 +4,9 @@ import android.app.WallpaperManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
 import android.text.format.DateFormat
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -12,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -27,7 +30,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.flowWithLifecycle
 import com.charan.padstudio.MainViewModel
 import com.charan.padstudio.data.IconStyle
 import com.charan.padstudio.icons.IconPack
@@ -38,7 +43,9 @@ import com.charan.padstudio.looks.screen.LooksPanes
 import com.charan.padstudio.looks.screen.MatchColoursCard
 import com.charan.padstudio.looks.screen.WallpaperCard
 import com.charan.padstudio.looks.screen.WallpaperResult
+import com.charan.padstudio.looks.screen.applyWaitLeft
 import com.charan.padstudio.looks.screen.dynamicColourSupported
+import com.charan.padstudio.looks.screen.keptAcrossConfigChange
 import com.charan.padstudio.looks.screen.loadIconFacts
 import com.charan.padstudio.looks.screen.paletteLabel
 import com.charan.padstudio.looks.screen.previewApps
@@ -51,11 +58,10 @@ import com.charan.padstudio.ui.components.ScreenScaffold
 import com.charan.padstudio.ui.theme.Tokens
 import java.util.Date
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Looks (plan §10, docs/redesign/mock-looks.html): the icon style of PadStudio's widgets and panels, previewed on
@@ -71,8 +77,11 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * applyWallpaper reports only through `MainViewModel.message`. While an Apply from this screen waits for that
  * message, the screen takes it from the shell's snackbar (`clearMessage`) and says it itself: success as a
- * snackbar with the time, failure in the card with a plain reason and Retry. If the screen is left before the
- * answer comes, the shell shows the message as before.
+ * snackbar with the time, failure in the card with a plain reason and Retry. It listens only while PadStudio is
+ * on screen, as the shell does, so an answer that comes while the user looks at the home screen waits for them.
+ * The wait survives a configuration change (rotation, split screen, the theme change a new wallpaper can bring);
+ * if Looks is left for another tab first, the shell shows the message as before. No answer in 30 s shows
+ * "Requested", which a later answer replaces.
  */
 @Composable
 fun LooksScreen(model: MainViewModel, modifier: Modifier = Modifier) {
@@ -112,36 +121,62 @@ fun LooksScreen(model: MainViewModel, modifier: Modifier = Modifier) {
     var seed by rememberSaveable { mutableLongStateOf(7L) }
     var dark by rememberSaveable { mutableStateOf(false) }
     val accent = MaterialTheme.colorScheme.primary.toArgb()
-    var applying by remember { mutableStateOf(false) }
+    val activity = LocalActivity.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val acrossRecreation = remember(activity) { { activity?.isChangingConfigurations == true } }
+    // The Apply waiting for its answer, until this SystemClock.elapsedRealtime(); null when none is.
+    var pendingUntil by rememberSaveable(saver = keptAcrossConfigChange<Long>(acrossRecreation)) { mutableStateOf(null) }
     var outcome by rememberSaveable { mutableStateOf(ApplyOutcome.None) }
     var failureDetail by rememberSaveable { mutableStateOf<String?>(null) }
+    // The success snackbar's text until it has been on screen; a recreation shows it again rather than lose it.
+    var notice by rememberSaveable(saver = keptAcrossConfigChange<String>(acrossRecreation)) { mutableStateOf(null) }
     val timeFormat = remember(context) { DateFormat.getTimeFormat(context) }
 
+    // The answer to the Apply in progress, or a late one after "Requested". Only while PadStudio is started, like
+    // the shell's snackbar: an answer that comes meanwhile waits in MainViewModel for the user to come back.
+    // Restarted for each Apply (a new deadline), so an Apply tapped as the last answer arrives still gets its own.
+    val listening = pendingUntil != null || outcome == ApplyOutcome.Requested
+    LaunchedEffect(listening, pendingUntil) {
+        if (!listening) return@LaunchedEffect
+        val raw = model.message.flowWithLifecycle(lifecycle).first { wallpaperResultOf(it) != null } ?: return@LaunchedEffect
+        // Take this answer from the shell's snackbar, and only this one, never a message that came after it.
+        if (model.message.value == raw) model.clearMessage()
+        pendingUntil = null
+        when (val result = wallpaperResultOf(raw)) {
+            null -> outcome = ApplyOutcome.None
+            WallpaperResult.Set -> {
+                outcome = ApplyOutcome.None
+                notice = wallpaperSetText(timeFormat.format(Date()))
+            }
+            is WallpaperResult.Failed -> {
+                failureDetail = result.detail
+                outcome = ApplyOutcome.Failed
+            }
+        }
+    }
+    // No answer by the deadline: "Requested". The listener above keeps waiting, so a late answer replaces it.
+    LaunchedEffect(pendingUntil) {
+        val until = pendingUntil ?: return@LaunchedEffect
+        delay(applyWaitLeft(until, SystemClock.elapsedRealtime()))
+        pendingUntil = null
+        outcome = ApplyOutcome.Requested
+    }
+    LaunchedEffect(notice) {
+        val text = notice ?: return@LaunchedEffect
+        snackbar.currentSnackbarData?.dismiss()
+        snackbar.showSnackbar(text)
+        notice = null
+    }
+
+    val applying = pendingUntil != null
     val apply: () -> Unit = {
-        if (!applying) {
+        if (pendingUntil == null) {
             // A wallpaper message still showing from an earlier Apply would be read as this one's answer.
             if (wallpaperResultOf(model.message.value) != null) model.clearMessage()
-            applying = true
             outcome = ApplyOutcome.None
             failureDetail = null
+            pendingUntil = SystemClock.elapsedRealtime() + APPLY_WAIT_MS
             model.applyWallpaper(seed, dark, accent)
-            scope.launch {
-                val result = withTimeoutOrNull(APPLY_WAIT_MS) { model.message.mapNotNull(::wallpaperResultOf).first() }
-                applying = false
-                when (result) {
-                    null -> outcome = ApplyOutcome.Requested
-                    WallpaperResult.Set -> {
-                        model.clearMessage()
-                        snackbar.currentSnackbarData?.dismiss()
-                        snackbar.showSnackbar(wallpaperSetText(timeFormat.format(Date())))
-                    }
-                    is WallpaperResult.Failed -> {
-                        model.clearMessage()
-                        failureDetail = result.detail
-                        outcome = ApplyOutcome.Failed
-                    }
-                }
-            }
         }
     }
     val openThemes: (() -> Unit)? = themesIntent?.let { intent ->

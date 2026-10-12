@@ -1,13 +1,16 @@
 package com.charan.padstudio.looks.screen
 
 import android.os.Build
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.Saver
 import com.charan.padstudio.core.home.AppFacts
 import com.charan.padstudio.core.home.PlannedGroup
 import com.charan.padstudio.data.IconStyle
 import com.charan.padstudio.icons.IconPack
 import com.charan.padstudio.ui.theme.BrandPalette
 
-// The Looks screen's words and decisions, kept free of Compose and Android state so unit tests can pin them
+// The Looks screen's words and decisions, kept free of composition and Android state so unit tests can pin them
 // (LooksStateTest). The screen itself is in ../LooksScreen.kt; its cards are next to this file.
 
 /** How many of the user's own apps each icon-style preview draws (plan §10 Looks). */
@@ -55,8 +58,9 @@ internal fun dynamicColourSupported(sdkInt: Int): Boolean = sdkInt >= Build.VERS
  */
 internal fun matchColoursText(on: Boolean, supported: Boolean, palette: String): String = when {
     !supported -> "Needs Android 12 or later. PadStudio keeps its own $palette colours."
-    on -> "On: PadStudio and its widgets use your wallpaper's colours. Off is the default because they made the app all grey."
-    else -> "Off: PadStudio uses its own $palette colours, the default because your wallpaper's colours made the app all grey."
+    // "Can": the grey came from one wallpaper (plan §3.1), and Looks itself can change the wallpaper.
+    on -> "On: PadStudio and its widgets use your wallpaper's colours. Off is the default because they can turn the whole app grey."
+    else -> "Off: PadStudio uses its own $palette colours. That's the default because wallpaper colours can turn the whole app grey."
 }
 
 /** Where an icon in a style preview comes from, read from IconRepository.source(). */
@@ -90,7 +94,7 @@ internal sealed interface PackChoice {
     /** Packs are installed, but none has been picked yet: the Icon pack style shows the original icons. */
     data object NotChosen : PackChoice
 
-    /** The saved pack is no longer installed; IconRepository falls back to the original icons. */
+    /** No installed pack has the saved name (uninstalled or disabled); IconRepository falls back to the original icons. */
     data class Missing(val packageName: String) : PackChoice
 
     /** The saved pack. [covered] of [total] preview apps have an icon in it; null while that is counted. */
@@ -117,7 +121,7 @@ internal fun styleCaption(style: IconStyle, pack: PackChoice?): String = when (s
         null -> "Looking for icon packs…"
         PackChoice.NoneInstalled -> "No icon pack installed"
         PackChoice.NotChosen -> "No pack chosen yet"
-        is PackChoice.Missing -> "Your pack was uninstalled"
+        is PackChoice.Missing -> "Your pack isn't installed"
         is PackChoice.Chosen -> coverageText(pack.label, pack.covered, pack.total)
     }
 }
@@ -136,7 +140,7 @@ internal fun packRowText(pack: PackChoice?): PackRowText = when (pack) {
     null -> PackRowText("Icon pack", "Looking for installed packs…", opensPicker = false)
     PackChoice.NoneInstalled -> PackRowText("No icon pack installed", "Install Lawnicons or Arcticons, then come back here.", opensPicker = false)
     PackChoice.NotChosen -> PackRowText("Choose an icon pack", "New packs show up when you come back", opensPicker = true)
-    is PackChoice.Missing -> PackRowText("Icon pack: not installed", "${pack.packageName} was removed · choose another", opensPicker = true)
+    is PackChoice.Missing -> PackRowText("Icon pack: not installed", "${pack.packageName} isn't installed · choose another", opensPicker = true)
     is PackChoice.Chosen -> PackRowText("Icon pack: ${pack.label}", "New packs show up when you come back", opensPicker = true)
 }
 
@@ -187,7 +191,9 @@ internal fun wallpaperResultOf(message: String?): WallpaperResult? = when {
 
 /**
  * A plain reason for a failed wallpaper change, from the exception message MainViewModel passes on. The raw
- * message goes under Developer details; this is what everyone else reads next to Retry.
+ * message goes under Developer details; this is what everyone else reads next to Retry. MainViewModel passes
+ * Throwable.message, which never names the exception class, so the words are matched, not the class: ART's
+ * OutOfMemoryError says "Failed to allocate a … byte allocation with … until OOM".
  */
 internal fun plainWallpaperFailure(detail: String?): String {
     val text = detail.orEmpty().lowercase()
@@ -195,10 +201,29 @@ internal fun plainWallpaperFailure(detail: String?): String {
         listOf("permission", "denied", "not allowed", "securityexception").any { it in text } ->
             "PadStudio isn't allowed to change the wallpaper on this tablet."
         listOf("enospc", "no space").any { it in text } -> "The tablet is out of storage space."
-        listOf("outofmemory", "out of memory").any { it in text } -> "The tablet ran out of memory making the picture."
+        listOf("outofmemory", "out of memory", "failed to allocate", "until oom").any { it in text } ->
+            "The tablet ran out of memory making the picture."
         else -> "The tablet didn't accept the new wallpaper."
     }
 }
+
+/** How long an Apply may still wait for its answer: until [deadline], from [now] (both SystemClock.elapsedRealtime). */
+internal fun applyWaitLeft(deadline: Long, now: Long): Long = (deadline - now).coerceAtLeast(0L)
+
+/**
+ * Saves a state only while the activity is being recreated for a configuration change ([changingConfigurations]:
+ * rotation, split screen, or the theme change a new wallpaper can bring). When Looks is left for another tab, or
+ * the process ends, the state starts again from its initial value instead.
+ *
+ * Looks uses it for an Apply still waiting for its answer, and for the success snackbar not yet shown: the answer
+ * comes from MainViewModel, which outlives a recreation but not the process, and once Looks is off screen the
+ * shell's snackbar shows MainViewModel's message itself. Saved across a tab change, the card would say
+ * "Applying…" for an answer it can no longer receive.
+ */
+internal fun <T : Any> keptAcrossConfigChange(changingConfigurations: () -> Boolean): Saver<MutableState<T?>, T> = Saver(
+    save = { state -> state.value?.takeIf { changingConfigurations() } },
+    restore = { saved -> mutableStateOf(saved) },
+)
 
 /** The success snackbar, with the time it was set, e.g. "Wallpaper set on home and lock screen · 14:05". */
 internal fun wallpaperSetText(time: String): String = "Wallpaper set on home and lock screen · $time"

@@ -1,5 +1,7 @@
 package com.charan.padstudio.looks.screen
 
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.SaverScope
 import com.charan.padstudio.core.home.AppFacts
 import com.charan.padstudio.core.home.AppGroup
 import com.charan.padstudio.core.home.PlannedGroup
@@ -101,6 +103,9 @@ class LooksStateTest {
         assertFalse(packRowText(PackChoice.NoneInstalled).opensPicker)
         assertTrue(packRowText(PackChoice.NotChosen).opensPicker)
         assertTrue(packRowText(PackChoice.Missing("gone.pack")).opensPicker)
+        // Missing means no installed pack answers to the saved name: it may be disabled, not only uninstalled.
+        assertEquals("gone.pack isn't installed · choose another", packRowText(PackChoice.Missing("gone.pack")).supporting)
+        assertEquals("Your pack isn't installed", styleCaption(IconStyle.ICON_PACK, PackChoice.Missing("gone.pack")))
         val chosen = packRowText(PackChoice.Chosen("Lawnicons", "p", 11, 12))
         assertEquals("Icon pack: Lawnicons", chosen.headline)
         assertEquals("New packs show up when you come back", chosen.supporting)
@@ -121,9 +126,11 @@ class LooksStateTest {
         assertEquals("Violet", palette)
         assertEquals("Graphite", paletteLabel(BrandPalette.GRAPHITE))
         val off = matchColoursText(on = false, supported = true, palette = palette)
-        assertTrue(off.startsWith("Off") && "Violet" in off && "made the app all grey" in off, off)
+        assertTrue(off.startsWith("Off") && "Violet" in off && "can turn the whole app grey" in off, off)
         val on = matchColoursText(on = true, supported = true, palette = palette)
-        assertTrue(on.startsWith("On") && "made the app all grey" in on, on)
+        assertTrue(on.startsWith("On") && "can turn the whole app grey" in on, on)
+        // The grey came from one wallpaper (plan §3.1). Looks can change the wallpaper, so never say the current one does it.
+        for (text in listOf(off, on)) assertFalse("made the app" in text, text)
         val unsupported = matchColoursText(on = false, supported = false, palette = palette)
         assertTrue("Android 12" in unsupported, unsupported)
     }
@@ -146,10 +153,11 @@ class LooksStateTest {
     }
 
     @Test fun `failures get a plain reason, never the raw exception text`() {
+        // As MainViewModel passes them: Throwable.message, without the exception's class name.
         val raw = listOf(
-            "java.lang.SecurityException: Permission denial: writing com.android.server.wallpaper",
-            "ENOSPC (No space left on device)",
-            "java.lang.OutOfMemoryError: Failed to allocate",
+            "Permission denial: writing com.android.server.wallpaper",
+            "write failed: ENOSPC (No space left on device)",
+            "Failed to allocate a 27262992 byte allocation with 4194304 free bytes and 18MB until OOM, target footprint 268435456",
             "Some vendor error 0x7f",
             null,
         )
@@ -167,6 +175,29 @@ class LooksStateTest {
         assertEquals("Violet dawn", wallpaperName("Violet", dark = false))
         assertEquals("Dusk, in your wallpaper's colours", wallpaperName(null, dark = true))
         assertEquals("Wallpaper set on home and lock screen · 14:05", wallpaperSetText("14:05"))
+    }
+
+    @Test fun `an Apply waits until its deadline, then says Requested at once`() {
+        assertEquals(30_000L, applyWaitLeft(deadline = 130_000L, now = 100_000L))
+        assertEquals(1L, applyWaitLeft(deadline = 130_000L, now = 129_999L))
+        // Restored after the deadline (a slow recreation): no waiting, and never a negative delay.
+        assertEquals(0L, applyWaitLeft(deadline = 130_000L, now = 130_000L))
+        assertEquals(0L, applyWaitLeft(deadline = 130_000L, now = 999_999L))
+    }
+
+    @Test fun `a waiting Apply and its unshown snackbar survive a configuration change only`() {
+        var changingConfigurations = false
+        val saver = keptAcrossConfigChange<Long> { changingConfigurations }
+        val scope = SaverScope { true }
+        val waiting = mutableStateOf<Long?>(130_000L)
+        // Another tab, or the app in the background (process death): start afresh, the shell reports the answer.
+        assertNull(with(saver) { scope.save(waiting) })
+        // Rotation, split screen, or the theme change a new wallpaper brings: keep waiting.
+        changingConfigurations = true
+        assertEquals(130_000L, with(saver) { scope.save(waiting) })
+        assertEquals(130_000L, saver.restore(130_000L)?.value)
+        // Nothing waiting: nothing saved, so it restores as nothing.
+        assertNull(with(saver) { scope.save(mutableStateOf<Long?>(null)) })
     }
 
     @Test fun `the preview is drawn at about its own width`() {

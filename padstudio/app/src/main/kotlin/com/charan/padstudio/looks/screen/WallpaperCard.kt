@@ -49,6 +49,7 @@ import com.charan.padstudio.ui.components.SegmentedChoice
 import com.charan.padstudio.ui.components.StatusLevel
 import com.charan.padstudio.ui.components.StatusPill
 import com.charan.padstudio.ui.components.StudioCard
+import com.charan.padstudio.ui.theme.Tokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -94,85 +95,95 @@ internal fun WallpaperCard(
     val scheme = MaterialTheme.colorScheme
     val type = MaterialTheme.typography
     val name = wallpaperName(palette, dark)
-    StudioCard(modifier) {
-        SectionHeader(
-            title = "Wallpaper",
-            supporting = if (palette != null) {
-                "A calm gradient in $palette for your home and lock screen."
-            } else {
-                "A calm gradient in your wallpaper's colours for your home and lock screen."
-            },
-        )
-        WallpaperPreview(seed = seed, dark = dark, accent = accent, name = name, onShuffle = onShuffle)
-        Text(name, style = type.titleMedium, color = scheme.onSurface)
-        SegmentedChoice(
-            options = listOf(false, true),
-            selected = dark,
-            onSelect = onDarkChange,
-            label = { if (it) "Dark" else "Light" },
-            icon = { if (it) Sym.dark else Sym.light },
-            modifier = Modifier.fillMaxWidth(),
-        )
+    // The card's own spacing is 0 so the stretch Spacer below adds no gap of its own: when the card isn't
+    // stretched, the Apply area sits the usual 12 dp under the choices, not 24.
+    StudioCard(modifier, spacing = 0.dp) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Tokens.GapS)) {
+            SectionHeader(
+                title = "Wallpaper",
+                supporting = if (palette != null) {
+                    "A calm gradient in $palette for your home and lock screen."
+                } else {
+                    "A calm gradient in your wallpaper's colours for your home and lock screen."
+                },
+            )
+            WallpaperPreview(seed = seed, dark = dark, accent = accent, name = name, onShuffle = onShuffle)
+            Text(name, style = type.titleMedium, color = scheme.onSurface)
+            SegmentedChoice(
+                options = listOf(false, true),
+                selected = dark,
+                onSelect = onDarkChange,
+                label = { if (it) "Dark" else "Light" },
+                icon = { if (it) Sym.dark else Sym.light },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         // Takes the room left when the card is stretched beside the icon cards; nothing otherwise.
         Spacer(Modifier.weight(1f))
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = if (allowed) {
-                    "Sets your home and lock screen. Apps can't copy your current wallpaper, so note it first."
-                } else {
-                    "This tablet doesn't let apps change the wallpaper."
-                },
-                style = type.bodyMedium,
-                color = scheme.onSurfaceVariant,
-            )
-            // Each state is a new live region, so TalkBack says it when it appears (as it does a snackbar).
-            if (outcome != ApplyOutcome.None && !applying) {
-                key(outcome) {
-                    Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (outcome == ApplyOutcome.Failed) {
-                            StatusPill("Couldn't set the wallpaper", StatusLevel.Bad)
-                            Text(plainWallpaperFailure(failureDetail), style = type.bodyMedium, color = scheme.onSurface)
-                        } else {
-                            StatusPill("Requested", StatusLevel.Unknown)
-                            Text("No answer from the tablet yet. Look at your home screen.", style = type.bodyMedium, color = scheme.onSurface)
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = Tokens.GapS),
+            verticalArrangement = Arrangement.spacedBy(Tokens.GapS),
+        ) {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = if (allowed) {
+                        "Sets your home and lock screen. Apps can't copy your current wallpaper, so note it first."
+                    } else {
+                        "This tablet doesn't let apps change the wallpaper."
+                    },
+                    style = type.bodyMedium,
+                    color = scheme.onSurfaceVariant,
+                )
+                // Each state is a new live region: Compose reports a new node's first layout with the node itself
+                // as the source, so TalkBack says it when it appears.
+                if (outcome != ApplyOutcome.None && !applying) {
+                    key(outcome) {
+                        Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (outcome == ApplyOutcome.Failed) {
+                                StatusPill("Couldn't set the wallpaper", StatusLevel.Bad)
+                                Text(plainWallpaperFailure(failureDetail), style = type.bodyMedium, color = scheme.onSurface)
+                            } else {
+                                StatusPill("Requested", StatusLevel.Unknown)
+                                Text("No answer from the tablet yet. Look at your home screen.", style = type.bodyMedium, color = scheme.onSurface)
+                            }
                         }
                     }
                 }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (applying) {
-                    Row(
-                        modifier = Modifier.weight(1f, fill = false).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Text("Applying…", style = type.bodyMedium, color = scheme.onSurface)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (applying) {
+                        Row(
+                            modifier = Modifier.weight(1f, fill = false).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Text("Applying…", style = type.bodyMedium, color = scheme.onSurface)
+                        }
                     }
+                    val retry = outcome == ApplyOutcome.Failed && !applying
+                    PillButton(
+                        text = if (retry) "Retry" else "Apply",
+                        onClick = onApply,
+                        icon = if (retry) Sym.refresh else null,
+                        enabled = allowed && !applying,
+                    )
                 }
-                val retry = outcome == ApplyOutcome.Failed && !applying
-                PillButton(
-                    text = if (retry) "Retry" else "Apply",
-                    onClick = onApply,
-                    icon = if (retry) Sym.refresh else null,
-                    enabled = allowed && !applying,
-                )
             }
-        }
-        Disclosure {
-            val context = LocalContext.current
-            val longSide = remember(context) { runCatching { WallpaperGenerator.longSide(context) }.getOrNull() }
-            Text("Seed $seed · ${if (dark) "dark" else "light"} · accent #${hexRgb(accent)}")
-            Text(
-                "Apply draws it ${longSide?.let { "$it px" } ?: "at the screen's long side"} square and sets home and lock " +
-                    "(WallpaperManager FLAG_SYSTEM | FLAG_LOCK).",
-            )
-            Text("Saved: wallpaperApplied $wallpaperApplied")
-            if (failureDetail != null) Text("Last error: $failureDetail")
+            Disclosure {
+                val context = LocalContext.current
+                val longSide = remember(context) { runCatching { WallpaperGenerator.longSide(context) }.getOrNull() }
+                Text("Seed $seed · ${if (dark) "dark" else "light"} · accent #${hexRgb(accent)}")
+                Text(
+                    "Apply draws it ${longSide?.let { "$it px" } ?: "at the screen's long side"} square and sets home and lock " +
+                        "(WallpaperManager FLAG_SYSTEM | FLAG_LOCK).",
+                )
+                Text("Saved: wallpaperApplied $wallpaperApplied")
+                if (failureDetail != null) Text("Last error: $failureDetail")
+            }
         }
     }
 }
