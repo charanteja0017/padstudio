@@ -8,6 +8,7 @@ import com.charan.padstudio.core.pen.PenIntent
 import com.charan.padstudio.core.pen.PenKind
 import com.charan.padstudio.core.pen.PenMode
 import com.charan.padstudio.core.pen.PenProfile
+import com.charan.padstudio.core.pen.PenStatus
 import com.charan.padstudio.core.pen.PenTrigger
 import com.charan.padstudio.core.pen.Press
 import java.time.Instant
@@ -45,19 +46,16 @@ fun bindingLabel(control: PenControl, press: Press): String =
 fun boundIntent(bindings: List<Binding>, contextId: String, controlId: String, press: Press): PenIntent? =
     bindings.firstOrNull { it.contextId == contextId && it.control == controlId && it.press == press }?.intent
 
-/** The pen's name in status lines ("Focus Pen Pro · Expert setup · 4 controls recorded"). */
+/** The pen's name in status lines ("Focus Pen Pro · Expert setup · 4 controls recorded") and in the header's pen menu. */
 fun penName(kind: PenKind): String = when (kind) {
     PenKind.TWO_BUTTON -> "Two-button pen"
     PenKind.FOCUS_PEN_PRO -> "Focus Pen Pro"
 }
 
-/** The pen-kind choice's segment labels. */
-fun penKindChoice(kind: PenKind): String = when (kind) {
-    PenKind.TWO_BUTTON -> "Two buttons"
-    PenKind.FOCUS_PEN_PRO -> "Focus Pen Pro"
-}
+/** The header's pen switcher: the current pen's name and a caret ("Focus Pen Pro ▾"). */
+fun penSwitcherLabel(kind: PenKind): String = "${penName(kind)} ▾"
 
-/** One line under the pen-kind choice. */
+/** One line on what each pen has, under its name in the pen menu. */
 fun penKindDetail(kind: PenKind): String = when (kind) {
     PenKind.TWO_BUTTON -> "Smart Pen 2 or Focus Pen: an upper and a lower button"
     PenKind.FOCUS_PEN_PRO -> "Squeeze, slide up, slide down and double tap"
@@ -104,6 +102,12 @@ fun contextLabels(context: PenContext): ContextLabels = when {
 
 /** "1 app", "3 apps". */
 fun appCount(count: Int): String = if (count == 1) "1 app" else "$count apps"
+
+/** The small badge on a context's one icon when [more] other apps share it: "+2". */
+fun moreAppsBadge(more: Int): String = "+$more"
+
+/** What TalkBack reads for a context's one icon: "ReadEra", or "ReadEra and 2 more" when [more] apps sit behind its badge. */
+fun appsDescription(first: String, more: Int): String = if (more > 0) "$first and $more more" else first
 
 /** How many of [controls] have at least one action in [contextId]. */
 fun controlsWithActions(bindings: List<Binding>, contextId: String, controls: List<PenControl>): Int =
@@ -181,7 +185,36 @@ fun sentTimeLabel(epochMs: Long, nowMs: Long, zone: ZoneId, time: (Long) -> Stri
     return if (then == today) time(epochMs) else "${day(epochMs)} ${time(epochMs)}"
 }
 
+/**
+ * What the bar's Key Mapper pill says: PenStatus's own words ("Key Mapper is off"), or that it isn't installed when
+ * it isn't, because its accessibility service can't be turned on for an app that isn't there.
+ */
+fun keyMapperBarText(status: PenStatus, installed: Boolean): String =
+    if (!installed && status.keyMapper != PenStatus.KeyMapper.LISTENING) KEY_MAPPER_MISSING else status.keyMapperText
+
+/** Whether the bar offers Fix (it opens the accessibility settings): Key Mapper is installed but not listening. */
+fun offersKeyMapperFix(status: PenStatus, installed: Boolean): Boolean =
+    installed && status.keyMapper != PenStatus.KeyMapper.LISTENING
+
+/** The narrowest window, in dp, that shows the Pen tab as list–detail panes. */
+const val PANES_MIN_WIDTH_DP = 840f
+
+/** How many characters of body text (one em each) the panes' left pane keeps room for. */
+const val LEFT_PANE_CHARS = 14
+
+/**
+ * Whether the Pen tab shows list–detail panes: the window is at least [PANES_MIN_WIDTH_DP] wide, and the left
+ * pane ([leftPaneDp] wide) keeps room for [LEFT_PANE_CHARS] characters of body-medium text at the user's text size
+ * ([bodyMediumDp] is its font size in dp). At 200 % text even the widest left pane is too narrow for that, so
+ * the page is one column and no row breaks a word mid-word.
+ */
+fun showsPanes(windowDp: Float, leftPaneDp: Float, bodyMediumDp: Float): Boolean =
+    windowDp >= PANES_MIN_WIDTH_DP && leftPaneDp >= bodyMediumDp * LEFT_PANE_CHARS
+
 /** What "any app not in another context" is called, as the generator and PadStudio 1 call it. */
 const val EVERYWHERE_TITLE = "Everywhere else"
+
+/** The bar's Key Mapper pill when its app isn't on the tablet. */
+const val KEY_MAPPER_MISSING = "Key Mapper isn't installed"
 
 private const val SEPARATOR = " · "

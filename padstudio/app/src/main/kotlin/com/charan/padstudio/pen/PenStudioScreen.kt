@@ -10,22 +10,27 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -47,11 +52,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.charan.padstudio.MainViewModel
@@ -76,7 +83,6 @@ import com.charan.padstudio.pen.screen.DeveloperFacts
 import com.charan.padstudio.pen.screen.HeroCard
 import com.charan.padstudio.pen.screen.MatrixCell
 import com.charan.padstudio.pen.screen.MatrixRow
-import com.charan.padstudio.pen.screen.PenChoice
 import com.charan.padstudio.pen.screen.PenConfirm
 import com.charan.padstudio.pen.screen.PenNotice
 import com.charan.padstudio.pen.screen.PenStage
@@ -97,10 +103,13 @@ import com.charan.padstudio.pen.screen.controlsSetLine
 import com.charan.padstudio.pen.screen.controlsWithActions
 import com.charan.padstudio.pen.screen.describeDevices
 import com.charan.padstudio.pen.screen.groupOf
+import com.charan.padstudio.pen.screen.heroFill
 import com.charan.padstudio.pen.screen.isDark
 import com.charan.padstudio.pen.screen.markerFor
 import com.charan.padstudio.pen.screen.penBackdrop
+import com.charan.padstudio.pen.screen.penKindDetail
 import com.charan.padstudio.pen.screen.penName
+import com.charan.padstudio.pen.screen.penSwitcherLabel
 import com.charan.padstudio.pen.screen.penWarnings
 import com.charan.padstudio.pen.screen.penWideWarnings
 import com.charan.padstudio.pen.screen.pressLabel
@@ -109,10 +118,13 @@ import com.charan.padstudio.pen.screen.rememberPenUiState
 import com.charan.padstudio.pen.screen.rememberRecordingTracker
 import com.charan.padstudio.pen.screen.screenContexts
 import com.charan.padstudio.pen.screen.sentTimeLabel
+import com.charan.padstudio.pen.screen.setupName
+import com.charan.padstudio.pen.screen.showsPanes
 import com.charan.padstudio.pen.screen.switchLoses
 import com.charan.padstudio.pen.screen.warningsFor
 import com.charan.padstudio.ui.LocalStudioSnackbar
 import com.charan.padstudio.ui.Sym
+import com.charan.padstudio.ui.components.ActionChip
 import com.charan.padstudio.ui.components.BindingChip
 import com.charan.padstudio.ui.components.ConfirmDialog
 import com.charan.padstudio.ui.components.EmptyState
@@ -122,6 +134,7 @@ import com.charan.padstudio.ui.components.PillStyle
 import com.charan.padstudio.ui.components.RowLeading
 import com.charan.padstudio.ui.components.ScreenScaffold
 import com.charan.padstudio.ui.components.StudioCard
+import com.charan.padstudio.ui.components.SymIcon
 import com.charan.padstudio.ui.components.SymIconButton
 import com.charan.padstudio.ui.components.cardBleed
 import com.charan.padstudio.ui.theme.Tokens
@@ -131,10 +144,12 @@ import java.time.ZoneId
 import java.util.Date
 
 /**
- * The Pen tab (redesign plan §10 "Pen"; mock-up docs/redesign/mock-pen.html): which pen and setup, where the pen
- * works (contexts with their apps), what each control does there (the pen with callouts, or a 2 × 3 grid for a
- * two-button pen), an action picker, recording, and Send to Key Mapper. At 840 dp and wider it shows list–detail
- * panes with the picker as a side sheet; below that one column with the picker as a bottom sheet.
+ * The Pen tab (redesign plan §10 "Pen"; mock-up docs/redesign/mock-pen.html): which pen and setup (the pen menu and
+ * the setup chip in the page header), where the pen works (contexts with their apps), what each control does there
+ * (the pen with callouts, or a 2 × 3 grid for a two-button pen), an action picker, recording, and Send to Key
+ * Mapper. At 840 dp and wider, when the left pane also keeps room for 14 characters of body text at the user's
+ * text size, it shows list–detail panes with the picker as a side sheet; otherwise one column with the picker as a
+ * bottom sheet.
  *
  * Every button calls the same [MainViewModel] function with the same arguments as PadStudio 1's Pen screen did
  * (plan §4). Pen key events still reach the view model through MainActivity.dispatchKeyEvent; this screen only
@@ -298,18 +313,44 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
     val sentLine = status.sentText(timeLabel)
     val notesApps = remember(snapshot, plan, config.notesApp) { notesCandidates(snapshot?.apps.orEmpty(), plan, config.notesApp) }
 
-    val pauseAction: @Composable () -> Unit = {
+    val pauseAction: @Composable (Modifier) -> Unit = { actionModifier ->
         PillButton(
             text = if (config.penEnabled) "Pause pen" else "Resume pen",
             onClick = { setPen(!config.penEnabled) },
+            modifier = actionModifier,
             style = PillStyle.Outlined,
             icon = if (config.penEnabled) Sym.pause else Sym.play,
         )
     }
 
+    // The setup chip opens Advanced, where the setup is chosen, and brings it into view.
+    val openAdvanced: () -> Unit = {
+        ui.advancedOpen = true
+        scope.launch {
+            delay(ADVANCED_OPEN_MS)
+            advancedRequester.bringIntoView()
+        }
+    }
+
+    // The page header's actions: which pen (the same switch the left pane's segmented choice made), the setup, and
+    // Pause/Resume. They wrap under one another when the header, or the text, leaves them no room side by side.
+    val headerActions: @Composable RowScope.() -> Unit = {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            PenSwitcher(kind = kind, onKind = ::requestKind, modifier = Modifier.align(Alignment.CenterVertically))
+            ActionChip(
+                label = setupName(mode),
+                onClick = openAdvanced,
+                modifier = Modifier.align(Alignment.CenterVertically),
+                icon = Sym.settings,
+            )
+            pauseAction(Modifier.align(Alignment.CenterVertically))
+        }
+    }
+
     val sendBar: @Composable (Modifier) -> Unit = { barModifier ->
         SendBar(
             status = status,
+            keyMapperInstalled = keyMapper.installed,
             sentLine = sentLine,
             canSend = plan != null,
             note = note,
@@ -318,22 +359,6 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
             onTestPen = { onStart(Intent(context, PenTestActivity::class.java)) },
             onFixKeyMapper = { onStart(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) },
             modifier = barModifier,
-        )
-    }
-
-    val penChoice: @Composable () -> Unit = {
-        if (penWide.isNotEmpty()) PenNotice(penWide)
-        PenChoice(
-            kind = kind,
-            mode = mode,
-            onKind = ::requestKind,
-            onSetupChip = {
-                ui.advancedOpen = true
-                scope.launch {
-                    delay(ADVANCED_OPEN_MS)
-                    advancedRequester.bringIntoView()
-                }
-            },
         )
     }
 
@@ -396,9 +421,10 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
     }
 
     // The right pane's body for the chosen context. [fill]: take the card's remaining height (panes) or a fixed one.
-    val heroBody: @Composable ColumnScope.(Boolean, Dp) -> Unit = { fill, stageHeight ->
+    // [cardHeight] is the card's own height in the panes (the card scrolls when its content is taller), else unspecified.
+    val heroBody: @Composable (Boolean, Dp, Dp) -> Unit = { fill, stageHeight, cardHeight ->
         val item = selected
-        val sized = if (fill) Modifier.weight(1f).fillMaxWidth() else Modifier.height(stageHeight).fillMaxWidth()
+        val sized = if (fill) Modifier.heroFill().fillMaxWidth() else Modifier.height(stageHeight).fillMaxWidth()
         when {
             item == null -> Unit
             item.context.passThrough -> PassThroughNote(item)
@@ -429,7 +455,9 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
                         style = PillStyle.Tonal,
                     )
                 }
-                MorePresses(controls, mode, bindings, contextId) { control, press -> chooseControl(control.id, press) }
+                // Capped at 40 % of the card, so a long list never crowds the pen out; it scrolls inside the cap.
+                val moreCap = if (cardHeight.isSpecified) cardHeight * MORE_PRESSES_SHARE else Dp.Unspecified
+                MorePresses(controls, mode, bindings, contextId, moreCap) { control, press -> chooseControl(control.id, press) }
             }
             else -> {
                 val rows = controls.map { control ->
@@ -458,8 +486,6 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
                         ui.controlId = controlId
                         openPicker(item.context.id, controlId, press)
                     },
-                    // In the panes the grid scrolls inside the card; in one column the page scrolls instead.
-                    modifier = if (fill) Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()) else Modifier,
                 )
             }
         }
@@ -476,7 +502,7 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
                 needsOpen = ui.needsOpen,
                 onNeedsOpen = { ui.needsOpen = it },
                 modifier = heroModifier,
-            ) { heroBody(fill, stageHeight) }
+            ) { cardHeight -> heroBody(fill, stageHeight, cardHeight) }
         }
     }
 
@@ -530,15 +556,17 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
     }
 
     BoxWithConstraints(modifier) {
-        val wide = maxWidth >= PANES_MIN_WIDTH
+        val inner = maxWidth - Tokens.Gutter * 2
+        val main = if (target != null) inner - SIDE_SHEET_WIDTH - PANE_GAP else inner
+        val leftWidth = (main * LEFT_SHARE).coerceIn(LEFT_MIN, LEFT_MAX)
+        // The left pane keeps room for 14 characters of body text at the user's text size, or the page is one column.
+        val bodyMedium = with(LocalDensity.current) { MaterialTheme.typography.bodyMedium.fontSize.toDp() }
+        val wide = showsPanes(windowDp = maxWidth.value, leftPaneDp = leftWidth.value, bodyMediumDp = bodyMedium.value)
         BackHandler(enabled = capturing != null || (wide && target != null)) {
             if (capturing != null) tracker.cancel() else ui.picker = null
         }
         if (wide) {
-            val inner = maxWidth - Tokens.Gutter * 2
-            val main = if (target != null) inner - SIDE_SHEET_WIDTH - PANE_GAP else inner
-            val leftWidth = (main * LEFT_SHARE).coerceIn(LEFT_MIN, LEFT_MAX)
-            ScreenScaffold(title = "Pen", subtitle = subtitle, scrollState = null, actions = { pauseAction() }) {
+            ScreenScaffold(title = "Pen", subtitle = subtitle, scrollState = null, actions = headerActions) {
                 Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
                     Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(PANE_GAP)) {
                         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(PANE_GAP)) {
@@ -547,8 +575,10 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
                                     Modifier.weight(1f).verticalScroll(rememberScrollState()),
                                     verticalArrangement = Arrangement.spacedBy(12.dp),
                                 ) {
-                                    penChoice()
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                    if (penWide.isNotEmpty()) {
+                                        PenNotice(penWide)
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                    }
                                     WhereLabel()
                                     contextList(LEFT_PANE_BLEED)
                                     advanced(Modifier)
@@ -575,9 +605,9 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
         } else {
             val stageHeight = (maxWidth * NARROW_STAGE_SHARE).coerceIn(NARROW_STAGE_MIN, NARROW_STAGE_MAX)
             Box(Modifier.fillMaxSize()) {
-                ScreenScaffold(title = "Pen", subtitle = subtitle, actions = { pauseAction() }) {
+                ScreenScaffold(title = "Pen", subtitle = subtitle, actions = headerActions) {
                     sendBar(Modifier.fillMaxWidth())
-                    StudioCard(Modifier.fillMaxWidth()) { penChoice() }
+                    if (penWide.isNotEmpty()) PenNotice(penWide)
                     StudioCard(Modifier.fillMaxWidth()) {
                         WhereLabel()
                         contextList(CARD_BLEED)
@@ -643,18 +673,69 @@ private fun WhereLabel() {
 }
 
 /**
- * The presses beside each control's main one that have an action here (Squeeze double press · Open camera), so
- * nothing set is hidden behind a callout. Choosing one opens the picker on that press.
+ * The pen switcher in the page header: an outlined button named for the pen ("Focus Pen Pro ▾") that opens a menu
+ * of the pens, each with a line on what it has, and a check on the current one. Choosing one calls [onKind], which
+ * asks first when the switch would clear recordings or custom actions.
  */
 @Composable
-private fun MorePresses(controls: List<PenControl>, mode: PenMode, bindings: List<Binding>, contextId: String, onChoose: (PenControl, Press) -> Unit) {
+private fun PenSwitcher(kind: PenKind, onKind: (PenKind) -> Unit, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    val type = MaterialTheme.typography
+    var open by remember { mutableStateOf(false) }
+    Box(modifier) {
+        PillButton(text = penSwitcherLabel(kind), onClick = { open = true }, style = PillStyle.Outlined)
+        DropdownMenu(
+            expanded = open,
+            onDismissRequest = { open = false },
+            shape = RoundedCornerShape(Tokens.CornerM),
+            containerColor = scheme.surfaceContainerHigh,
+        ) {
+            PenKind.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(text = penName(option), style = type.bodyLarge, color = scheme.onSurface)
+                            Text(text = penKindDetail(option), style = type.bodyMedium, color = scheme.onSurfaceVariant)
+                        }
+                    },
+                    onClick = {
+                        open = false
+                        onKind(option)
+                    },
+                    leadingIcon = { SymIcon(Sym.pen, contentDescription = null) },
+                    trailingIcon = if (option == kind) {
+                        { SymIcon(Sym.ok, contentDescription = "Current pen") }
+                    } else {
+                        null
+                    },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The presses beside each control's main one that have an action here (Squeeze double press · Open camera), so
+ * nothing set is hidden behind a callout. Choosing one opens the picker on that press. In the panes the list is
+ * capped at [maxHeight] (unspecified: no cap, as in one column, where the page scrolls) and scrolls inside the cap.
+ */
+@Composable
+private fun MorePresses(
+    controls: List<PenControl>,
+    mode: PenMode,
+    bindings: List<Binding>,
+    contextId: String,
+    maxHeight: Dp,
+    onChoose: (PenControl, Press) -> Unit,
+) {
     val extras = controls.filterNot { it.singleGesture }.flatMap { control ->
         pressesFor(control, mode).filter { it != Press.SHORT }.mapNotNull { press ->
             boundIntent(bindings, contextId, control.id, press)?.let { Triple(control, press, it) }
         }
     }
     if (extras.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val capped = if (maxHeight.isSpecified) Modifier.heightIn(max = maxHeight).verticalScroll(rememberScrollState()) else Modifier
+    Column(capped, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(text = "More presses", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         ChipFlow {
             extras.forEach { (control, press, intent) ->
@@ -699,9 +780,9 @@ private fun notesCandidates(apps: List<InstalledApp>, plan: PenPlan?, chosen: St
     return candidates + listOfNotNull(extra)
 }
 
-/** Key Mapper as this screen reads it, again on every resume: its accessibility service and version. */
+/** Key Mapper as this screen reads it, again on every resume: whether it is installed, its accessibility service and version. */
 @Immutable
-private data class KeyMapperState(val listening: Boolean, val version: String?)
+private data class KeyMapperState(val listening: Boolean, val version: String?, val installed: Boolean)
 
 @Composable
 private fun rememberKeyMapper(): KeyMapperState {
@@ -714,7 +795,11 @@ private fun rememberKeyMapper(): KeyMapperState {
     return state
 }
 
-private fun readKeyMapper(context: Context) = KeyMapperState(KeyMapperBridge.isAccessibilityEnabled(context), KeyMapperBridge.versionName(context))
+private fun readKeyMapper(context: Context) = KeyMapperState(
+    listening = KeyMapperBridge.isAccessibilityEnabled(context),
+    version = KeyMapperBridge.versionName(context),
+    installed = KeyMapperBridge.isInstalled(context),
+)
 
 /** "14:05" (the device's 12/24-hour setting), with the day ("11 Oct 14:05") when it wasn't today. */
 @Composable
@@ -751,7 +836,8 @@ private const val NOTE_SHOWN_MS = 4_000L
 /** Lets the Advanced section start opening before it's scrolled into view. */
 private const val ADVANCED_OPEN_MS = 150L
 
-private val PANES_MIN_WIDTH = 840.dp
+/** The share of the hero card that "More presses" may take before it scrolls inside itself. */
+private const val MORE_PRESSES_SHARE = 0.4f
 
 /** Context rows reach into the left pane's 12 dp padding (selection inset from the edge) and a card's 20 dp. */
 private val LEFT_PANE_BLEED = 8.dp

@@ -9,13 +9,16 @@ import com.charan.padstudio.core.pen.PenIntent
 import com.charan.padstudio.core.pen.PenKind
 import com.charan.padstudio.core.pen.PenMode
 import com.charan.padstudio.core.pen.PenProfile
+import com.charan.padstudio.core.pen.PenStatus
 import com.charan.padstudio.core.pen.PenTrigger
 import com.charan.padstudio.core.pen.Press
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class PenLabelsTest {
     @Test fun `controls and presses are what PadStudio 1 offered`() {
@@ -61,6 +64,44 @@ class PenLabelsTest {
         assertEquals(ContextLabels("Home screen", "Your home screen"), contextLabels(DefaultProfiles.HOME))
         assertEquals(ContextLabels("Reading & PDF", "2 apps"), contextLabels(DefaultProfiles.READING.copy(packages = listOf("a", "b"))))
         assertEquals("1 app", appCount(1))
+    }
+
+    @Test fun `the pen switcher names the current pen and its menu has a line for each pen`() {
+        assertEquals("Two-button pen ▾", penSwitcherLabel(PenKind.TWO_BUTTON))
+        assertEquals("Focus Pen Pro ▾", penSwitcherLabel(PenKind.FOCUS_PEN_PRO))
+        assertEquals(listOf("Two-button pen", "Focus Pen Pro"), PenKind.entries.map(::penName))
+        PenKind.entries.forEach { kind -> assertTrue(penKindDetail(kind).isNotBlank(), "$kind has a line in the menu") }
+        assertEquals(PenKind.entries.size, PenKind.entries.map(::penKindDetail).distinct().size)
+    }
+
+    @Test fun `a context's one icon is badged and read with the apps behind it`() {
+        assertEquals("+1", moreAppsBadge(1))
+        assertEquals("+12", moreAppsBadge(12))
+        assertEquals("ReadEra", appsDescription("ReadEra", 0))
+        assertEquals("ReadEra and 2 more", appsDescription("ReadEra", 2))
+    }
+
+    @Test fun `the bar says Key Mapper isn't installed instead of off, and offers no Fix for it`() {
+        val off = PenStatus(listening = false, sentHash = null, planHash = null, appliedAt = null, penEnabled = true)
+        val listening = off.copy(listening = true)
+        assertEquals("Key Mapper is off", keyMapperBarText(off, installed = true))
+        assertEquals("Key Mapper isn't installed", keyMapperBarText(off, installed = false))
+        assertEquals("Key Mapper isn't installed", KEY_MAPPER_MISSING)
+        assertEquals("Key Mapper is listening", keyMapperBarText(listening, installed = true))
+        assertTrue(offersKeyMapperFix(off, installed = true), "installed but off: Fix opens the accessibility settings")
+        assertFalse(offersKeyMapperFix(off, installed = false), "nothing to fix in an app that isn't there")
+        assertFalse(offersKeyMapperFix(listening, installed = true), "listening: nothing to fix")
+    }
+
+    @Test fun `the panes give way to one column when the left pane can't hold 14 characters of body text`() {
+        // Body-medium is 13 sp: 13 dp at 100 % text, 16.9 at 130 %, 19.5 at 150 %, 26 at 200 %. The left pane is 240 to 300 dp.
+        assertTrue(showsPanes(windowDp = 840f, leftPaneDp = 240f, bodyMediumDp = 13f), "182 dp needed")
+        assertTrue(showsPanes(windowDp = 840f, leftPaneDp = 240f, bodyMediumDp = 13f * 1.3f), "236.6 dp needed")
+        assertFalse(showsPanes(windowDp = 840f, leftPaneDp = 240f, bodyMediumDp = 13f * 1.5f), "273 dp needed")
+        assertTrue(showsPanes(windowDp = 1400f, leftPaneDp = 300f, bodyMediumDp = 13f * 1.5f), "273 dp needed, 300 there")
+        assertFalse(showsPanes(windowDp = 1400f, leftPaneDp = 300f, bodyMediumDp = 26f), "200 %: 364 dp needed, 300 at most")
+        assertTrue(showsPanes(windowDp = 840f, leftPaneDp = 280f, bodyMediumDp = 20f), "exactly 14 em fits")
+        assertFalse(showsPanes(windowDp = 839f, leftPaneDp = 300f, bodyMediumDp = 13f), "narrower than 840 dp: one column")
     }
 
     @Test fun `controls set lines`() {
