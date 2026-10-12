@@ -6,6 +6,11 @@
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <!-- "Most used" in the Library and the folders ranks apps by the time they were open. The user grants this in
+         Settings (Usage access); without it the ranking counts launches from PadStudio's own panels. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
     <!-- Generated wallpapers. -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <!-- SceneView (the 3D pen) declares these for network models and haptics. PadStudio loads its pen from
