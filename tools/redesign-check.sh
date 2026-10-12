@@ -8,6 +8,8 @@
 #   tools/redesign-check.sh shots <name> [opts] tab…   screenshot PadStudio tabs (today pen home looks setup about)
 #        opts: --theme dark|light  --font <scale>  --bold on|off   (PadStudio's own debug overrides, reset after)
 #   tools/redesign-check.sh demo <name>                screenshot the 3D pen demo activity
+#   tools/redesign-check.sh open <name> probe|pentest  screenshot the pen probe or the pen test
+#   tools/redesign-check.sh home <name>                screenshot the home screen (only if it is in front)
 #
 # Tablet rule (§12): acts only when the tablet is asleep, or the home screen or PadStudio is in front.
 # Never presses HOME over another app, never changes a system setting, never uses uiautomator, never unlocks.
@@ -198,6 +200,24 @@ cmd_shots() {
   leave
 }
 
+cmd_open() { # open <name> probe|pentest: PadStudio's debug `--es open` screens, then a screenshot
+  local name="${1:-}" what="${2:-}"
+  [[ "$name" =~ ^[A-Za-z0-9._-]+$ && "$what" =~ ^(probe|pentest)$ ]] || { echo "usage: $0 open <name> probe|pentest" >&2; return 64; }
+  tablet_rule screen || return $?
+  start_app --es open "$what"
+  sleep 3
+  shot "$LOGS/$(date +%Y-%m-%d)-$name.png" || true
+  adb shell input keyevent KEYCODE_BACK
+  sleep 1
+  leave
+}
+
+cmd_home() { # home <name>: a screenshot of the home screen (only when it is already in front)
+  local name="${1:-home}"
+  [[ "$(top_pkg)" == "com.miui.home" && "$(keyguard)" != "true" ]] || { echo "NOT NOW: the home screen isn't in front." >&2; return 75; }
+  shot "$LOGS/$(date +%Y-%m-%d)-$name.png"
+}
+
 cmd_demo() {
   local name="${1:-pen3d}"
   tablet_rule screen || return $?
@@ -215,5 +235,7 @@ case "${1:-}" in
   dump) cmd_dump ;;
   shots) shift; cmd_shots "$@" ;;
   demo) shift; cmd_demo "$@" ;;
+  open) shift; cmd_open "$@" ;;
+  home) shift; cmd_home "$@" ;;
   *) sed -n '2,13p' "$0" >&2; exit 64 ;;
 esac
