@@ -26,7 +26,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -35,7 +34,6 @@ import com.charan.padstudio.debug.DebugDumps
 import com.charan.padstudio.debug.DebugOverrides
 import com.charan.padstudio.home.HomeKitScreen
 import com.charan.padstudio.looks.LooksScreen
-import com.charan.padstudio.pen.KeyMapperBridge
 import com.charan.padstudio.pen.PenStudioScreen
 import com.charan.padstudio.setup.SetupScreen
 import com.charan.padstudio.today.TodayScreen
@@ -44,8 +42,6 @@ import com.charan.padstudio.ui.LocalStudioSnackbar
 import com.charan.padstudio.ui.PadStudioShell
 import com.charan.padstudio.ui.PadStudioTheme
 import com.charan.padstudio.ui.ShellDestination
-import com.charan.padstudio.ui.ShellStatusLine
-import com.charan.padstudio.ui.ShellStatusTone
 import kotlinx.coroutines.launch
 
 /**
@@ -185,8 +181,6 @@ class MainActivity : ComponentActivity() {
             destinations = railDestinations,
             selected = tab,
             onSelect = { tab = it },
-            onSettings = { tab = Tab.SETUP },
-            statusLine = { KeyMapperStatusLine() },
             snackbarHost = { SnackbarHost(snackbar) },
         ) {
             // Screens post their own timed results into the same host (LocalStudioSnackbar), so messages queue.
@@ -204,24 +198,5 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-}
-
-/**
- * The rail's status line until the plan §7 status model drives it: whether Key Mapper's accessibility service is
- * on (read like the Pen screen's Key Mapper card, again on every resume). It never claims Expert mode is running.
- */
-@Composable
-private fun KeyMapperStatusLine() {
-    val context = LocalContext.current
-    var listening by remember { mutableStateOf(KeyMapperBridge.isAccessibilityEnabled(context)) }
-    LifecycleResumeEffect(context) {
-        listening = KeyMapperBridge.isAccessibilityEnabled(context)
-        onPauseOrDispose { }
-    }
-    if (listening) {
-        ShellStatusLine("Key Mapper is listening", ShellStatusTone.Good)
-    } else {
-        ShellStatusLine("Key Mapper is off", ShellStatusTone.Attention)
     }
 }
