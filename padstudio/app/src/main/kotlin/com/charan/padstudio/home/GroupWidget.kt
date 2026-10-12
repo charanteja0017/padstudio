@@ -108,7 +108,8 @@ import androidx.glance.material3.ColorProviders as materialColors
  *   colours (Glance's dynamic colours) while Looks → "Match wallpaper colours" is on; the system's widget
  *   corner radius.
  *
- * Glance lays out at most 10 children per Row and Column, which [GridSpec] (10 columns, 8 rows) respects.
+ * Glance lays out at most 10 children per Row and Column. Exact grids stay inside that ([GridSpec]: 10 columns,
+ * 8 rows); Auto caps columns at 10 but not rows, so a taller Auto grid draws at most 10 rows ([drawnRows]).
  */
 class GroupWidget : GlanceAppWidget() {
     // Exact: one layout per size the launcher reports (portrait and landscape), each filling the real
@@ -382,8 +383,8 @@ private fun Pill(title: String, count: String?) {
     }
 }
 
-/** How each cell draws: the icon size, and whether icon and label fit so they can be centred. */
-private class CellGeometry(val iconDp: Float, val showLabel: Boolean, val centred: Boolean)
+/** How each cell draws: its height, the icon size, and whether icon and label fit so they can be centred. */
+private class CellGeometry(val cellHeightDp: Float, val iconDp: Float, val showLabel: Boolean, val centred: Boolean)
 
 private fun cellGeometry(layout: WidgetLayout, gridHeightDp: Float, meter: TextMeter): CellGeometry {
     // Rows share what the header leaves, which is a little less than layoutFor's 28 dp header allows once
@@ -392,7 +393,7 @@ private fun cellGeometry(layout: WidgetLayout, gridHeightDp: Float, meter: TextM
     // Never bigger than its cell: only very small widgets (under one 48 dp cell) need this.
     val iconDp = minOf(layout.iconDp, layout.cellWidthDp, cellHeightDp).coerceAtLeast(1f)
     val labelDp = if (layout.showLabels) meter.lineDp(LABEL_SP, WEIGHT_REGULAR) else null
-    return CellGeometry(iconDp, layout.showLabels, cellHolds(cellHeightDp, iconDp, labelDp))
+    return CellGeometry(cellHeightDp, iconDp, layout.showLabels, cellHolds(cellHeightDp, iconDp, labelDp))
 }
 
 @Composable
@@ -407,14 +408,20 @@ private fun ColumnScope.AppGrid(
     openPanel: Action,
 ) {
     val colors = themedIconColors(context)
+    // Up to 10 rows share the height. A taller Auto grid can't (drawnRows), so each row gets its share fixed.
+    val rowModifier = if (layout.rows <= GroupPlanner.MAX_PER_ROW) {
+        GlanceModifier.fillMaxWidth().defaultWeight()
+    } else {
+        GlanceModifier.fillMaxWidth().height(geometry.cellHeightDp.dp)
+    }
     Column(modifier = GlanceModifier.fillMaxWidth().defaultWeight().padding(horizontal = PAD_DP.dp)) {
-        gridCells(group.apps, layout.columns, layout.rows).forEach { row ->
+        drawnRows(group.apps, layout.columns, layout.rows).forEach { row ->
             // Empty rows keep their share, so the cells keep the height layoutFor gave them.
             if (row.all { it == Cell.Empty }) {
                 Spacer(GlanceModifier.fillMaxWidth().defaultWeight())
                 return@forEach
             }
-            Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+            Row(modifier = rowModifier) {
                 row.forEach { cell ->
                     when (cell) {
                         is Cell.App -> {
@@ -812,6 +819,19 @@ internal fun <T> gridCells(apps: List<T>, columns: Int, rows: Int): List<List<Ce
     val filled: List<Cell<T>> = apps.take(overflow.shown).map { Cell.App(it) } +
         (if (overflow.more > 0) listOf(Cell.More(overflow.more)) else emptyList())
     return List(rows) { row -> List(columns) { column -> filled.getOrNull(row * columns + column) ?: Cell.Empty } }
+}
+
+/**
+ * The rows the grid draws: [gridCells], at most 10 rows of it. Glance draws only the first 10 children of a
+ * Row or Column and drops the rest without a word (glance-appwidget's RemoteViewsTranslator takes 10).
+ * Columns never pass 10 and exact grids have at most 8 rows, but Auto doesn't cap rows ([GroupPlanner.gridFor]):
+ * from 628 dp tall at Dense (760 dp at Standard) it has 11 or more. Such a grid keeps its rows' height (each
+ * row drawn at its share), leaves out the empty rows at the end, and a group too big for 10 rows ends in
+ * "+N" on the 10th, so no app is ever dropped without a tile that opens it.
+ */
+internal fun <T> drawnRows(apps: List<T>, columns: Int, rows: Int): List<List<Cell<T>>> {
+    if (rows <= GroupPlanner.MAX_PER_ROW) return gridCells(apps, columns, rows)
+    return gridCells(apps, columns, GroupPlanner.MAX_PER_ROW).dropLastWhile { row -> row.all { it == Cell.Empty } }
 }
 
 /**

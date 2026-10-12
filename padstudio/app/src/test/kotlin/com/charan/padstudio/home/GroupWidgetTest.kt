@@ -143,6 +143,41 @@ class GroupWidgetTest {
         assertTrue(gridCells(emptyList<String>(), 4, 3).flatten().all { it == Cell.Empty })
     }
 
+    @Test fun `Glance never gets more than 10 rows, and every app has a cell or sits behind +N`() {
+        // Glance drops a Column's children after the 10th, and Auto (gridFor) doesn't cap rows.
+        var tall = 0
+        for (density in Density.entries) for (w in 100..1300 step 50) for (h in 100..1400 step 47) {
+            val layout = widgetLayout(w.toFloat(), h.toFloat(), null, null, density, line)
+            if (layout.rows > 10) tall++
+            val cells = layout.columns * layout.rows
+            for (count in listOf(1, 15, 10 * layout.columns, 10 * layout.columns + 1, cells, cells + 7)) {
+                val apps = List(count) { it }
+                val rows = drawnRows(apps, layout.columns, layout.rows)
+                val at = "$density at $w x $h (${layout.columns} x ${layout.rows}), $count apps"
+                assertTrue(rows.size <= 10 && rows.all { it.size <= 10 }, "Glance draws 10 children at most: ${rows.size} rows, $at")
+                val drawn = rows.flatten()
+                val shown = drawn.filterIsInstance<Cell.App<Int>>().map { it.app }
+                val more = drawn.filterIsInstance<Cell.More>().sumOf { it.count }
+                assertEquals(apps.take(shown.size), shown, at)
+                assertEquals(count, shown.size + more, "no app dropped without a +N tile, $at")
+                if (more > 0) assertEquals(Cell.More(more), drawn.last(), "+N is the last cell drawn, $at")
+            }
+        }
+        assertTrue(tall > 100, "the sweep must reach Auto grids taller than 10 rows, saw $tall")
+    }
+
+    @Test fun `a tall Auto grid keeps its rows and leaves out the empty ones at the end`() {
+        // 700 x 700 dp at Dense: Auto is 10 x 12 (gridFor), two rows more than Glance draws.
+        val layout = widgetLayout(700f, 700f, null, null, Density.DENSE, line)
+        assertEquals(10 to 12, layout.columns to layout.rows)
+        val apps = (1..15).toList()
+        assertEquals(2, drawnRows(apps, 10, 12).size, "15 apps: two rows, the rest of the widget stays empty")
+        val rows = drawnRows((1..130).toList(), 10, 12)
+        assertEquals(10, rows.size)
+        assertEquals(Cell.More(31), rows.last().last(), "99 apps, then +31 on the 10th row")
+        assertEquals(gridCells(apps, 9, 3), drawnRows(apps, 9, 3), "10 rows or fewer: every row, empty ones too")
+    }
+
     @Test fun `a missing icon's tile shows the app's initial`() {
         assertEquals("W", appInitial("WhatsApp", "com.whatsapp"))
         assertEquals("K", appInitial("key Mapper", "io.github.sds100.keymapper"))
