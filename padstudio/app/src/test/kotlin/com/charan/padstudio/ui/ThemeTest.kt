@@ -25,7 +25,7 @@ class ThemeTest {
         )
     }
 
-    /** Token size → its line height (body and titleMedium share 15 / 22). */
+    /** Token size → its line height (body and titleMedium share one size and line height). */
     private val tokenSizes = mapOf(
         Tokens.DisplaySize to Tokens.DisplayLineHeight,
         Tokens.HeadlineSize to Tokens.HeadlineLineHeight,
