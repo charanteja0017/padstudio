@@ -62,7 +62,8 @@ data class StageChip(
  * threshold. The pen view keeps its full-stage layout in both forms (the list form only scales its drawing), so
  * its markers, and the decision, don't change when the form does.
  *
- * [reserveBottomEnd] is a corner the chips keep clear of (the animation's pause button).
+ * [reserveBottomEnd] is a corner the chips keep clear of (the animation's pause button). Bumping [replay] plays
+ * [clip] again from its start (PenModelView's replay).
  */
 @Composable
 fun PenStage(
@@ -73,6 +74,7 @@ fun PenStage(
     onChip: (String) -> Unit,
     modifier: Modifier = Modifier,
     reserveBottomEnd: DpSize = DpSize.Zero,
+    replay: Int = 0,
 ) {
     val board = remember { MarkerBoard() }
     var waited by remember { mutableStateOf(false) }
@@ -136,7 +138,7 @@ fun PenStage(
         }
 
         val pen = subcompose(StageSlot.Pen) {
-            PenModelView(modifier = Modifier.fillMaxSize(), clip = clip, playing = playing, onMarkers = reportMarkers)
+            PenModelView(modifier = Modifier.fillMaxSize(), clip = clip, playing = playing, onMarkers = reportMarkers, replay = replay)
         }.map { it.measure(full) }
 
         when (form) {

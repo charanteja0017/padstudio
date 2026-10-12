@@ -43,7 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -192,19 +191,9 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
         items.any { it.context.id == t.contextId && !it.context.passThrough } && controls.any { it.id == t.controlId }
     }
 
-    // The pen animation: a callout plays its gesture; tapping the same one again replays it (a frame of idle in
-    // between, so PenModelView sees the clip change).
+    // The pen animation: a callout plays its gesture; tapping the same one again replays it (PenModelView's replay).
     var gesture by remember { mutableStateOf(IDLE) }
-    var resting by remember { mutableStateOf(false) }
     var replays by remember { mutableIntStateOf(0) }
-    LaunchedEffect(replays) {
-        if (replays == 0) return@LaunchedEffect
-        resting = true
-        withFrameNanos { }
-        withFrameNanos { }
-        resting = false
-    }
-    val clip = if (resting) IDLE else gesture
 
     // Where the last Send or Pause/Resume stands (plan §13).
     var note by remember { mutableStateOf<ActionNote?>(null) }
@@ -402,11 +391,12 @@ fun PenStudioScreen(model: MainViewModel, onStart: (Intent) -> Unit, modifier: M
                     PenStage(
                         chips = chips,
                         selectedControl = selectedControl.id,
-                        clip = clip,
+                        clip = gesture,
                         playing = !ui.animationPaused,
                         onChip = { chooseControl(it) },
                         modifier = Modifier.fillMaxSize(),
                         reserveBottomEnd = DpSize(PAUSE_CORNER, PAUSE_CORNER),
+                        replay = replays,
                     )
                     SymIconButton(
                         icon = if (ui.animationPaused) Sym.play else Sym.pause,
