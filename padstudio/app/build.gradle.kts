@@ -54,6 +54,8 @@ dependencies {
     implementation(libs.glance.material3)
     implementation(libs.work.runtime)
     implementation(libs.kotlinx.coroutines.android)
+    // The live 3D pen (pen/PenModelView.kt). Brings Filament's native libraries; see the APK size note there.
+    implementation(libs.sceneview)
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test.junit)
 }
