@@ -3,7 +3,7 @@
 PadStudio makes a Xiaomi Pad's pen (the Focus Pen Pro, or a two-button pen) useful in every app: you choose what each gesture does, per kind of app, from a camera shutter and page turns to undo and screenshots. It also tidies the home screen into dense, auto-grouped widgets and gives the tablet a coherent look. It needs no root and can be undone. It runs on top of the stock HyperOS launcher, and [Key Mapper](https://github.com/keymapperorg/KeyMapper) runs the pen: PadStudio configures it but does not modify it.
 
 <p align="center">
-  <a href="https://github.com/charanteja0017/padstudio/releases/latest/download/PadStudio.apk"><img alt="Download the latest APK (PadStudio 0.2)" src="https://img.shields.io/badge/Download_APK-v0.2-2ea44f?style=for-the-badge&logo=android&logoColor=white"></a>
+  <a href="https://github.com/charanteja0017/padstudio/releases/latest/download/PadStudio.apk"><img alt="Download the latest APK" src="https://img.shields.io/github/v/release/charanteja0017/padstudio?style=for-the-badge&label=Download%20APK&logo=android&logoColor=white&color=2ea44f"></a>
   &nbsp;
   <a href="https://github.com/charanteja0017/padstudio/releases"><img alt="All releases" src="https://img.shields.io/badge/All_releases-on_GitHub-555555?style=for-the-badge&logo=github&logoColor=white"></a>
 </p>
@@ -12,7 +12,7 @@ PadStudio makes a Xiaomi Pad's pen (the Focus Pen Pro, or a two-button pen) usef
 
 ## Download
 
-**[Download PadStudio 0.2 (APK, 57.6 MB)](https://github.com/charanteja0017/padstudio/releases/latest/download/PadStudio.apk)**. The link and the button above always fetch the newest release.
+**[Download the latest PadStudio APK](https://github.com/charanteja0017/padstudio/releases/latest/download/PadStudio.apk)** (now 0.2, 57.6 MB). This link and the button above always fetch the newest release, and the button shows its version.
 
 | Version | Released | Download | Size | Notes |
 |---|---|---|---|---|
@@ -100,7 +100,7 @@ For the Focus Pen Pro, notes apps have no default actions, and pen-native ones s
   <img src="docs/screenshots/edit-widget.jpg" width="49%" alt="Edit widget: group, grid and density">
 </p>
 
-- **Library** (left): every app in your groups, with a chip per group, search, and the order Most used or A–Z. Long-press an app for App info, Move to group, Hide or Uninstall. It opens from Today, from Home, or from the pen's "Open app library" action.
+- **Library** (left): every app in your groups, with a chip per group and the order Most used or A–Z. Long-press an app for App info, Move to group, Hide or Uninstall. It opens from Today, from Home, or from the pen's "Open app library" action.
 - **Folder panel** (right): one group's apps, opened from a widget's header or its "+N" tile, with Search, Open library and Edit widget. Panels blur what is behind them when HyperOS allows it, and dim it otherwise.
 - **Edit widget**: the widget's group, grid and density. Changes apply right away, and the grid picker disables a grid the widget is too small for and says why.
 
@@ -146,12 +146,12 @@ Do these once, in this order. Steps 1 to 5 are for the pen; the home screen and 
    - Camera shutter, Expert setup: turn on "Key Mapper can press keys" (Advanced) after enabling Key Mapper's Expert-mode setting for key event actions. On the author's tablet an injected Volume down takes the photo in Xiaomi Camera, while clicking its shutter button through Key Mapper did nothing ([ADR-002](docs/decisions/ADR-002-pen-path.md)).
    - Press **Send to Key Mapper** on Pen (or Today). PadStudio writes the profile and opens Key Mapper's restore screen; when Key Mapper asks how to restore, choose **Replace**. Back in PadStudio the status line reads "Sent to Key Mapper" with the time.
    - Replace removes every key map already in Key Mapper, so back those up first if you use it for anything else. PadStudio marks the profile as sent when it hands it over; it cannot see whether you finished the restore.
-6. **Add group widgets.** On Home, press S, M or L beside a group to ask the launcher to add that widget, or long-press the home screen and open Widgets, PadStudio, App group. A widget with no group shows "Choose a group"; its edit button opens Edit widget.
+6. **Add group widgets.** On Home, press S, M or L beside a group to ask the launcher to add that widget, or long-press the home screen and open Widgets, PadStudio, App group. A widget with no group shows "Choose a group", and its Choose button opens Edit widget.
 7. **Optional.** Install Lawnicons or Arcticons for themed or icon-pack icons, choose a wallpaper in Looks, and allow Usage access (the Library offers Allow) so "Most used" ranks by the time apps were open.
 
 ### Expert setup: load the device facts
 
-Expert setup reads the pen's input device, and for the Focus Pen Pro its gestures, from `device-facts.json`. `tools/facts.sh` builds the file on a computer and pushes it into the app.
+Expert setup reads the pen's input device, and for the Focus Pen Pro its gestures, from `device-facts.json`. `tools/facts.sh` builds the file on a computer and pushes it into the app. (Setup lists the "Device facts imported" check as optional, which holds for Basic setup.)
 
 HyperOS keeps the Focus Pen Pro's gestures from apps, so PadStudio cannot record them on the tablet (it would say "No key reached PadStudio, so HyperOS keeps that button for itself"). The script is written for that pen: it names the pen's device, and the codes for squeeze, slide up, slide down and double tap are the ones measured on the author's Pad 8 (see `tools/facts.sh` and [ADR-002](docs/decisions/ADR-002-pen-path.md)).
 
@@ -187,7 +187,7 @@ cd padstudio
 
 Two settings point at the author's Mac. `padstudio/gradle.properties` pins `org.gradle.java.home` to a Homebrew JDK 17 (`/opt/homebrew/opt/openjdk@17/...`): change or remove that line to use your own. `padstudio/local.properties` (git-ignored) holds `sdk.dir`: create it with your own SDK path, or set `ANDROID_HOME`, as `tools/env.sh` does.
 
-To publish a version, attach its APK to the GitHub release twice: as `PadStudio-<version>.apk`, which the versions table links, and as `PadStudio.apk`, the fixed name the Download button asks GitHub for (`releases/latest/download/PadStudio.apk`). Then add the version's row to the table under [Download](#download) and the version to the button.
+To publish a version, attach its APK to the GitHub release twice: as `PadStudio-<version>.apk`, which the versions table links, and as `PadStudio.apk`, the fixed name the Download button asks GitHub for (`releases/latest/download/PadStudio.apk`). Then add the version's row to the table under [Download](#download); the button reads the latest version from GitHub by itself.
 
 ## Repository layout
 
@@ -250,4 +250,4 @@ This is the list on the app's About screen, which also shows every bundled libra
 - **Key Mapper has to be kept running.** HyperOS may stop it unless Autostart, Battery saver and the Recents lock are set, and PadStudio cannot check those or whether Expert Mode is running. It reports only whether Key Mapper's accessibility service is on and what it last sent. In Key Mapper 4.6.1, Expert Mode's bridge can stop holding the pen after the pen reconnects (a likely lock-order deadlock, seen twice on the author's tablet). Squeezes then go to HyperOS until `tools/pen-health.sh --fix` restarts the bridge ([ADR-002](docs/decisions/ADR-002-pen-path.md)).
 - **HyperOS limits what an app can change.** On the author's tablet it has no home-screen grid setting, so PadStudio's widget grid is the way to a denser page, and the grid shown on Home is a recorded baseline, not a live reading. HyperOS cannot blur what is behind a third-party widget, so the widget glass is translucency. PadStudio does no system-wide theming: icon style and colours apply to its own widgets and panels.
 - **"Most used" needs Usage access.** Without it, the Library and folders rank by the launches PadStudio's own panels counted, not by the time apps were open.
-- **The wallpaper is one way.** Apply replaces your wallpaper, and apps can't copy the current one, so note it first.
+- **The app cannot undo a wallpaper.** Apply replaces your wallpaper, and apps can't copy the current one, so note it first.
