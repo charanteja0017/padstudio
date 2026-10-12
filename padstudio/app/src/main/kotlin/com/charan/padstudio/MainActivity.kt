@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 
 /**
  * PadStudio's places, in rail order. The names are protected (plan §4): `--es tab <name>` matches them in any case.
- * ABOUT isn't in the rail: it opens Setup, which gets an About section in W3 (see openAboutSection).
+ * ABOUT isn't in the rail: it opens Setup scrolled to its About section (openAboutSection).
  */
 internal enum class Tab(val label: String, @param:DrawableRes val icon: Int, @param:DrawableRes val selectedIcon: Int) {
     TODAY("Today", R.drawable.sym_today, R.drawable.sym_today_fill),
@@ -178,7 +178,6 @@ class MainActivity : ComponentActivity() {
             }
         }
         ColorsDumpEffect(colorsDumpRequests)
-        // TODO(W3 Setup): pass `scrollToAbout = openAboutSection` to SetupScreen once it has its About section.
         val openAboutSection: Boolean = tab == Tab.ABOUT
         // Each tab keeps its own saved state (scroll position, open pickers) while another is showing.
         val tabStates = rememberSaveableStateHolder()
@@ -199,7 +198,7 @@ class MainActivity : ComponentActivity() {
                         Tab.PEN -> PenStudioScreen(model, start, content)
                         Tab.HOME -> HomeKitScreen(model, content)
                         Tab.LOOKS -> LooksScreen(model, content)
-                        Tab.SETUP, Tab.ABOUT -> SetupScreen(model, start, content)
+                        Tab.SETUP, Tab.ABOUT -> SetupScreen(model, start, content, scrollToAbout = openAboutSection, onOpenLooks = { tab = Tab.LOOKS })
                     }
                 }
             }
