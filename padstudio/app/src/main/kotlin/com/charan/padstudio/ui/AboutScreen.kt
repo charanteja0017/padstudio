@@ -156,10 +156,7 @@ fun LicencesDialog(onDismiss: () -> Unit) {
     }
 }
 
-/**
- * About as a page of its own. Since the redesign, About is the last section of Setup ([AboutCard]) and
- * `--es tab about` opens Setup scrolled there; this stays for existing callers until the merge removes it.
- */
+/** About as a page of its own (round 2: its own rail icon; `--es tab about` opens it). */
 @Composable
 fun AboutScreen(modifier: Modifier = Modifier) {
     var licencesOpen by rememberSaveable { mutableStateOf(false) }

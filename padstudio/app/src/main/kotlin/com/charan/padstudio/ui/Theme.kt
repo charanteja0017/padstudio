@@ -19,7 +19,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
@@ -31,7 +33,8 @@ import com.charan.padstudio.ui.theme.Tokens
  * - **Colours:** the brand schemes from [Tokens] for [Tokens.DefaultPalette]. While Looks → "Match wallpaper
  *   colours" ([com.charan.padstudio.data.StudioConfig.matchWallpaperColours]) is on, Material You colours from
  *   the wallpaper instead (minSdk 31 always has them).
- * - **Text:** [StudioTypography], the token type scale in the system font (MiSans on HyperOS).
+ * - **Text:** [studioTypography] in PadStudio's own typeface, [StudioFont.DEFAULT] (Manrope), not the system font.
+ *   Debug builds can probe the other candidates with `--es font` until the owner picks (plan round 2, §3.1).
  * - **Corners:** [StudioShapes], the token radii.
  * - **Status colours:** [PadStudioTheme.semantic].
  */
@@ -51,8 +54,10 @@ fun PadStudioTheme(content: @Composable () -> Unit) {
     val semantic = remember(dark, colorScheme.error) {
         SemanticColors(good = Tokens.goodInk(dark), warn = Tokens.warnInk(dark), bad = colorScheme.error)
     }
+    val font = remember(context) { com.charan.padstudio.debug.DebugOverrides.font(context) ?: StudioFont.DEFAULT }
+    val typography = remember(font) { studioTypography(studioFontFamily(font)) }
     CompositionLocalProvider(LocalSemanticColors provides semantic) {
-        MaterialTheme(colorScheme = colorScheme, typography = StudioTypography, shapes = StudioShapes, content = content)
+        MaterialTheme(colorScheme = colorScheme, typography = typography, shapes = StudioShapes, content = content)
     }
 }
 
@@ -79,31 +84,65 @@ private val LocalSemanticColors = staticCompositionLocalOf {
 }
 
 /**
- * Material 3's 15 text styles, built from the token type scale.
- * - **Font:** [FontFamily.Default], the system font (MiSans on HyperOS).
- * - **Weights:** 400 and 500 only, never above 600, because the tablet's Bold text adds 300.
- * - **Letter spacing:** 0, as in the preview.
- * - **Line height and font padding:** kept from Material.
+ * PadStudio's own typefaces (plan round 2, §3.1: "it should have its own font"), bundled in res/font from
+ * google/fonts at pinned commits (OFL 1.1; texts in assets/licenses). [MANROPE] is the app's font; the other
+ * two are candidates a debug build can show (`--es font jakarta|outfit`) until the owner picks one.
  *
- * Each style uses a size the way the preview does (docs/redesign/kit.css):
- *
- * | Style | Token | sp | Weight | Preview use |
- * |---|---|---|---|---|
- * | display Large, Medium, Small | display | 36 / 44 | 400 | big readouts |
- * | headline Large, Medium, Small | headline | 28 / 36 | 400 | page and dialog titles |
- * | titleLarge | title | 20 / 28 | 500 | section labels, sheet titles |
- * | titleMedium | body | 16 / 24 | 500 | emphasised body |
- * | titleSmall | label | 13 / 18 | 500 | small headings |
- * | bodyLarge | body | 16 / 24 | 400 | default text, list headlines |
- * | bodyMedium | label | 13 / 18 | 400 | list supporting text, snackbars |
- * | bodySmall | labelSmall | 11 / 16 | 400 | captions, meta text |
- * | labelLarge, labelMedium | label | 13 / 18 | 500 | buttons, chips, navigation |
- * | labelSmall | labelSmall | 11 / 16 | 500 | badges, widget labels |
- *
- * Material's AlertDialog sets its text in bodyMedium, but the preview's dialog body is 16 / 24, so pass
- * bodyLarge to a dialog's text.
+ * [maxWeight] is the end of the font's weight axis: with Bold text on (+300), a 500 or 600 request is clamped there.
  */
-internal val StudioTypography: Typography = Typography().let { m3 ->
+enum class StudioFont(val label: String, @param:androidx.annotation.FontRes val res: Int, val maxWeight: Int) {
+    MANROPE("Manrope", com.charan.padstudio.R.font.manrope_variable, 800),
+    JAKARTA("Plus Jakarta Sans", com.charan.padstudio.R.font.plusjakartasans_variable, 800),
+    OUTFIT("Outfit", com.charan.padstudio.R.font.outfit_variable, 900),
+    ;
+
+    companion object {
+        val DEFAULT = MANROPE
+    }
+}
+
+/** Every weight Compose may ask for: the theme's 400-600, plus up to 300 more from the system's Bold text. */
+internal val STUDIO_FONT_WEIGHTS = (400..900 step 100).toList()
+
+/**
+ * [font] as a Compose family with one entry per weight in [STUDIO_FONT_WEIGHTS], each pinned to that point on the
+ * variable font's `wght` axis. Naming `variationSettings` matters: the overload without it renders every weight
+ * at the file's default instance (Manrope's is 200, ExtraLight). Bold text needs the 700-900 entries, or a
+ * 400 + 300 request falls back to the nearest lighter one.
+ */
+internal fun studioFontFamily(font: StudioFont): FontFamily = FontFamily(
+    STUDIO_FONT_WEIGHTS.map { w ->
+        Font(
+            resId = font.res,
+            weight = FontWeight(w),
+            variationSettings = FontVariation.Settings(FontVariation.weight(w.coerceAtMost(font.maxWeight))),
+        )
+    },
+)
+
+/**
+ * Material 3's 15 text styles from the token type scale (round 2: smaller and looser than round 1's).
+ * - **Font:** [family], PadStudio's bundled typeface.
+ * - **Weights:** 400 and 500 only, never above 600, because the tablet's Bold text adds 300.
+ * - **Letter spacing:** 0. Line heights come from the tokens.
+ *
+ * | Style | Token | sp | Weight |
+ * |---|---|---|---|
+ * | display Large, Medium, Small | display | 30 / 38 | 400 (page titles set 500) |
+ * | headline Large, Medium, Small | headline | 24 / 32 | 400 |
+ * | titleLarge | title | 18 / 26 | 500 |
+ * | titleMedium | titleMedium | 15 / 22 | 500 |
+ * | titleSmall | bodyMedium | 13 / 20 | 500 |
+ * | bodyLarge | body | 15 / 22 | 400 |
+ * | bodyMedium | bodyMedium | 13 / 20 | 400 |
+ * | bodySmall | labelSmall | 11 / 16 | 400 |
+ * | labelLarge | bodyMedium | 13 / 20 | 500 (buttons) |
+ * | labelMedium | label | 12 / 16 | 500 |
+ * | labelSmall | labelSmall | 11 / 16 | 500 |
+ */
+internal fun studioTypography(family: FontFamily): Typography = Typography().let { m3 ->
+    fun TextStyle.token(size: TextUnit, lineHeight: TextUnit, weight: FontWeight) =
+        copy(fontFamily = family, fontWeight = weight, fontSize = size, lineHeight = lineHeight, letterSpacing = 0.sp)
     Typography(
         displayLarge = m3.displayLarge.token(Tokens.DisplaySize, Tokens.DisplayLineHeight, Tokens.WeightRegular),
         displayMedium = m3.displayMedium.token(Tokens.DisplaySize, Tokens.DisplayLineHeight, Tokens.WeightRegular),
@@ -112,19 +151,19 @@ internal val StudioTypography: Typography = Typography().let { m3 ->
         headlineMedium = m3.headlineMedium.token(Tokens.HeadlineSize, Tokens.HeadlineLineHeight, Tokens.WeightRegular),
         headlineSmall = m3.headlineSmall.token(Tokens.HeadlineSize, Tokens.HeadlineLineHeight, Tokens.WeightRegular),
         titleLarge = m3.titleLarge.token(Tokens.TitleSize, Tokens.TitleLineHeight, Tokens.WeightMedium),
-        titleMedium = m3.titleMedium.token(Tokens.BodySize, Tokens.BodyLineHeight, Tokens.WeightMedium),
-        titleSmall = m3.titleSmall.token(Tokens.LabelSize, Tokens.LabelLineHeight, Tokens.WeightMedium),
+        titleMedium = m3.titleMedium.token(Tokens.TitleMediumSize, Tokens.TitleMediumLineHeight, Tokens.WeightMedium),
+        titleSmall = m3.titleSmall.token(Tokens.BodyMediumSize, Tokens.BodyMediumLineHeight, Tokens.WeightMedium),
         bodyLarge = m3.bodyLarge.token(Tokens.BodySize, Tokens.BodyLineHeight, Tokens.WeightRegular),
-        bodyMedium = m3.bodyMedium.token(Tokens.LabelSize, Tokens.LabelLineHeight, Tokens.WeightRegular),
+        bodyMedium = m3.bodyMedium.token(Tokens.BodyMediumSize, Tokens.BodyMediumLineHeight, Tokens.WeightRegular),
         bodySmall = m3.bodySmall.token(Tokens.LabelSmallSize, Tokens.LabelSmallLineHeight, Tokens.WeightRegular),
-        labelLarge = m3.labelLarge.token(Tokens.LabelSize, Tokens.LabelLineHeight, Tokens.WeightMedium),
+        labelLarge = m3.labelLarge.token(Tokens.BodyMediumSize, Tokens.BodyMediumLineHeight, Tokens.WeightMedium),
         labelMedium = m3.labelMedium.token(Tokens.LabelSize, Tokens.LabelLineHeight, Tokens.WeightMedium),
         labelSmall = m3.labelSmall.token(Tokens.LabelSmallSize, Tokens.LabelSmallLineHeight, Tokens.WeightMedium),
     )
 }
 
-private fun TextStyle.token(size: TextUnit, lineHeight: TextUnit, weight: FontWeight) =
-    copy(fontFamily = FontFamily.Default, fontWeight = weight, fontSize = size, lineHeight = lineHeight, letterSpacing = 0.sp)
+/** The app's typography in its default typeface; tests and previews use it. */
+internal val StudioTypography: Typography = studioTypography(studioFontFamily(StudioFont.DEFAULT))
 
 /**
  * Material 3's corner sizes from the token radii, slot for slot: extraSmall = xs 8, small = s 12,

@@ -68,7 +68,7 @@ class PenLabelsTest {
         val controls = controlsFor(PenKind.FOCUS_PEN_PRO)
         assertEquals(2, controlsWithActions(bindings, "camera", controls))
         assertEquals(0, controlsWithActions(bindings, "notes_other", controls))
-        assertEquals("2 of 4 controls set", controlsSetLine(2, 4))
+        assertEquals("2 of 4 have actions", controlsSetLine(2, 4))
         assertEquals("No pen actions set yet", controlsSetLine(0, 4))
     }
 

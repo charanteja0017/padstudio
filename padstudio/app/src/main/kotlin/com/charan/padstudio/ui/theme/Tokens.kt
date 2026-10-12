@@ -76,18 +76,22 @@ object Tokens {
     // Bad's ink is each scheme's own error colour: use MaterialTheme.colorScheme.error.
 
     // Type scale in sp at font scale 1.0: size and line height. Android scales sp nonlinearly above 1.0.
-    val DisplaySize: TextUnit = 36.sp
-    val DisplayLineHeight: TextUnit = 44.sp
-    val HeadlineSize: TextUnit = 28.sp
-    val HeadlineLineHeight: TextUnit = 36.sp
-    val TitleSize: TextUnit = 20.sp
-    val TitleLineHeight: TextUnit = 28.sp
-    val BodySize: TextUnit = 16.sp
-    val BodyLineHeight: TextUnit = 24.sp
-    val LabelSize: TextUnit = 13.sp
-    val LabelLineHeight: TextUnit = 18.sp
+    val DisplaySize: TextUnit = 30.sp
+    val DisplayLineHeight: TextUnit = 38.sp
+    val HeadlineSize: TextUnit = 24.sp
+    val HeadlineLineHeight: TextUnit = 32.sp
+    val TitleSize: TextUnit = 18.sp
+    val TitleLineHeight: TextUnit = 26.sp
+    val BodySize: TextUnit = 15.sp
+    val BodyLineHeight: TextUnit = 22.sp
+    val LabelSize: TextUnit = 12.sp
+    val LabelLineHeight: TextUnit = 16.sp
     val LabelSmallSize: TextUnit = 11.sp
     val LabelSmallLineHeight: TextUnit = 16.sp
+    val TitleMediumSize: TextUnit = 15.sp
+    val TitleMediumLineHeight: TextUnit = 22.sp
+    val BodyMediumSize: TextUnit = 13.sp
+    val BodyMediumLineHeight: TextUnit = 20.sp
 
     // Weights: body regular, titles medium, never above 600, because Android's Bold text adds 300.
     val WeightRegular: FontWeight = FontWeight(400)
@@ -104,10 +108,11 @@ object Tokens {
 
     // Spacing, all on the 4 dp grid. TouchTarget is the minimum size of anything tappable.
     val GridUnit: Dp = 4.dp
-    val Gutter: Dp = 24.dp
-    val CardPadding: Dp = 20.dp
+    val Gutter: Dp = 32.dp
+    val CardPadding: Dp = 24.dp
     val GapS: Dp = 12.dp
-    val GapM: Dp = 16.dp
+    val GapM: Dp = 20.dp
+    val GapL: Dp = 32.dp
     val TouchTarget: Dp = 48.dp
 
     private val violetLight: ColorScheme = lightColorScheme(

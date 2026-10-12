@@ -29,7 +29,7 @@ class PenStatusTest {
         assertEquals(PenActions.ON_AS_REQUESTED, status.penActions)
         assertEquals(ExpertMode.CANT_BE_CHECKED, status.expertMode)
         assertEquals(Working.NOT_OBSERVABLE, status.working)
-        assertEquals("Focus Pen Pro · Expert setup · 4 controls set", status.configuredText("Focus Pen Pro", PenMode.EXPERT, 4))
+        assertEquals("Focus Pen Pro · Expert setup · 4 controls recorded", status.configuredText("Focus Pen Pro", PenMode.EXPERT, 4))
         assertEquals("Sent to Key Mapper 14:05", status.sentText(clock))
         assertEquals("Key Mapper is listening", status.keyMapperText)
         assertEquals("On (as last requested)", status.penActionsText)
@@ -100,9 +100,9 @@ class PenStatusTest {
 
     @Test fun `the configured line counts controls in plain words`() {
         val status = PenStatus(listening = true, sentHash = null, planHash = current, appliedAt = null, penEnabled = true)
-        assertEquals("Smart Pen 2 · Basic setup · 2 controls set", status.configuredText("Smart Pen 2", PenMode.BASIC, 2))
-        assertEquals("Focus Pen Pro · Expert setup · 1 control set", status.configuredText("Focus Pen Pro", PenMode.EXPERT, 1))
-        assertEquals("Focus Pen Pro · Expert setup · no controls set", status.configuredText("Focus Pen Pro", PenMode.EXPERT, 0))
+        assertEquals("Smart Pen 2 · Basic setup · 2 controls recorded", status.configuredText("Smart Pen 2", PenMode.BASIC, 2))
+        assertEquals("Focus Pen Pro · Expert setup · 1 control recorded", status.configuredText("Focus Pen Pro", PenMode.EXPERT, 1))
+        assertEquals("Focus Pen Pro · Expert setup · no controls recorded yet", status.configuredText("Focus Pen Pro", PenMode.EXPERT, 0))
     }
 
     @Test fun `tones match the design kit's pills`() {
@@ -155,7 +155,7 @@ class PenStatusTest {
         val section7 = listOf(
             "Sent to Key Mapper 14:05", "Changes not sent yet", "Key Mapper is listening", "Key Mapper is off",
             "On (as last requested)", "Off (as last requested)", "Can't be checked from the tablet",
-            "Set up and sent · Key Mapper listening", "Focus Pen Pro · Expert setup · 4 controls set",
+            "Set up and sent · Key Mapper listening", "Focus Pen Pro · Expert setup · 4 controls recorded",
         )
         for (text in section7) assertTrue(text in texts, "the scan covered \"$text\"")
     }

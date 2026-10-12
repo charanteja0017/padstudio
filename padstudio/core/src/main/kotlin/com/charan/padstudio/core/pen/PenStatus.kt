@@ -99,7 +99,7 @@ data class PenStatus(
     val needsSend: Boolean get() = configured == Configured.SET_UP && sent != Sent.SENT
 
     /**
-     * The Configured row: "Focus Pen Pro · Expert setup · 4 controls set", or "Pen profile not
+     * The Configured row: "Focus Pen Pro · Expert setup · 4 controls recorded", or "Pen profile not
      * ready" while there is no profile. [penName] is the pen as the Pen screen names it.
      */
     fun configuredText(penName: String, mode: PenMode, controlsSet: Int): String = when (configured) {
@@ -184,10 +184,13 @@ data class PenStatus(
             PenMode.EXPERT -> "Expert"
         }
 
+        // "recorded": the pen's controls PadStudio knows (recorded or measured), distinct from the actions chosen
+        // for them, which the Pen screen counts as "2 of 4 have actions" (round 2: "no controls set" beside
+        // "2 of 2 controls set" read as a contradiction).
         fun controlsText(count: Int) = when (val n = count.coerceAtLeast(0)) {
-            0 -> "no controls set"
-            1 -> "1 control set"
-            else -> "$n controls set"
+            0 -> "no controls recorded yet"
+            1 -> "1 control recorded"
+            else -> "$n controls recorded"
         }
     }
 }

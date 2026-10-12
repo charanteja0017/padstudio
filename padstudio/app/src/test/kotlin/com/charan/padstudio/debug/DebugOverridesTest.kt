@@ -1,5 +1,6 @@
 package com.charan.padstudio.debug
 
+import com.charan.padstudio.ui.StudioFont
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -22,6 +23,16 @@ class DebugOverridesTest {
         listOf("0", "0.49", "3.01", "-1", "NaN", "Infinity", "big", "").forEach { value ->
             assertIs<OverrideChange.Invalid>(parseFontScale(value), "fontscale \"$value\"")
         }
+    }
+
+    @Test fun `font takes the three candidates by short name, or reset`() {
+        assertEquals(OverrideChange.SetTo(StudioFont.MANROPE), parseFont("manrope"))
+        assertEquals(OverrideChange.SetTo(StudioFont.JAKARTA), parseFont("Jakarta"))
+        assertEquals(OverrideChange.SetTo(StudioFont.JAKARTA), parseFont("plus jakarta sans"))
+        assertEquals(OverrideChange.SetTo(StudioFont.OUTFIT), parseFont("OUTFIT"))
+        assertEquals(OverrideChange.Reset, parseFont("reset"))
+        assertEquals(OverrideChange.Reset, parseFont("default"))
+        listOf("", "inter", "comic").forEach { assertIs<OverrideChange.Invalid>(parseFont(it), "font \"$it\"") }
     }
 
     @Test fun `boldtext on adds 300, off forces 0, reset follows the system`() {

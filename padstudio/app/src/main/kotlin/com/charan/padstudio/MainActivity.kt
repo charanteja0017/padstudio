@@ -39,6 +39,7 @@ import com.charan.padstudio.pen.KeyMapperBridge
 import com.charan.padstudio.pen.PenStudioScreen
 import com.charan.padstudio.setup.SetupScreen
 import com.charan.padstudio.today.TodayScreen
+import com.charan.padstudio.ui.AboutScreen
 import com.charan.padstudio.ui.LocalStudioSnackbar
 import com.charan.padstudio.ui.PadStudioShell
 import com.charan.padstudio.ui.PadStudioTheme
@@ -49,7 +50,7 @@ import kotlinx.coroutines.launch
 
 /**
  * PadStudio's places, in rail order. The names are protected (plan §4): `--es tab <name>` matches them in any case.
- * ABOUT isn't in the rail: it opens Setup scrolled to its About section (openAboutSection).
+ * ABOUT has its own rail icon and page since round 2 (the owner: "about keep separate nav icon").
  */
 internal enum class Tab(val label: String, @param:DrawableRes val icon: Int, @param:DrawableRes val selectedIcon: Int) {
     TODAY("Today", R.drawable.sym_today, R.drawable.sym_today_fill),
@@ -66,9 +67,9 @@ internal enum class Tab(val label: String, @param:DrawableRes val icon: Int, @pa
     }
 }
 
-/** What the rail and the bottom bar show: every tab but ABOUT, which opens inside Setup. */
+/** What the rail and the bottom bar show: every tab, About last. */
 private val railDestinations: List<ShellDestination<Tab>> =
-    Tab.entries.filter { it != Tab.ABOUT }.map { ShellDestination(it, it.label, it.icon, it.selectedIcon) }
+    Tab.entries.map { ShellDestination(it, it.label, it.icon, it.selectedIcon) }
 
 class MainActivity : ComponentActivity() {
     private val model: MainViewModel by viewModels()
@@ -107,7 +108,7 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Debug builds only, e.g. `adb shell am start -n com.charan.padstudio/.MainActivity --es tab home`:
-     * - `--es tab today|pen|home|looks|setup|about` opens a tab for screenshots (about opens Setup);
+     * - `--es tab today|pen|home|looks|setup|about` opens a tab for screenshots (about opens About);
      * - `--es open probe` opens the pen probe, `--es open pentest` the pen test;
      * - `--es apply keymapper` hands the current pen profile to Key Mapper;
      * - `--es widgets update` redraws every placed group widget; `--es dumpicons <group>` writes its icons;
@@ -178,12 +179,11 @@ class MainActivity : ComponentActivity() {
             }
         }
         ColorsDumpEffect(colorsDumpRequests)
-        val openAboutSection: Boolean = tab == Tab.ABOUT
         // Each tab keeps its own saved state (scroll position, open pickers) while another is showing.
         val tabStates = rememberSaveableStateHolder()
         PadStudioShell(
             destinations = railDestinations,
-            selected = if (openAboutSection) Tab.SETUP else tab,
+            selected = tab,
             onSelect = { tab = it },
             onSettings = { tab = Tab.SETUP },
             statusLine = { KeyMapperStatusLine() },
@@ -198,7 +198,8 @@ class MainActivity : ComponentActivity() {
                         Tab.PEN -> PenStudioScreen(model, start, content)
                         Tab.HOME -> HomeKitScreen(model, content)
                         Tab.LOOKS -> LooksScreen(model, content)
-                        Tab.SETUP, Tab.ABOUT -> SetupScreen(model, start, content, scrollToAbout = openAboutSection, onOpenLooks = { tab = Tab.LOOKS })
+                        Tab.SETUP -> SetupScreen(model, start, content, onOpenLooks = { tab = Tab.LOOKS })
+                        Tab.ABOUT -> AboutScreen(content)
                     }
                 }
             }

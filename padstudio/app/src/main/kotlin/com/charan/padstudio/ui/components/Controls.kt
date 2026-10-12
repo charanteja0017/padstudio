@@ -65,6 +65,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
 import com.charan.padstudio.ui.Sym
@@ -280,6 +281,24 @@ fun <T> SegmentedChoice(
 }
 
 /**
+ * What a [SegmentedChoice] needs around its labels, so a screen can decide whether the control fits before
+ * showing it (round 2: screens never copy Material's sizes, because the control's look can change here).
+ */
+object SegmentedChoiceDefaults {
+    /** The narrowest a segment gets. */
+    val MinSegmentWidth: Dp = ButtonDefaults.MinWidth
+
+    /** Space a segment adds beside its label: padding on both sides, the check and its gap. */
+    val SegmentChrome: Dp
+        get() = SegmentedButtonDefaults.ContentPadding.let {
+            it.calculateLeftPadding(LayoutDirection.Ltr) + it.calculateRightPadding(LayoutDirection.Ltr)
+        } + SegmentedButtonDefaults.IconSize + ButtonDefaults.IconSpacing
+
+    /** Width [count] equal segments need when the widest label measures [widestLabel] on one line. */
+    fun requiredWidth(widestLabel: Dp, count: Int): Dp = maxOf(MinSegmentWidth, widestLabel + SegmentChrome) * count
+}
+
+/**
  * A filter chip (the kit's `.chip--filter`): an 8 dp-cornered 32 dp chip in a 48 dp target, outline
  * variant edge; when [selected] it turns secondary container with a check. Use it for on/off filters
  * such as the Library's group chips. [icon] shows while it isn't selected.
@@ -374,10 +393,10 @@ fun BindingChip(
     val scheme = MaterialTheme.colorScheme
     val type = MaterialTheme.typography
     val adding = action == null
-    val shape = RoundedCornerShape(Tokens.CornerS)
+    val shape = BindingChipDefaults.Shape
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val surface = if (adding) Modifier.dashedOutline(scheme.outline, Tokens.CornerS) else Modifier.background(scheme.surfaceContainerHigh)
+    val surface = if (adding) Modifier.dashedOutline(scheme.outline, BindingChipDefaults.Corner) else Modifier.background(scheme.surfaceContainerHigh)
     Row(
         modifier = modifier
             .defaultMinSize(minWidth = Tokens.TouchTarget, minHeight = Tokens.TouchTarget)
@@ -487,3 +506,9 @@ private fun Modifier.dashedOutline(color: Color, corner: Dp): Modifier = this.dr
 
 private val SWATCH_DOT = 36.dp
 private const val DISABLED_EDGE_ALPHA = 0.12f
+
+/** A [BindingChip]'s corners, for screens that draw beside or around it (a selected edge, a leader line). */
+object BindingChipDefaults {
+    val Corner: Dp = Tokens.CornerS
+    val Shape: Shape = RoundedCornerShape(Corner)
+}

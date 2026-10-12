@@ -5,6 +5,7 @@ import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
 import android.util.Log
 import androidx.core.content.edit
+import com.charan.padstudio.ui.StudioFont
 
 /**
  * Debug builds only: the appearance PadStudio is tested at (plan §12, §13) without changing a system setting.
@@ -12,6 +13,7 @@ import androidx.core.content.edit
  *     adb shell am start -n com.charan.padstudio/.MainActivity --es theme dark|light|system
  *     adb shell am start -n com.charan.padstudio/.MainActivity --es fontscale 1.25|2|reset
  *     adb shell am start -n com.charan.padstudio/.MainActivity --es boldtext on|off|reset
+ *     adb shell am start -n com.charan.padstudio/.MainActivity --es font manrope|jakarta|outfit|reset
  *
  * Each value is kept in a debug SharedPreferences file until reset, so recreate(), rotation and later launches
  * keep it. MainActivity applies it in attachBaseContext as a Configuration override: uiMode's night bits,
@@ -24,6 +26,7 @@ internal object DebugOverrides {
     private const val KEY_NIGHT = "night"
     private const val KEY_FONT_SCALE = "font_scale"
     private const val KEY_FONT_WEIGHT = "font_weight_adjustment"
+    private const val KEY_TYPEFACE = "typeface"
 
     fun isDebuggable(context: Context): Boolean = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
 
@@ -42,9 +45,40 @@ internal object DebugOverrides {
     fun applyExtras(context: Context, extra: (String) -> String?): Boolean {
         val old = read(context)
         val new = old.withExtras(extra) { Log.w(TAG, it) }
-        if (new == old) return false
+        val typefaceChanged = applyTypeface(context, extra(EXTRA_FONT))
+        if (new == old) return typefaceChanged
         write(context, new)
         Log.i(TAG, "appearance override: $new")
+        return true
+    }
+
+    /**
+     * The typeface probe (plan round 2, §3.1): one of [StudioFont] while the owner picks, null for the app's
+     * default. Release builds always get null.
+     */
+    fun font(context: Context): StudioFont? {
+        if (!isDebuggable(context)) return null
+        val name = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_TYPEFACE, null)
+        return StudioFont.entries.firstOrNull { it.name == name }
+    }
+
+    /** Stores the `font` extra; true when the stored typeface changed. */
+    private fun applyTypeface(context: Context, value: String?): Boolean {
+        if (value == null) return false
+        val old = font(context)
+        val new = when (val change = parseFont(value)) {
+            is OverrideChange.SetTo -> change.value
+            OverrideChange.Reset -> null
+            is OverrideChange.Invalid -> {
+                Log.w(TAG, change.message)
+                return false
+            }
+        }
+        if (new == old) return false
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit {
+            if (new == null) remove(KEY_TYPEFACE) else putString(KEY_TYPEFACE, new.name)
+        }
+        Log.i(TAG, "typeface override: ${new?.label ?: "default"}")
         return true
     }
 
@@ -80,6 +114,7 @@ internal object DebugOverrides {
 internal const val EXTRA_THEME = "theme"
 internal const val EXTRA_FONT_SCALE = "fontscale"
 internal const val EXTRA_BOLD_TEXT = "boldtext"
+internal const val EXTRA_FONT = "font"
 
 /** Android's Bold text: FONT_WEIGHT_BOLD − FONT_WEIGHT_NORMAL (700 − 400), the tablet's secure font_weight_adjustment. */
 internal const val BOLD_TEXT_WEIGHT_ADJUSTMENT = 300
@@ -133,6 +168,15 @@ internal fun parseFontScale(value: String): OverrideChange<Float> {
     } else {
         OverrideChange.Invalid("fontscale \"$value\" ignored: use a number from 0.5 to 3, or reset")
     }
+}
+
+/** `font`: manrope, jakarta (Plus Jakarta Sans) or outfit; reset (or default) goes back to the app's typeface. */
+internal fun parseFont(value: String): OverrideChange<StudioFont> = when (value.trim().lowercase().replace(" ", "")) {
+    "manrope" -> OverrideChange.SetTo(StudioFont.MANROPE)
+    "jakarta", "plusjakarta", "plusjakartasans" -> OverrideChange.SetTo(StudioFont.JAKARTA)
+    "outfit" -> OverrideChange.SetTo(StudioFont.OUTFIT)
+    "reset", "default" -> OverrideChange.Reset
+    else -> OverrideChange.Invalid("font \"$value\" ignored: use manrope, jakarta, outfit or reset")
 }
 
 /** `boldtext`: on (+300, like Settings → Bold text), off (0, even if the system's Bold text is on), or reset. */

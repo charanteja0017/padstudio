@@ -50,9 +50,9 @@ class TodayStateTest {
 
     @Test fun `the hero's three lines are the pieces of configuredText`() {
         val text = heroText(status(), "Focus Pen Pro", PenMode.EXPERT, controlsSet = 4)
-        assertEquals(HeroText("Your pen · Expert setup", "Focus Pen Pro", "4 controls set"), text)
+        assertEquals(HeroText("Your pen · Expert setup", "Focus Pen Pro", "4 controls recorded"), text)
         val basic = heroText(status(), "Two-button pen", PenMode.BASIC, controlsSet = 1)
-        assertEquals(HeroText("Your pen · Basic setup", "Two-button pen", "1 control set"), basic)
+        assertEquals(HeroText("Your pen · Basic setup", "Two-button pen", "1 control recorded"), basic)
     }
 
     @Test fun `without a profile the pen still titles the hero and the subtitle says it isn't ready`() {

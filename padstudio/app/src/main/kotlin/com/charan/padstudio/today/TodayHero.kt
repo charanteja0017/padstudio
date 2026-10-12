@@ -386,7 +386,7 @@ private fun HeroLayout(
 
 // ---- Name, status and quick actions ------------------------------------------------------------------------
 
-/** "YOUR PEN · EXPERT SETUP", the pen's name, "4 controls set", and the headline pill (with Fix when Key Mapper is off). */
+/** "YOUR PEN · EXPERT SETUP", the pen's name, "4 controls recorded", and the headline pill (with Fix when Key Mapper is off). */
 @Composable
 private fun HeroIdentity(status: PenStatus, text: HeroText, onFixKeyMapper: () -> Unit) {
     val scheme = MaterialTheme.colorScheme

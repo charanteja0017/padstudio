@@ -45,7 +45,7 @@ fun bindingLabel(control: PenControl, press: Press): String =
 fun boundIntent(bindings: List<Binding>, contextId: String, controlId: String, press: Press): PenIntent? =
     bindings.firstOrNull { it.contextId == contextId && it.control == controlId && it.press == press }?.intent
 
-/** The pen's name in status lines ("Focus Pen Pro · Expert setup · 4 controls set"). */
+/** The pen's name in status lines ("Focus Pen Pro · Expert setup · 4 controls recorded"). */
 fun penName(kind: PenKind): String = when (kind) {
     PenKind.TWO_BUTTON -> "Two-button pen"
     PenKind.FOCUS_PEN_PRO -> "Focus Pen Pro"
@@ -109,8 +109,8 @@ fun appCount(count: Int): String = if (count == 1) "1 app" else "$count apps"
 fun controlsWithActions(bindings: List<Binding>, contextId: String, controls: List<PenControl>): Int =
     controls.count { control -> bindings.any { it.contextId == contextId && it.control == control.id } }
 
-/** The hero's line under a context: "2 of 4 controls set", or "No pen actions set yet". */
-fun controlsSetLine(set: Int, total: Int): String = if (set == 0) "No pen actions set yet" else "$set of $total controls set"
+/** The hero's line under a context: "2 of 4 have actions", or "No pen actions set yet" (actions, not recorded controls). */
+fun controlsSetLine(set: Int, total: Int): String = if (set == 0) "No pen actions set yet" else "$set of $total have actions"
 
 /** How many of the pen's controls Key Mapper can recognise: recorded here or measured by the probe. */
 fun controlsKnown(controls: List<PenControl>, triggers: Map<String, PenTrigger>): Int = controls.count { triggers[it.id] != null }

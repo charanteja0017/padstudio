@@ -32,7 +32,7 @@ import com.charan.padstudio.ui.components.SymIcon
 import com.charan.padstudio.ui.theme.Tokens
 
 /**
- * The right pane (plan §10 "Pen"): the chosen context's picture, name and "2 of 4 controls set" ([meta]), the
+ * The right pane (plan §10 "Pen"): the chosen context's picture, name and "2 of 4 have actions" ([meta]), the
  * "Needs a look" chip when core warns about it, then [body] (the pen with its callouts, the button grid, or the
  * pass-through note). The chip opens the warnings in plain words, with the generator's own wording under
  * "Original wording".

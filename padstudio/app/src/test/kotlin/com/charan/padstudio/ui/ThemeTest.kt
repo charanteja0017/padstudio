@@ -5,6 +5,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontListFontFamily
+import androidx.compose.ui.text.font.ResourceFont
 import androidx.compose.ui.unit.sp
 import com.charan.padstudio.ui.theme.BrandPalette
 import com.charan.padstudio.ui.theme.Tokens
@@ -23,22 +25,40 @@ class ThemeTest {
         )
     }
 
-    /** Token size → its line height. */
+    /** Token size → its line height (body and titleMedium share 15 / 22). */
     private val tokenSizes = mapOf(
         Tokens.DisplaySize to Tokens.DisplayLineHeight,
         Tokens.HeadlineSize to Tokens.HeadlineLineHeight,
         Tokens.TitleSize to Tokens.TitleLineHeight,
+        Tokens.TitleMediumSize to Tokens.TitleMediumLineHeight,
         Tokens.BodySize to Tokens.BodyLineHeight,
+        Tokens.BodyMediumSize to Tokens.BodyMediumLineHeight,
         Tokens.LabelSize to Tokens.LabelLineHeight,
         Tokens.LabelSmallSize to Tokens.LabelSmallLineHeight,
     )
 
-    @Test fun `every text style is a token size and line height in the system font`() {
+    @Test fun `every text style is a token size and line height in PadStudio's own typeface`() {
+        val family = studioFontFamily(StudioFont.DEFAULT)
         for ((name, style) in styles) {
             assertTrue(style.fontSize in tokenSizes, "$name is ${style.fontSize}, not a token size")
             assertEquals(tokenSizes[style.fontSize], style.lineHeight, "$name line height")
-            assertEquals(FontFamily.Default, style.fontFamily, "$name font")
+            assertEquals(family, style.fontFamily, "$name font")
+            assertTrue(style.fontFamily != FontFamily.Default, "$name must not fall back to the system font")
             assertEquals(0.sp, style.letterSpacing, "$name letter spacing")
+        }
+    }
+
+    /** Without an explicit wght setting a variable font renders at its default instance (Manrope's is 200). */
+    @Test fun `every font entry pins the wght axis to its own weight, clamped to the font's range`() {
+        for (font in StudioFont.entries) {
+            val family = studioFontFamily(font) as FontListFontFamily
+            assertEquals(STUDIO_FONT_WEIGHTS, family.fonts.map { it.weight.weight }, "$font weights")
+            for (entry in family.fonts) {
+                val settings = (entry as ResourceFont).variationSettings.settings
+                val wght = settings.single { it.axisName == "wght" }.toVariationValue(null)
+                assertEquals(minOf(entry.weight.weight, font.maxWeight).toFloat(), wght, "$font ${entry.weight}")
+                assertEquals(font.res, entry.resId, "$font resource")
+            }
         }
     }
 
@@ -53,9 +73,11 @@ class ThemeTest {
     @Test fun `styles follow the preview's roles`() {
         with(StudioTypography) {
             assertEquals(Tokens.BodySize to Tokens.WeightRegular, bodyLarge.fontSize to bodyLarge.fontWeight)
-            assertEquals(Tokens.LabelSize to Tokens.WeightRegular, bodyMedium.fontSize to bodyMedium.fontWeight)
+            assertEquals(Tokens.BodyMediumSize to Tokens.WeightRegular, bodyMedium.fontSize to bodyMedium.fontWeight)
+            assertEquals(Tokens.TitleMediumSize to Tokens.WeightMedium, titleMedium.fontSize to titleMedium.fontWeight)
             assertEquals(Tokens.TitleSize to Tokens.WeightMedium, titleLarge.fontSize to titleLarge.fontWeight)
-            assertEquals(Tokens.LabelSize to Tokens.WeightMedium, labelLarge.fontSize to labelLarge.fontWeight)
+            assertEquals(Tokens.BodyMediumSize to Tokens.WeightMedium, labelLarge.fontSize to labelLarge.fontWeight)
+            assertEquals(Tokens.LabelSize to Tokens.WeightMedium, labelMedium.fontSize to labelMedium.fontWeight)
             assertEquals(Tokens.LabelSmallSize to Tokens.WeightMedium, labelSmall.fontSize to labelSmall.fontWeight)
             assertEquals(Tokens.HeadlineSize to Tokens.WeightRegular, headlineSmall.fontSize to headlineSmall.fontWeight)
         }

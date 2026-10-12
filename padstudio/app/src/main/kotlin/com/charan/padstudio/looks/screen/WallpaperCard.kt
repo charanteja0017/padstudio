@@ -17,10 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,7 +42,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.charan.padstudio.looks.WallpaperGenerator
 import com.charan.padstudio.looks.WallpaperTarget
@@ -56,6 +53,7 @@ import com.charan.padstudio.ui.components.PillStyle
 import com.charan.padstudio.ui.components.RowTrailing
 import com.charan.padstudio.ui.components.SectionHeader
 import com.charan.padstudio.ui.components.SegmentedChoice
+import com.charan.padstudio.ui.components.SegmentedChoiceDefaults
 import com.charan.padstudio.ui.components.StatusLevel
 import com.charan.padstudio.ui.components.StatusPill
 import com.charan.padstudio.ui.components.StudioCard
@@ -229,10 +227,9 @@ private fun TargetChoice(target: WallpaperTarget, onSelect: (WallpaperTarget) ->
             TARGET_ORDER.maxOf { measurer.measure(targetLabel(it), style, maxLines = 1, softWrap = false).size.width }.toDp()
         }
     }
-    val padding = SegmentedButtonDefaults.ContentPadding.let {
-        it.calculateLeftPadding(LayoutDirection.Ltr) + it.calculateRightPadding(LayoutDirection.Ltr)
-    }
-    val check = SegmentedButtonDefaults.IconSize + ButtonDefaults.IconSpacing
+    // The control's own chrome around a label (padding, check, gap): SegmentedChoice owns those sizes.
+    val padding = SegmentedChoiceDefaults.SegmentChrome
+    val check = 0.dp
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         if (segmentsFit(widest, maxWidth, TARGET_ORDER.size, padding, check)) {
             SegmentedChoice(

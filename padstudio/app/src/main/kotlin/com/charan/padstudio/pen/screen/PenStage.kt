@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -35,7 +34,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.charan.padstudio.pen.PenModelView
 import com.charan.padstudio.ui.components.BindingChip
-import com.charan.padstudio.ui.theme.Tokens
+import com.charan.padstudio.ui.components.BindingChipDefaults
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.abs
@@ -210,7 +209,7 @@ fun PenStage(
 /** A binding chip as the stage shows it; the chosen control's chip gets the kit's 2 dp primary edge. */
 @Composable
 private fun StageBindingChip(chip: StageChip, selected: Boolean, selectedColor: Color, onClick: () -> Unit) {
-    val edge = if (selected) Modifier.border(2.dp, selectedColor, RoundedCornerShape(Tokens.CornerS)) else Modifier
+    val edge = if (selected) Modifier.border(2.dp, selectedColor, BindingChipDefaults.Shape) else Modifier
     BindingChip(
         onClick = onClick,
         modifier = edge.semantics { this.selected = selected },

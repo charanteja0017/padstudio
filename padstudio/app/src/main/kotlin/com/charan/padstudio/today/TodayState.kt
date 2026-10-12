@@ -56,7 +56,7 @@ internal fun penControls(kind: PenKind): List<PenControl> = when (kind) {
 /** How many of the pen's controls have a trigger, recorded here or measured by the probe ([recorded] = PenPlan.controls keys). */
 internal fun controlsSet(kind: PenKind, recorded: Set<String>): Int = penControls(kind).count { it.id in recorded }
 
-/** The hero's three text lines, cut from [PenStatus.configuredText]: "Your pen · Expert setup", "Focus Pen Pro", "4 controls set". */
+/** The hero's three text lines, cut from [PenStatus.configuredText]: "Your pen · Expert setup", "Focus Pen Pro", "4 controls recorded". */
 internal data class HeroText(val overline: String, val title: String, val subtitle: String)
 
 internal fun heroText(status: PenStatus, penName: String, mode: PenMode, controlsSet: Int): HeroText {

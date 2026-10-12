@@ -5,18 +5,22 @@
 
 :root {
   /* Type scale at font scale 1.0; fontscale.js rewrites the sizes for other scales. */
-  --t-display-size: 36px;
-  --t-display-line: 44px;
-  --t-headline-size: 28px;
-  --t-headline-line: 36px;
-  --t-title-size: 20px;
-  --t-title-line: 28px;
-  --t-body-size: 16px;
-  --t-body-line: 24px;
-  --t-label-size: 13px;
-  --t-label-line: 18px;
+  --t-display-size: 30px;
+  --t-display-line: 38px;
+  --t-headline-size: 24px;
+  --t-headline-line: 32px;
+  --t-title-size: 18px;
+  --t-title-line: 26px;
+  --t-body-size: 15px;
+  --t-body-line: 22px;
+  --t-label-size: 12px;
+  --t-label-line: 16px;
   --t-label-small-size: 11px;
   --t-label-small-line: 16px;
+  --t-title-medium-size: 15px;
+  --t-title-medium-line: 22px;
+  --t-body-medium-size: 13px;
+  --t-body-medium-line: 20px;
   /* Weights: body regular, titles medium, never above 600 (Bold text adds 300). */
   --w-regular: 400;
   --w-medium: 500;
@@ -30,10 +34,11 @@
   --r-full: 999px;
   /* Spacing, all on the 4 dp grid; touch-target is the minimum size of anything tappable. */
   --s-grid-unit: 4px;
-  --s-gutter: 24px;
-  --s-card-padding: 20px;
+  --s-gutter: 32px;
+  --s-card-padding: 24px;
   --s-gap-s: 12px;
-  --s-gap-m: 16px;
+  --s-gap-m: 20px;
+  --s-gap-l: 32px;
   --s-touch-target: 48px;
 }
 

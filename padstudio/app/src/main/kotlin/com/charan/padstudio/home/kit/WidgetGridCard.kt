@@ -41,6 +41,7 @@ import com.charan.padstudio.ui.components.PillButton
 import com.charan.padstudio.ui.components.PillStyle
 import com.charan.padstudio.ui.components.SectionHeader
 import com.charan.padstudio.ui.components.SegmentedChoice
+import com.charan.padstudio.ui.components.SegmentedChoiceDefaults
 import com.charan.padstudio.ui.components.StatusLevel
 import com.charan.padstudio.ui.components.StudioCard
 import com.charan.padstudio.ui.components.SymIcon
@@ -220,7 +221,7 @@ private fun DensityChoice(density: Density, onDensity: (Density) -> Unit) {
             val pxDensity = LocalDensity.current
             val needed = remember(measurer, style, pxDensity) {
                 val widest = Density.entries.maxOf { measurer.measure(it.label, style, maxLines = 1, softWrap = false).size.width }
-                maxOf(SEGMENT_MIN, with(pxDensity) { widest.toDp() } + SEGMENT_CHROME) * Density.entries.size
+                SegmentedChoiceDefaults.requiredWidth(with(pxDensity) { widest.toDp() }, Density.entries.size)
             }
             if (needed <= maxWidth) {
                 SegmentedChoice(
@@ -239,14 +240,6 @@ private fun DensityChoice(density: Density, onDensity: (Density) -> Unit) {
         }
     }
 }
-
-/**
- * Material 3 1.4.0's segmented row gives every segment the same width (weight 1 in an IntrinsicSize.Min row),
- * at least ButtonDefaults.MinWidth (58 dp), and each always keeps 12 + 12 dp of padding, the 18 dp check and
- * its 8 dp gap beside its label (read from the 1.4.0 classes).
- */
-private val SEGMENT_MIN = 58.dp
-private val SEGMENT_CHROME = 50.dp
 
 /**
  * Custom: columns 4–10 and rows 2–8 as chips, "Up to C × R" for the previewed widget, the draft drawn on it,

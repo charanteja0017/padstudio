@@ -93,8 +93,12 @@ object PenModel {
     /** `idle` loops; every other clip plays once and hands back to `idle`. */
     val clips = listOf("idle", "squeeze", "slide_up", "slide_down", "double_tap", "write")
 
-    /** The marker empties whose screen positions [PenModelView] reports through `onMarkers`. */
-    val markers = listOf("marker_squeeze", "marker_slide_top", "marker_slide_bottom", "marker_double_tap", "marker_nib")
+    /**
+     * The marker empties whose screen positions [PenModelView] reports through `onMarkers`. `marker_top` (the end
+     * cap, round 2) gives screens the pen's axis without assuming its length; a model without it (older builds,
+     * an owner's model missing it) simply doesn't report it, and screens fall back to `marker_double_tap`.
+     */
+    val markers = listOf("marker_squeeze", "marker_slide_top", "marker_slide_bottom", "marker_double_tap", "marker_nib", "marker_top")
 }
 
 /**
@@ -126,6 +130,9 @@ object PenModel {
  *
  * @param replay bump to play [clip] again from the start (the four parameters before it are the
  *   cross-task contract; this one is an optional addition).
+ * @param onBusyChange `true` when a gesture or `write` starts, `false` once the pen is back at rest. Screens hide
+ *   their callouts, and stop re-placing them, while busy (round 2 contract). Step 0 reports busy for the clip's
+ *   nominal length; the zoom work (round 2, B1) replaces that with the real timeline, including the ease back.
  */
 @Composable
 fun PenModelView(
@@ -134,8 +141,10 @@ fun PenModelView(
     playing: Boolean = true,
     onMarkers: (Map<String, Offset>) -> Unit = {},
     replay: Int = 0,
+    onBusyChange: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
+    val busy by rememberUpdatedState(onBusyChange)
     val debug = LocalPenModelDebug.current
     val report by rememberUpdatedState(onMarkers)
     val motionAllowed = rememberAnimationsEnabled()
@@ -154,6 +163,19 @@ fun PenModelView(
     }
     val request = ClipRequest(clip.takeIf { it in PenModel.clips } ?: IDLE, replay)
     val live = playing && visible && started
+
+    // Step 0 stub of the busy signal: a gesture is busy for its nominal length. Round 2's B1 drives this from the
+    // zoom timeline instead (start, hold, ease back), which also follows pauses.
+    LaunchedEffect(request) {
+        if (request.clip != IDLE) {
+            busy(true)
+            try {
+                delay((GESTURE_SECONDS * 1000).toLong())
+            } finally {
+                busy(false)
+            }
+        }
+    }
 
     // Filament starts after the 2D pen has reached the screen, and only once the view is visible: the
     // engine, shaders and model take a moment on the main thread.
@@ -828,6 +850,7 @@ private val MARKERS_PEN = mapOf(
     "marker_slide_bottom" to floatArrayOf(0f, -0.0043f, 0.005f),
     "marker_double_tap" to floatArrayOf(0f, 0.040f, 0.005f),
     "marker_nib" to floatArrayOf(0f, -0.0825f, 0f),
+    "marker_top" to floatArrayOf(0f, 0.0825f, 0f),
 )
 
 private class Kit2dPaths {

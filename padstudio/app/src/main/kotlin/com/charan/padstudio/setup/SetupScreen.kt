@@ -6,7 +6,6 @@ import android.text.format.DateFormat
 import android.text.format.DateUtils
 import android.view.KeyEvent
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,14 +30,10 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -61,8 +56,6 @@ import com.charan.padstudio.home.WidgetPinning
 import com.charan.padstudio.icons.IconRepository
 import com.charan.padstudio.pen.KeyMapperBridge
 import com.charan.padstudio.studio
-import com.charan.padstudio.ui.AboutCard
-import com.charan.padstudio.ui.LicencesDialog
 import com.charan.padstudio.ui.Sym
 import com.charan.padstudio.ui.components.AppIcon
 import com.charan.padstudio.ui.components.CardColumns
@@ -74,7 +67,6 @@ import com.charan.padstudio.ui.components.PillStyle
 import com.charan.padstudio.ui.components.ProgressRing
 import com.charan.padstudio.ui.components.RowLeading
 import com.charan.padstudio.ui.components.RowTrailing
-import com.charan.padstudio.ui.components.ScreenDefaults
 import com.charan.padstudio.ui.components.ScreenScaffold
 import com.charan.padstudio.ui.components.StatusLevel
 import com.charan.padstudio.ui.components.StatusPill
@@ -90,7 +82,6 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Date
 import kotlin.math.max
-import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -98,12 +89,10 @@ import kotlinx.coroutines.withContext
 /**
  * Setup (plan §10, docs/redesign/mock-setup.html): a ring "N of 8 ready" over MainViewModel's eight health checks;
  * the checks grouped Pen, Home and Looks (any other under Other), each in plain words with its status pill and its
- * own Fix; Developer (the pen probe, device facts via tools/facts.sh); and About at the end.
+ * own Fix; and Developer (the pen probe, device facts via tools/facts.sh). About has its own page since round 2.
  *
- * At 840 dp and wider the checks fill the left column and the summary, Developer and About a 344 dp column on the
- * right, as the mock-up; narrower, one column with the summary first. With [scrollToAbout] (the shell passes it
- * for `--es tab about`) the page opens scrolled to About: once, on its first composition, so a rotation keeps the
- * reader's place.
+ * At 840 dp and wider the checks fill the left column and the summary and Developer a 344 dp column on the
+ * right, as the mock-up; narrower, one column with the summary first.
  *
  * Every button does what it did before the redesign: Check again calls `refresh(force = true)`, a Fix starts the
  * check's own intent through [onStart] (on every check that has one, as before; quieter on a ready check), and
@@ -115,7 +104,6 @@ fun SetupScreen(
     model: MainViewModel,
     onStart: (Intent) -> Unit,
     modifier: Modifier = Modifier,
-    scrollToAbout: Boolean = false,
     onOpenLooks: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -164,17 +152,14 @@ fun SetupScreen(
 
     // Kept here, above the layout switch, so they survive a rotation or a resize across 840 dp.
     var detailsOpen by rememberSaveable { mutableStateOf(false) }
-    var licencesOpen by rememberSaveable { mutableStateOf(false) }
 
     val scroll = rememberScrollState()
-    val anchors = remember { ScrollAnchors() }
-    ScrollToAboutEffect(scrollToAbout, settled = checks.isNotEmpty() && readings != null, scroll, anchors)
 
     val fix: (HealthCheck) -> Unit = { check -> check.fixIntent?.let(onStart) }
     ScreenScaffold(
         title = "Setup",
         subtitle = setupSubtitle(checks.size),
-        modifier = modifier.onPlaced { anchors.viewport = it },
+        modifier = modifier,
         scrollState = scroll,
         actions = {
             PillButton(
@@ -205,9 +190,6 @@ fun SetupScreen(
                     onOpenProbe = { onStart(Intent(context, PenProbeActivity::class.java)) },
                 )
             }
-            val aboutCard: @Composable () -> Unit = {
-                AboutCard(onOpenLicences = { licencesOpen = true }, modifier = Modifier.onPlaced { anchors.about = it })
-            }
             if (maxWidth >= TwoPaneMinWidth) {
                 CardColumns(
                     endWidth = SideColumnWidth,
@@ -216,7 +198,6 @@ fun SetupScreen(
                     end = {
                         summaryCard()
                         developerCard()
-                        aboutCard()
                     },
                 )
             } else {
@@ -224,25 +205,21 @@ fun SetupScreen(
                     summaryCard()
                     areaCards()
                     developerCard()
-                    aboutCard()
                 }
             }
         }
     }
-    if (licencesOpen) LicencesDialog(onDismiss = { licencesOpen = false })
 }
 
 /** From this content width the page has two columns, as the mock-up (plan §10: list–detail at 840 dp and wider). */
 private val TwoPaneMinWidth = 840.dp
 
-/** The mock-up's right-hand column: the summary, Developer and About. */
+/** The mock-up's right-hand column: the summary and Developer. */
 private val SideColumnWidth = 344.dp
 
 /** Check again gives up waiting after this long, so its button can't stay on "Checking…". */
 private const val RECHECK_TIMEOUT_MS = 15_000L
 
-/** With [scrollToAbout], wait at most this long for the checks and facts to load before scrolling, so About doesn't move after. */
-private const val SETTLE_TIMEOUT_MS = 2_000L
 
 /** One check as the page shows it: the view model's [check], its [state] and its sentence in plain [words]. */
 private class CheckRowUi(val check: HealthCheck, val words: String) {
@@ -340,51 +317,6 @@ private class RecheckState {
         waitingFor = null
     }
 }
-
-/** Where the page's viewport and its About card are. Plain fields: they're only read when scrolling, never drawn from. */
-private class ScrollAnchors {
-    var viewport: LayoutCoordinates? = null
-    var about: LayoutCoordinates? = null
-
-    /** The scroll offset that puts About's top [gap] px below the top of the viewport; null until both are placed. */
-    fun aboutOffset(current: Int, gap: Int): Int? {
-        val page = viewport?.takeIf { it.isAttached } ?: return null
-        val card = about?.takeIf { it.isAttached } ?: return null
-        return current + page.localPositionOf(card, Offset.Zero).y.roundToInt() - gap
-    }
-}
-
-/**
- * Scrolls to About once [scrollToAbout] is on: after the checks and facts have loaded ([settled]), or after
- * [SETTLE_TIMEOUT_MS] if they take longer. Done once per request: remembered across recreation, and asked again
- * only when [scrollToAbout] turns off and on.
- */
-@Composable
-private fun ScrollToAboutEffect(scrollToAbout: Boolean, settled: Boolean, scroll: ScrollState, anchors: ScrollAnchors) {
-    var done by rememberSaveable { mutableStateOf(false) }
-    val gap = with(LocalDensity.current) { ScreenDefaults.TopPadding.roundToPx() }
-    LaunchedEffect(scrollToAbout) {
-        if (!scrollToAbout) done = false
-    }
-    LaunchedEffect(scrollToAbout, done, settled) {
-        if (!scrollToAbout || done) return@LaunchedEffect
-        if (!settled) delay(SETTLE_TIMEOUT_MS)
-        // Let the page lay out with what has loaded, then measure where About is.
-        repeat(ANCHOR_FRAMES) {
-            withFrameNanos { }
-            val target = anchors.aboutOffset(scroll.value, gap)
-            if (target != null) {
-                scroll.scrollTo(target)
-                done = true
-                return@LaunchedEffect
-            }
-        }
-        done = true
-    }
-}
-
-/** Frames to wait for the About card to be placed before giving up on scrolling to it. */
-private const val ANCHOR_FRAMES = 10
 
 /** A card's title, with [meta] ("4 of 5 ready") at the end, or under it when they don't fit side by side. */
 @Composable
