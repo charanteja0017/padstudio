@@ -2,13 +2,27 @@
 
 PadStudio makes a Xiaomi Pad's pen (the Focus Pen Pro, or a two-button pen) useful in every app: you choose what each gesture does, per kind of app, from a camera shutter and page turns to undo and screenshots. It also tidies the home screen into dense, auto-grouped widgets and gives the tablet a coherent look. It needs no root and can be undone. It runs on top of the stock HyperOS launcher, and [Key Mapper](https://github.com/keymapperorg/KeyMapper) runs the pen: PadStudio configures it but does not modify it.
 
+<p align="center">
+  <a href="https://github.com/charanteja0017/padstudio/releases/latest/download/PadStudio.apk"><img alt="Download the latest APK (PadStudio 0.2)" src="https://img.shields.io/badge/Download_APK-v0.2-2ea44f?style=for-the-badge&logo=android&logoColor=white"></a>
+  &nbsp;
+  <a href="https://github.com/charanteja0017/padstudio/releases"><img alt="All releases" src="https://img.shields.io/badge/All_releases-on_GitHub-555555?style=for-the-badge&logo=github&logoColor=white"></a>
+</p>
+
 ![PadStudio on a Xiaomi Pad](docs/screenshots/today.jpg)
 
 ## Download
 
-Get the app from the [latest release](https://github.com/charanteja0017/padstudio/releases/latest). The file is `PadStudio-0.2.apk` (version 0.2).
+**[Download PadStudio 0.2 (APK, 57.6 MB)](https://github.com/charanteja0017/padstudio/releases/latest/download/PadStudio.apk)**. The link and the button above always fetch the newest release.
 
-It is the debug-signed build that was tested on the tablet. The release page lists its SHA-256, which you can compare with `shasum -a 256 PadStudio-0.2.apk`. When Android asks, allow installs from the browser or file manager you opened the file with.
+| Version | Released | Download | Size | Notes |
+|---|---|---|---|---|
+| **0.2** (latest) | 13 Oct 2026 | [PadStudio-0.2.apk](https://github.com/charanteja0017/padstudio/releases/download/v0.2/PadStudio-0.2.apk) | 57.6 MB | [Release notes](https://github.com/charanteja0017/padstudio/releases/tag/v0.2) |
+
+Every version is on the [releases page](https://github.com/charanteja0017/padstudio/releases).
+
+SHA-256 of 0.2 (`PadStudio-0.2.apk`, and `PadStudio.apk` from the button, which is the same file): `d1c0d32c83d0e876bd4ad6744454596084d11fedd029443c256341acefed14c8`. Check it with `shasum -a 256 <file>` on macOS or Linux, or `certutil -hashfile <file> SHA256` on Windows.
+
+It is the debug-signed build that was tested on the tablet. When Android asks, allow installs from the browser or file manager you opened the file with.
 
 ## What you need
 
@@ -119,7 +133,7 @@ For the Focus Pen Pro, notes apps have no default actions, and pen-native ones s
 Do these once, in this order. Steps 1 to 5 are for the pen; the home screen and looks features (steps 6 and 7) work without Key Mapper.
 
 1. **Install Key Mapper 4.6.1.** Get `keymapper-4.6.1-foss.apk` from [Key Mapper's releases](https://github.com/keymapperorg/KeyMapper/releases) and install it; its SHA-256 is in [ADR-000](docs/decisions/ADR-000-baselines.md). PadStudio's own messages say "Install it from your computer with tools/install.sh keymapper"; that script is only the adb route to the same APK.
-2. **Install PadStudio** from the [release page](https://github.com/charanteja0017/padstudio/releases/latest) and open it. It starts on Today.
+2. **Install PadStudio**: [download the APK](https://github.com/charanteja0017/padstudio/releases/latest/download/PadStudio.apk), open it and install, then open PadStudio. It starts on Today.
 3. **Open Setup and work through the Pen checks.** "Key Mapper can see the pen" needs Key Mapper's accessibility service turned on; its Fix button opens Android's accessibility settings. If Android says "Restricted setting", open Key Mapper's App info, tap ⋮, choose Allow restricted settings, then try again.
 4. **Keep Key Mapper running on HyperOS.** Setup shows "HyperOS keeps Key Mapper running" as Check by hand, because apps cannot read these settings. Its button opens Key Mapper's app info: turn on Autostart, set Battery saver to No restrictions, and lock Key Mapper's card in Recents (pull the card down).
 5. **Set up the pen** on the Pen tab.
@@ -172,6 +186,8 @@ cd padstudio
 ```
 
 Two settings point at the author's Mac. `padstudio/gradle.properties` pins `org.gradle.java.home` to a Homebrew JDK 17 (`/opt/homebrew/opt/openjdk@17/...`): change or remove that line to use your own. `padstudio/local.properties` (git-ignored) holds `sdk.dir`: create it with your own SDK path, or set `ANDROID_HOME`, as `tools/env.sh` does.
+
+To publish a version, attach its APK to the GitHub release twice: as `PadStudio-<version>.apk`, which the versions table links, and as `PadStudio.apk`, the fixed name the Download button asks GitHub for (`releases/latest/download/PadStudio.apk`). Then add the version's row to the table under [Download](#download) and the version to the button.
 
 ## Repository layout
 
