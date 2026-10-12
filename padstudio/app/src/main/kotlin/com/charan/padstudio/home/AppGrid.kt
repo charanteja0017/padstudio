@@ -55,6 +55,7 @@ import androidx.glance.appwidget.updateAll
 import com.charan.padstudio.core.home.AppGroup
 import com.charan.padstudio.core.home.Density
 import com.charan.padstudio.data.InstalledApp
+import com.charan.padstudio.data.UsageRanking
 import com.charan.padstudio.studio
 import com.charan.padstudio.ui.components.ListRow
 import com.charan.padstudio.ui.components.PillButton
@@ -153,7 +154,13 @@ private fun AppTile(
                     onLongClick = { menu = true },
                     onClick = {
                         val failure = context.startOrReason(app.launchIntent())
-                        if (failure == null) onLaunched() else onMessage("Couldn't open $label. $failure")
+                        if (failure == null) {
+                            // Most used counts this launch while Usage access is off.
+                            UsageRanking.recordLaunch(context, app.component.packageName)
+                            onLaunched()
+                        } else {
+                            onMessage("Couldn't open $label. $failure")
+                        }
                     },
                 )
                 .padding(horizontal = 4.dp, vertical = if (density.showLabels) 8.dp else 4.dp),

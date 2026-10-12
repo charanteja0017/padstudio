@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.provider.Settings
 import android.text.format.DateFormat
 import android.util.Log
 import android.util.TypedValue
@@ -40,6 +41,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
@@ -100,16 +102,17 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.state.PreferencesGlanceStateDefinition
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.charan.padstudio.core.home.AppFacts
 import com.charan.padstudio.core.home.AppGroup
@@ -120,7 +123,9 @@ import com.charan.padstudio.core.home.PlannedGroup
 import com.charan.padstudio.core.home.WidgetLayout
 import com.charan.padstudio.data.HomeSnapshot
 import com.charan.padstudio.data.InstalledApp
+import com.charan.padstudio.data.PanelSort
 import com.charan.padstudio.data.StudioConfig
+import com.charan.padstudio.data.UsageRanking
 import com.charan.padstudio.studio
 import com.charan.padstudio.ui.PadStudioTheme
 import com.charan.padstudio.ui.Sym
@@ -189,8 +194,8 @@ private fun Context.isOwnWidget(appWidgetId: Int): Boolean =
             .getOrDefault(false)
 
 /**
- * The folder that opens from a group widget's header or "+N" tile: the group's apps, search, and
- * "Edit widget" for the widget it came from. That widget is the intent's
+ * The folder that opens from a group widget's header or "+N" tile: the group's apps (most used first or
+ * A to Z), a search button, and "Edit widget" for the widget it came from. That widget is the intent's
  * [AppWidgetManager.EXTRA_APPWIDGET_ID] when the widget passes it, otherwise the one widget showing this
  * group, if exactly one does.
  */
@@ -234,7 +239,7 @@ class FolderPanelActivity : ComponentActivity() {
     }
 }
 
-/** Every group as a chip, plus search across all apps. A pen press can open this (Key Mapper INTENT action). */
+/** Every app under All, or one group at a time, most used first or A to Z. A pen press can open this (Key Mapper INTENT action). */
 class LibraryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -317,6 +322,8 @@ private fun FolderPanel(request: FolderRequest, frosted: Boolean, onClose: () ->
     var groupName by rememberSaveable(request) { mutableStateOf(request.group) }
     var widgetId by rememberSaveable(request) { mutableStateOf(request.widgetId) }
     var query by rememberSaveable(request, groupName) { mutableStateOf("") }
+    // Search starts folded away, under the search button.
+    var searching by rememberSaveable(request, groupName) { mutableStateOf(false) }
     var editing by rememberSaveable(request) { mutableStateOf(false) }
     // Without the widget's id in the intent, look for the one widget that can be showing this group. That
     // waits for the groups that have apps: a widget whose saved group has none, or that has no saved group,
@@ -344,6 +351,12 @@ private fun FolderPanel(request: FolderRequest, frosted: Boolean, onClose: () ->
                 density = config.density,
                 query = query,
                 onQuery = { query = it },
+                searching = searching,
+                // Folding the search away also drops what was typed, so no hidden filter is left on the grid.
+                onSearch = {
+                    searching = !searching
+                    if (!searching) query = ""
+                },
                 canEdit = editId != null,
                 editing = editing,
                 onEdit = { editing = !editing },
@@ -391,6 +404,8 @@ private fun FolderSheet(
     density: Density,
     query: String,
     onQuery: (String) -> Unit,
+    searching: Boolean,
+    onSearch: () -> Unit,
     canEdit: Boolean,
     editing: Boolean,
     onEdit: () -> Unit,
@@ -401,38 +416,46 @@ private fun FolderSheet(
     val group = AppGroup.entries.firstOrNull { it.name == groupName }
     val snapshot = (load as? SnapshotLoad.Ready)?.snapshot
     val planned = snapshot?.groups?.firstOrNull { it.group == group }
-    val apps = remember(snapshot, planned) { if (snapshot == null || planned == null) emptyList() else planned.apps.mapNotNull(snapshot::app) }
-    FrostedSheet(modifier, frosted) {
+    val sort = rememberAppSort()
+    val apps = remember(snapshot, planned, sort.mode, sort.usage) {
+        if (snapshot == null || planned == null) emptyList() else planned.apps.mapNotNull(snapshot::app).sortedFor(sort.mode, sort.usage)
+    }
+    FrostedSheet(modifier, frosted, top = FOLDER_SHEET_TOP) {
+        // One row: the group and how many apps it has, then the controls, then Close. Search and Edit widget are
+        // icon buttons so that the row stays one row.
         PanelHeader(
             title = group?.title ?: "Apps",
-            overline = "Group",
-            subtitle = when {
+            compact = true,
+            count = when {
                 load is SnapshotLoad.Loading -> "Loading…"
                 load is SnapshotLoad.Failed -> null
                 planned == null -> "No apps right now"
-                else -> PanelText.appCount(apps.size)
+                else -> "${apps.size}"
             },
+            countDescription = if (planned != null) PanelText.appCount(apps.size) else null,
             actions = {
-                PillButton(
-                    text = "Open library",
-                    onClick = onOpenLibrary,
-                    style = PillStyle.Outlined,
-                    icon = Sym.library,
-                    shape = PillButtonDefaults.FullPill,
+                SortChoice(sort)
+                // Pressed while the search is open: a tonal container and a filled glass.
+                SymIconButton(
+                    icon = Sym.filledIf(Sym.search, searching),
+                    contentDescription = "Search",
+                    onClick = onSearch,
+                    style = if (searching) PillStyle.Tonal else PillStyle.Text,
                 )
+                SymIconButton(icon = Sym.library, contentDescription = "Open library", onClick = onOpenLibrary)
                 if (canEdit) {
                     // Pressed while the editor is open: a tonal container and a filled pencil, besides the pane itself.
-                    PillButton(
-                        text = "Edit widget",
-                        onClick = onEdit,
-                        style = if (editing) PillStyle.Tonal else PillStyle.Outlined,
+                    SymIconButton(
                         icon = Sym.filledIf(Sym.edit, editing),
-                        shape = PillButtonDefaults.FullPill,
+                        contentDescription = "Edit widget",
+                        onClick = onEdit,
+                        style = if (editing) PillStyle.Tonal else PillStyle.Text,
                     )
                 }
             },
             close = { SymIconButton(icon = Sym.close, contentDescription = "Close", onClick = onClose) },
         )
+        if (sort.needsAccess) UsageAccessLine(onMessage, Modifier.padding(top = 4.dp))
         when {
             load is SnapshotLoad.Loading -> LoadingLine("Loading your apps…")
             load is SnapshotLoad.Failed -> LoadFailed(load.reason, onRetry)
@@ -444,19 +467,22 @@ private fun FolderSheet(
                 onAction = onOpenLibrary,
             )
             else -> {
-                SearchField(query = query, onQuery = onQuery, modifier = Modifier.padding(top = 16.dp))
+                if (searching) SearchField(query = query, onQuery = onQuery, modifier = Modifier.padding(top = 8.dp))
                 val shown = apps.matching(query)
                 if (shown.isEmpty()) {
-                    EmptyState(title = "No apps match “${query.trim()}”", icon = Sym.search, body = "Try part of the name, or search the library.")
+                    EmptyState(title = "No apps match “${query.trim()}”", icon = Sym.search, body = "Try part of the name.")
                 } else {
-                    PanelAppGrid(
-                        apps = shown,
-                        density = density,
-                        onLaunched = onClose,
-                        onMessage = onMessage,
-                        modifier = Modifier.padding(top = 12.dp).weight(1f, fill = false),
-                        whereOf = { "In ${planned.group.title}" },
-                    )
+                    // A fresh grid when the order changes, so it starts at the top of the new order.
+                    key(sort.mode, sort.usage) {
+                        PanelAppGrid(
+                            apps = shown,
+                            density = density,
+                            onLaunched = onClose,
+                            onMessage = onMessage,
+                            modifier = Modifier.padding(top = 8.dp).weight(1f, fill = false),
+                            whereOf = { "In ${planned.group.title}" },
+                        )
+                    }
                 }
             }
         }
@@ -470,8 +496,9 @@ private fun LibraryPanel(frosted: Boolean, onClose: () -> Unit) {
     val context = LocalContext.current
     val config by context.studio.config.config.collectAsStateWithLifecycle()
     val (load, retry) = rememberSnapshotLoad(config.overrides)
-    var query by rememberSaveable { mutableStateOf("") }
+    // The chosen group's name; null is the All chip.
     var chosen by rememberSaveable { mutableStateOf<String?>(null) }
+    val sort = rememberAppSort()
     val messages = remember { SnackbarHostState() }
     val say = rememberSay(messages)
     PanelScrim(onDismiss = onClose, messages = messages) {
@@ -485,43 +512,41 @@ private fun LibraryPanel(frosted: Boolean, onClose: () -> Unit) {
                     is SnapshotLoad.Failed -> null
                     is SnapshotLoad.Ready -> PanelText.librarySubtitle(groups)
                 },
+                actions = { SortChoice(sort) },
                 close = { SymIconButton(icon = Sym.close, contentDescription = "Close", onClick = onClose) },
             )
+            if (sort.needsAccess) UsageAccessLine(say, Modifier.padding(top = 4.dp))
             when {
                 load is SnapshotLoad.Loading -> LoadingLine("Loading your apps…")
                 load is SnapshotLoad.Failed -> LoadFailed(load.reason, retry)
                 snapshot != null -> {
-                    SearchField(query = query, onQuery = { query = it }, modifier = Modifier.padding(top = 16.dp))
-                    val places = remember(snapshot) { PlaceIndex(snapshot) }
-                    if (query.isNotBlank()) {
-                        val results = remember(snapshot, query) { snapshot.apps.matching(query).sortedBy { it.facts.label.lowercase() } }
-                        if (results.isEmpty()) {
-                            EmptyState(title = "No apps match “${query.trim()}”", icon = Sym.search, body = "Try part of the name.")
-                        } else {
-                            PanelAppGrid(
-                                apps = results,
-                                density = config.density,
-                                onLaunched = onClose,
-                                onMessage = say,
-                                modifier = Modifier.padding(top = 12.dp).weight(1f, fill = false),
-                                whereOf = places::where,
-                                isHidden = places::isHidden,
-                            )
-                        }
-                    } else if (groups.isEmpty()) {
+                    if (groups.isEmpty()) {
                         EmptyState(title = "No apps to show yet", icon = Sym.library, body = "Apps you install appear here, sorted into groups.")
                     } else {
-                        val selected = groups.firstOrNull { it.group.name == chosen } ?: groups.first()
-                        GroupChips(groups, selected, onSelect = { chosen = it.group.name }, modifier = Modifier.padding(top = 12.dp))
-                        // A fresh grid per group, so one group's scroll position never carries over to the next.
-                        key(selected.group) {
+                        val places = remember(snapshot) { PlaceIndex(snapshot) }
+                        val everyApp = remember(snapshot) { snapshot.shownApps() }
+                        // A group that has gone (its apps were moved away) leaves All chosen.
+                        val selected = groups.firstOrNull { it.group.name == chosen }
+                        GroupChips(
+                            groups = groups,
+                            allCount = everyApp.size,
+                            selected = selected,
+                            onSelectAll = { chosen = null },
+                            onSelect = { chosen = it.group.name },
+                            modifier = Modifier.padding(top = 12.dp),
+                        )
+                        val shown = remember(snapshot, selected, sort.mode, sort.usage) {
+                            (if (selected == null) everyApp else selected.apps.mapNotNull(snapshot::app)).sortedFor(sort.mode, sort.usage)
+                        }
+                        // A fresh grid per group and per order, so one list's scroll position never carries over to the next.
+                        key(selected?.group, sort.mode, sort.usage) {
                             PanelAppGrid(
-                                apps = remember(snapshot, selected) { selected.apps.mapNotNull(snapshot::app) },
+                                apps = shown,
                                 density = config.density,
                                 onLaunched = onClose,
                                 onMessage = say,
                                 modifier = Modifier.padding(top = 8.dp).weight(1f, fill = false),
-                                whereOf = { "In ${selected.group.title}" },
+                                whereOf = { app -> if (selected == null) places.where(app) else "In ${selected.group.title}" },
                             )
                         }
                     }
@@ -531,20 +556,41 @@ private fun LibraryPanel(frosted: Boolean, onClose: () -> Unit) {
     }
 }
 
-/** The Library's group chips, one per group with its app count, scrolling sideways; the chosen one starts in view. */
+/**
+ * The Library's chips, scrolling sideways: All first, then one per group with its app count. [selected] is the
+ * chosen group, or null while All is; the chosen chip starts in view.
+ */
 @Composable
-private fun GroupChips(groups: List<PlannedGroup>, selected: PlannedGroup, onSelect: (PlannedGroup) -> Unit, modifier: Modifier = Modifier) {
-    val state = rememberLazyListState(initialFirstVisibleItemIndex = groups.indexOf(selected).coerceAtLeast(0))
+private fun GroupChips(
+    groups: List<PlannedGroup>,
+    allCount: Int,
+    selected: PlannedGroup?,
+    onSelectAll: () -> Unit,
+    onSelect: (PlannedGroup) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // All is the first item, so the groups start at 1.
+    val state = rememberLazyListState(initialFirstVisibleItemIndex = if (selected == null) 0 else groups.indexOf(selected) + 1)
     LazyRow(modifier = modifier.fillMaxWidth(), state = state, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        item(key = ALL_CHIP_KEY) {
+            ChoiceChip(label = "All $allCount", selected = selected == null, onClick = onSelectAll)
+        }
         items(groups, key = { it.group.name }) { group ->
             ChoiceChip(
                 label = "${group.group.title} ${group.apps.size}",
-                selected = group.group == selected.group,
+                selected = group.group == selected?.group,
                 onClick = { onSelect(group) },
             )
         }
     }
 }
+
+/** Every app the groups show, each once, in the groups' order: the Library's All. Hidden apps are in no group. */
+private fun HomeSnapshot.shownApps(): List<InstalledApp> =
+    groups.filter { it.group != AppGroup.HIDDEN }
+        .flatMap { it.apps }
+        .distinctBy { it.packageName to it.activityName }
+        .mapNotNull { app(it) }
 
 /** Where each app sits, for the long-press menu: its group as the widgets show it, or Hidden. */
 private class PlaceIndex(snapshot: HomeSnapshot) {
@@ -569,7 +615,7 @@ private fun EditWidgetPanel(appWidgetId: Int, frosted: Boolean, onChanged: () ->
     val messages = remember { SnackbarHostState() }
     PanelScrim(onDismiss = onDismiss, messages = messages) {
         EditWidgetSheet(
-            modifier = Modifier.widthIn(max = EDIT_WIDTH_ALONE).fillMaxWidth().heightIn(max = maxHeight),
+            modifier = Modifier.widthIn(max = EDIT_WIDTH_PANEL).fillMaxWidth().heightIn(max = maxHeight),
             frosted = frosted,
             appWidgetId = appWidgetId,
             config = config,
@@ -619,26 +665,46 @@ private fun EditWidgetSheet(
                 onAction = onDone,
             )
             state == null -> LoadingLine("Reading this widget…")
-            else -> Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-                editor.failure?.let { FailureCard(it, onRetry = editor::retry) }
-                GroupField(
-                    load = load,
-                    saved = state.group,
-                    onChoose = { group ->
-                        editor.setGroup(group)
-                        onGroupChanged(group)
-                    },
-                )
+            // The room the sheet really has decides the layout, not the screen: the folder's 480 dp side pane
+            // is narrow even on a wide screen.
+            else -> BoxWithConstraints(Modifier.weight(1f, fill = false)) {
+                val sideBySide = maxWidth >= EDIT_SIDE_BY_SIDE
                 val density = state.density?.let { name -> Density.entries.firstOrNull { it.name == name } } ?: config.density
-                GridField(
-                    saved = GridPicker.read(state.grid),
-                    size = size,
-                    density = density,
-                    defaultGrid = config.widgetGrid,
-                    labelLineDp = labelLineDp,
-                    onChoose = editor::setGrid,
-                )
-                DensityField(density = density, onChoose = editor::setDensity)
+                val groupField: @Composable () -> Unit = {
+                    GroupField(
+                        load = load,
+                        saved = state.group,
+                        onChoose = { group ->
+                            editor.setGroup(group)
+                            onGroupChanged(group)
+                        },
+                    )
+                }
+                val gridAndDensity: @Composable () -> Unit = {
+                    GridField(
+                        saved = GridPicker.read(state.grid),
+                        size = size,
+                        density = density,
+                        defaultGrid = config.widgetGrid,
+                        labelLineDp = labelLineDp,
+                        onChoose = editor::setGrid,
+                    )
+                    DensityField(density = density, onChoose = editor::setDensity)
+                }
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    editor.failure?.let { FailureCard(it, onRetry = editor::retry) }
+                    if (sideBySide) {
+                        // Groups on the left; the grid, with the density under it, on the right.
+                        Row(Modifier.fillMaxWidth()) {
+                            Column(Modifier.weight(1f)) { groupField() }
+                            Spacer(Modifier.width(EDIT_COLUMN_GAP))
+                            Column(Modifier.weight(1f)) { gridAndDensity() }
+                        }
+                    } else {
+                        groupField()
+                        gridAndDensity()
+                    }
+                }
             }
         }
     }
@@ -1211,6 +1277,92 @@ private fun rememberSay(host: SnackbarHostState): (String) -> Unit {
 }
 
 /**
+ * The order a panel shows its apps in: the chosen [mode], the numbers it ranks by ([usage]: null for A to Z and
+ * until Most used has read them), and whether Most used still lacks Usage access ([needsAccess]).
+ */
+private class AppSort(
+    val mode: PanelSort,
+    val usage: Map<String, Long>?,
+    val needsAccess: Boolean,
+    val onMode: (PanelSort) -> Unit,
+)
+
+/**
+ * The sort of the Library and of the folder, as the owner last chose it ([UsageRanking.setSortMode] keeps it).
+ * Most used ranks by the usage statistics while Usage access is on, otherwise by the launches PadStudio's own
+ * panels counted; the access is read again each time the panel comes back from Settings.
+ */
+@Composable
+private fun rememberAppSort(): AppSort {
+    val context = LocalContext.current
+    var mode by remember { mutableStateOf(UsageRanking.sortMode(context)) }
+    var access by remember { mutableStateOf(UsageRanking.hasAccess(context)) }
+    LifecycleResumeEffect(Unit) {
+        access = UsageRanking.hasAccess(context)
+        onPauseOrDispose { }
+    }
+    val usage by produceState<Map<String, Long>?>(null, mode, access) {
+        val mostUsed = mode == PanelSort.MOST_USED
+        val granted = access
+        value = when {
+            !mostUsed -> null
+            granted -> UsageRanking.usage(context) ?: UsageRanking.ownCounts(context)
+            else -> UsageRanking.ownCounts(context)
+        }
+    }
+    return AppSort(
+        mode = mode,
+        usage = usage,
+        needsAccess = mode == PanelSort.MOST_USED && !access,
+        onMode = { chosen ->
+            mode = chosen
+            UsageRanking.setSortMode(context, chosen)
+        },
+    )
+}
+
+/**
+ * [this] in the order of [mode]. A to Z is the ranking with nothing used; Most used shows A to Z until its
+ * [usage] has been read.
+ */
+private fun List<InstalledApp>.sortedFor(mode: PanelSort, usage: Map<String, Long>?): List<InstalledApp> =
+    UsageRanking.rank(this, if (mode == PanelSort.MOST_USED) usage.orEmpty() else emptyMap())
+
+/** "Most used" or "A–Z", in the header of the Library and of the folder. */
+@Composable
+private fun SortChoice(sort: AppSort) {
+    SegmentedChoice(
+        options = PanelSort.entries,
+        selected = sort.mode,
+        onSelect = sort.onMode,
+        label = { if (it == PanelSort.MOST_USED) "Most used" else "A–Z" },
+    )
+}
+
+/** One line under a header while Most used lacks Usage access, with the button to Settings' Usage access page. */
+@Composable
+private fun UsageAccessLine(onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Most used needs Usage access",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        PillButton(
+            text = "Allow",
+            onClick = { context.startOrReason(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))?.let { onMessage("Couldn't open Usage access. $it") } },
+            style = PillStyle.Text,
+        )
+    }
+}
+
+/**
  * The window behind the sheets: a tap outside every sheet dismisses the panel. It is not a button (Close
  * and Back do the same for TalkBack and keyboards). [content] is laid out inside the system bars and the
  * keyboard with 24 dp gutters, top-centred as in the mock, and knows the room it has.
@@ -1242,10 +1394,10 @@ private fun PanelScrim(onDismiss: () -> Unit, messages: SnackbarHostState, conte
 /**
  * A frosted sheet (plan §10 Panels): 28 dp corners, the low surface tinted a little toward the primary
  * container, and, while the window blurs what's behind, slightly see-through. Taps on it never reach the
- * scrim, so only a tap outside dismisses the panel.
+ * scrim, so only a tap outside dismisses the panel. [top] is the padding above the content.
  */
 @Composable
-private fun FrostedSheet(modifier: Modifier, frosted: Boolean, content: @Composable ColumnScope.() -> Unit) {
+private fun FrostedSheet(modifier: Modifier, frosted: Boolean, top: Dp = SHEET_TOP, content: @Composable ColumnScope.() -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val tint = lerp(scheme.surfaceContainerLow, scheme.primaryContainer, SHEET_TINT)
     Surface(
@@ -1255,21 +1407,27 @@ private fun FrostedSheet(modifier: Modifier, frosted: Boolean, content: @Composa
         contentColor = scheme.onSurface,
         border = BorderStroke(1.dp, scheme.onSurface.copy(alpha = HAIRLINE_ALPHA)),
     ) {
-        Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 24.dp), content = content)
+        Column(Modifier.padding(start = 24.dp, end = 24.dp, top = top, bottom = 24.dp), content = content)
     }
 }
 
 /**
- * A sheet's header, as the mock: an optional small-capitals [overline], the [title] in the headline role,
- * a one-line [subtitle]; [actions] at the top right and [close] in the corner. When the title needs the
- * room (a narrow sheet, large text) the actions move under it and wrap; Close stays in the corner.
+ * A sheet's header, as the mock: the [title] in the headline role over a one-line [subtitle]; [actions] at the
+ * top right and [close] in the corner. When the title needs the room (a narrow sheet, large text) the actions
+ * move under it and wrap; Close stays in the corner.
+ *
+ * [compact] is the folder's one-row form: the [title] in the title role with the [count] beside it ("Games  48";
+ * [countDescription] is what TalkBack reads for the count), no subtitle, and everything centred on the row.
+ * It stays one row only while the whole title and its count fit beside the actions.
  */
 @Composable
 private fun PanelHeader(
     title: String,
     modifier: Modifier = Modifier,
-    overline: String? = null,
     subtitle: String? = null,
+    compact: Boolean = false,
+    count: String? = null,
+    countDescription: String? = null,
     actions: @Composable () -> Unit = {},
     close: @Composable () -> Unit = {},
 ) {
@@ -1278,17 +1436,39 @@ private fun PanelHeader(
     Layout(
         modifier = modifier.fillMaxWidth(),
         content = {
-            Column {
-                if (overline != null) {
-                    Text(text = overline.uppercase(), style = type.labelMedium.copy(letterSpacing = 0.08.em), color = scheme.onSurfaceVariant)
+            if (compact) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.semantics(mergeDescendants = true) { heading() },
+                ) {
+                    Text(
+                        text = title,
+                        style = type.titleLarge,
+                        color = scheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false).alignByBaseline(),
+                    )
+                    if (count != null) {
+                        Text(
+                            text = count,
+                            style = type.bodyMedium,
+                            color = scheme.onSurfaceVariant,
+                            maxLines = 1,
+                            modifier = Modifier.alignByBaseline().semantics { countDescription?.let { contentDescription = it } },
+                        )
+                    }
                 }
-                Text(
-                    text = title,
-                    style = type.headlineSmall.copy(fontWeight = Tokens.WeightMedium),
-                    color = scheme.onSurface,
-                    modifier = Modifier.semantics { heading() },
-                )
-                if (subtitle != null) Text(text = subtitle, style = type.bodyLarge, color = scheme.onSurfaceVariant)
+            } else {
+                Column {
+                    Text(
+                        text = title,
+                        style = type.headlineSmall.copy(fontWeight = Tokens.WeightMedium),
+                        color = scheme.onSurface,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    if (subtitle != null) Text(text = subtitle, style = type.bodyLarge, color = scheme.onSurfaceVariant)
+                }
             }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1304,13 +1484,19 @@ private fun PanelHeader(
         val closeRoom = if (closer.width > 0) closer.width + gap else 0
         val actionsWidth = measurables[1].maxIntrinsicWidth(Constraints.Infinity)
         val actionsRoom = if (actionsWidth > 0) actionsWidth + gap else 0
-        if (width - closeRoom - actionsRoom >= MIN_TITLE_WIDTH.roundToPx()) {
+        // The compact title is one line that must not be cut short; the other can wrap down to MIN_TITLE_WIDTH.
+        val titleWidth = measurables[0].maxIntrinsicWidth(Constraints.Infinity)
+        val titleNeeds = if (compact) titleWidth else minOf(MIN_TITLE_WIDTH.roundToPx(), titleWidth)
+        // Where an item of [height] sits in a row [row] tall: the compact header centres, the other hangs from the top.
+        fun offset(row: Int, height: Int) = if (compact) (row - height) / 2 else 0
+        if (width - closeRoom - actionsRoom >= titleNeeds) {
             val titleBlock = measurables[0].measure(Constraints(maxWidth = width - closeRoom - actionsRoom))
             val actions = measurables[1].measure(Constraints(maxWidth = actionsWidth))
-            layout(width, maxOf(titleBlock.height, actions.height, closer.height)) {
-                titleBlock.placeRelative(0, 0)
-                actions.placeRelative(width - closeRoom - actions.width, 0)
-                closer.placeRelative(width - closer.width, 0)
+            val row = maxOf(titleBlock.height, actions.height, closer.height)
+            layout(width, row) {
+                titleBlock.placeRelative(0, offset(row, titleBlock.height))
+                actions.placeRelative(width - closeRoom - actions.width, offset(row, actions.height))
+                closer.placeRelative(width - closer.width, offset(row, closer.height))
             }
         } else {
             val titleBlock = measurables[0].measure(Constraints(maxWidth = (width - closeRoom).coerceAtLeast(0)))
@@ -1318,8 +1504,8 @@ private fun PanelHeader(
             val top = maxOf(titleBlock.height, closer.height)
             val between = if (actions.height > 0) Tokens.GapS.roundToPx() else 0
             layout(width, top + between + actions.height) {
-                titleBlock.placeRelative(0, 0)
-                closer.placeRelative(width - closer.width, 0)
+                titleBlock.placeRelative(0, offset(top, titleBlock.height))
+                closer.placeRelative(width - closer.width, offset(top, closer.height))
                 actions.placeRelative(0, top + between)
             }
         }
@@ -1393,10 +1579,28 @@ private val FOLDER_WIDTH = 576.dp
 private val EDIT_WIDTH = 516.dp
 private val PANE_GAP = 24.dp
 private val FOLDER_WIDTH_ALONE = 600.dp
+
+/** Edit widget in place of the folder, in a window too narrow for both: its stacked fields, so no wider than before. */
 private val EDIT_WIDTH_ALONE = 560.dp
+
+/**
+ * Edit widget as a panel of its own (the widget's configure screen): wide enough for the group beside the
+ * grid and density. From [EDIT_SIDE_BY_SIDE] of room inside the sheet, not of screen, it lays them out
+ * side by side with [EDIT_COLUMN_GAP] between; narrower, as the folder's 480 dp side pane, they stack.
+ */
+private val EDIT_WIDTH_PANEL = 1040.dp
+private val EDIT_SIDE_BY_SIDE = 840.dp
+private val EDIT_COLUMN_GAP = 24.dp
 private val LIBRARY_WIDTH = 880.dp
 private val SCRIM_GUTTER = 24.dp
 private val MIN_TITLE_WIDTH = 160.dp
+
+/** The padding above a sheet's header: 20 dp, and 12 dp for the folder, whose header is one row. */
+private val SHEET_TOP = 20.dp
+private val FOLDER_SHEET_TOP = 12.dp
+
+/** The Library's All chip, in the chip row's keys beside the groups' names. */
+private const val ALL_CHIP_KEY = "all-apps"
 
 /**
  * Tiles: padding, the gap between them, and the room the grid drawing (30 dp, wider than the 20 dp
