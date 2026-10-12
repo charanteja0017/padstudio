@@ -139,6 +139,10 @@ fun AppIconStack(
             }
         }
         if (more > 0) {
+            val label = "+$more"
+            // Sized with the tile, not the text setting (as InitialTile is): "+12" must fit a 28 dp tile at 200 % text.
+            val inner = size - ring * 2
+            val glyph = with(LocalDensity.current) { minOf(inner * (0.8f / (0.6f * label.length)), inner * 0.5f).toSp() }
             Box(Modifier.size(size).background(ringColor, tile).padding(ring)) {
                 Box(
                     Modifier
@@ -148,8 +152,8 @@ fun AppIconStack(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "+$more",
-                        style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = "tnum"),
+                        text = label,
+                        style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = "tnum", fontSize = glyph, lineHeight = glyph),
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                         maxLines = 1,
                     )
