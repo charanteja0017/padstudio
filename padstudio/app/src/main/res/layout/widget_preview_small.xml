@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Picker preview of the group widget (GroupWidget.kt): the brand surface, the group pill, and a grid
+<!-- Picker preview of the group widget (GroupWidget.kt): the dark glass, the group pill, and a grid
      with "+N" in the last cell. Generated with the other widget_preview_* files; keep them in step. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="sans-serif-medium"
             android:text="@string/group_widget_preview_group"
-            android:textColor="#FFD7CEFF"
+            android:textColor="#FFFFFFFF"
             android:textSize="11sp" />
 
         <TextView
@@ -35,7 +35,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="6dp"
             android:text="@string/group_widget_preview_count_small"
-            android:textColor="#FFD7CEFF"
+            android:textColor="#FFFFFFFF"
             android:textSize="11sp" />
     </LinearLayout>
 
@@ -154,7 +154,7 @@
             android:fontFamily="sans-serif-medium"
             android:gravity="center"
             android:text="@string/group_widget_preview_more_small"
-            android:textColor="#FFD7CEFF"
+            android:textColor="#FFFFFFFF"
             android:textSize="13sp" />
     </GridLayout>
 </LinearLayout>
