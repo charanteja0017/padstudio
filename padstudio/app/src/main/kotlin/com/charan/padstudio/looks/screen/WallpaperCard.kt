@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,9 +15,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,21 +38,28 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.charan.padstudio.looks.WallpaperGenerator
+import com.charan.padstudio.looks.WallpaperTarget
 import com.charan.padstudio.ui.Sym
 import com.charan.padstudio.ui.components.Disclosure
+import com.charan.padstudio.ui.components.ListRow
 import com.charan.padstudio.ui.components.PillButton
 import com.charan.padstudio.ui.components.PillStyle
+import com.charan.padstudio.ui.components.RowTrailing
 import com.charan.padstudio.ui.components.SectionHeader
 import com.charan.padstudio.ui.components.SegmentedChoice
 import com.charan.padstudio.ui.components.StatusLevel
 import com.charan.padstudio.ui.components.StatusPill
 import com.charan.padstudio.ui.components.StudioCard
+import com.charan.padstudio.ui.components.cardBleed
 import com.charan.padstudio.ui.theme.Tokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -68,7 +79,8 @@ internal enum class ApplyOutcome {
 /**
  * Looks → the wallpaper (plan §10, mock-looks.html "Colours and wallpaper"): a preview of what Apply sets, drawn
  * by WallpaperGenerator from [seed], [dark] and [accent] exactly as MainViewModel.applyWallpaper will draw it;
- * Shuffle ([onShuffle]) for another, Light or Dark ([onDarkChange]), and Apply ([onApply]).
+ * Shuffle ([onShuffle]) for another, Light or Dark ([onDarkChange]), Apply to Home, Lock or Both ([target],
+ * [onTargetChange]), and Apply ([onApply]).
  *
  * Apply's states (plan §13): [applying] shows "Applying…" with a spinner; [ApplyOutcome.Failed] a plain reason
  * from [failureDetail] and Retry; [ApplyOutcome.Requested] when no answer came. Success is the caller's snackbar.
@@ -81,6 +93,7 @@ internal fun WallpaperCard(
     seed: Long,
     dark: Boolean,
     accent: Int,
+    target: WallpaperTarget,
     palette: String?,
     allowed: Boolean,
     applying: Boolean,
@@ -89,6 +102,7 @@ internal fun WallpaperCard(
     wallpaperApplied: Boolean,
     onShuffle: () -> Unit,
     onDarkChange: (Boolean) -> Unit,
+    onTargetChange: (WallpaperTarget) -> Unit,
     onApply: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -101,11 +115,7 @@ internal fun WallpaperCard(
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Tokens.GapS)) {
             SectionHeader(
                 title = "Wallpaper",
-                supporting = if (palette != null) {
-                    "A calm gradient in $palette for your home and lock screen."
-                } else {
-                    "A calm gradient in your wallpaper's colours for your home and lock screen."
-                },
+                supporting = if (palette != null) "A calm gradient in $palette." else "A calm gradient in your wallpaper's colours.",
             )
             WallpaperPreview(seed = seed, dark = dark, accent = accent, name = name, onShuffle = onShuffle)
             Text(name, style = type.titleMedium, color = scheme.onSurface)
@@ -117,6 +127,10 @@ internal fun WallpaperCard(
                 icon = { if (it) Sym.dark else Sym.light },
                 modifier = Modifier.fillMaxWidth(),
             )
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Apply to", style = type.bodyMedium, color = scheme.onSurfaceVariant)
+                TargetChoice(target = target, onSelect = onTargetChange)
+            }
         }
         // Takes the room left when the card is stretched beside the icon cards; nothing otherwise.
         Spacer(Modifier.weight(1f))
@@ -127,7 +141,7 @@ internal fun WallpaperCard(
             Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = if (allowed) {
-                        "Sets your home and lock screen. Apps can't copy your current wallpaper, so note it first."
+                        "Sets your ${targetScreens(target)}. Apps can't copy your current wallpaper, so note it first."
                     } else {
                         "This tablet doesn't let apps change the wallpaper."
                     },
@@ -144,7 +158,8 @@ internal fun WallpaperCard(
                                 Text(plainWallpaperFailure(failureDetail), style = type.bodyMedium, color = scheme.onSurface)
                             } else {
                                 StatusPill("Requested", StatusLevel.Unknown)
-                                Text("No answer from the tablet yet. Look at your home screen.", style = type.bodyMedium, color = scheme.onSurface)
+                                val look = if (target == WallpaperTarget.LOCK) "lock screen" else "home screen"
+                                Text("No answer from the tablet yet. Look at your $look.", style = type.bodyMedium, color = scheme.onSurface)
                             }
                         }
                     }
@@ -176,10 +191,10 @@ internal fun WallpaperCard(
             Disclosure {
                 val context = LocalContext.current
                 val longSide = remember(context) { runCatching { WallpaperGenerator.longSide(context) }.getOrNull() }
-                Text("Seed $seed · ${if (dark) "dark" else "light"} · accent #${hexRgb(accent)}")
+                Text("Seed $seed · ${if (dark) "dark" else "light"} · accent #${hexRgb(accent)} · target ${target.name}")
                 Text(
-                    "Apply draws it ${longSide?.let { "$it px" } ?: "at the screen's long side"} square and sets home and lock " +
-                        "(WallpaperManager FLAG_SYSTEM | FLAG_LOCK).",
+                    "Apply draws it ${longSide?.let { "$it px" } ?: "at the screen's long side"} square and sets " +
+                        "${targetFlags(target)}.",
                 )
                 Text("Saved: wallpaperApplied $wallpaperApplied")
                 if (failureDetail != null) Text("Last error: $failureDetail")
@@ -190,6 +205,59 @@ internal fun WallpaperCard(
 
 /** "421EBE" for an ARGB colour: its RGB part, six hex digits. */
 private fun hexRgb(argb: Int): String = Integer.toHexString(argb and 0xFFFFFF).uppercase().padStart(6, '0')
+
+/** What Apply asks WallpaperManager for, for Developer details. */
+private fun targetFlags(target: WallpaperTarget): String = when (target) {
+    WallpaperTarget.HOME -> "home (WallpaperManager FLAG_SYSTEM)"
+    WallpaperTarget.LOCK -> "lock (WallpaperManager FLAG_LOCK)"
+    WallpaperTarget.BOTH -> "home and lock (WallpaperManager FLAG_SYSTEM | FLAG_LOCK)"
+}
+
+/**
+ * Apply to: Home, Lock or Both (plan §10), as the mock-up's segmented buttons. When the labels can't each stay on
+ * one line in a third of the card (large text in the narrow side pane), the same choice is a list of radio rows
+ * instead, so no label breaks inside a word. The fit is measured with the text as drawn now (font scale and Bold
+ * text included) and Material 3's own segment padding and check, for the widest label in the chosen segment.
+ */
+@Composable
+private fun TargetChoice(target: WallpaperTarget, onSelect: (WallpaperTarget) -> Unit) {
+    val measurer = rememberTextMeasurer()
+    val style = MaterialTheme.typography.labelLarge
+    val density = LocalDensity.current
+    val widest = remember(measurer, style, density) {
+        with(density) {
+            TARGET_ORDER.maxOf { measurer.measure(targetLabel(it), style, maxLines = 1, softWrap = false).size.width }.toDp()
+        }
+    }
+    val padding = SegmentedButtonDefaults.ContentPadding.let {
+        it.calculateLeftPadding(LayoutDirection.Ltr) + it.calculateRightPadding(LayoutDirection.Ltr)
+    }
+    val check = SegmentedButtonDefaults.IconSize + ButtonDefaults.IconSpacing
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        if (segmentsFit(widest, maxWidth, TARGET_ORDER.size, padding, check)) {
+            SegmentedChoice(
+                options = TARGET_ORDER,
+                selected = target,
+                onSelect = onSelect,
+                label = ::targetLabel,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            Column(Modifier.fillMaxWidth().selectableGroup()) {
+                TARGET_ORDER.forEach { option ->
+                    val chosen = option == target
+                    ListRow(
+                        headline = targetLabel(option),
+                        trailing = if (chosen) RowTrailing.Symbol(Sym.ok) else RowTrailing.None,
+                        selected = chosen,
+                        onClick = { onSelect(option) },
+                        modifier = Modifier.cardBleed(),
+                    )
+                }
+            }
+        }
+    }
+}
 
 /**
  * The wallpaper on a tablet-shaped frame (the screen's own proportions, landscape), cropped as the home screen

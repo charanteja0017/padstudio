@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,7 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -51,6 +48,7 @@ import com.charan.padstudio.looks.screen.paletteLabel
 import com.charan.padstudio.looks.screen.previewApps
 import com.charan.padstudio.looks.screen.wallpaperResultOf
 import com.charan.padstudio.looks.screen.wallpaperSetText
+import com.charan.padstudio.ui.LocalStudioSnackbar
 import com.charan.padstudio.ui.Sym
 import com.charan.padstudio.ui.components.PillButton
 import com.charan.padstudio.ui.components.PillStyle
@@ -72,16 +70,17 @@ import kotlinx.coroutines.withContext
  * - a style: `setIconStyle(style)`, and a pack: `setIconStyle(IconStyle.ICON_PACK, pack)`;
  * - the installed packs: `iconPacks()`, read again on every resume, so a pack installed meanwhile shows up;
  * - the switch: `setMatchWallpaperColours(on)`;
- * - Apply: `applyWallpaper(seed, dark, accent)`, with seed 7 and +1 per Shuffle, Light or Dark, and the theme's
- *   primary colour as the accent. It sets the home and lock screen together, as it always has.
+ * - Apply: `applyWallpaper(seed, dark, accent, target)`, with seed 7 and +1 per Shuffle, Light or Dark, the
+ *   theme's primary colour as the accent, and Apply to Home, Lock or Both. Both is the default, and is exactly
+ *   the three-argument `applyWallpaper(seed, dark, accent)` the screen called before (home and lock together).
  *
  * applyWallpaper reports only through `MainViewModel.message`. While an Apply from this screen waits for that
- * message, the screen takes it from the shell's snackbar (`clearMessage`) and says it itself: success as a
- * snackbar with the time, failure in the card with a plain reason and Retry. It listens only while PadStudio is
- * on screen, as the shell does, so an answer that comes while the user looks at the home screen waits for them.
- * The wait survives a configuration change (rotation, split screen, the theme change a new wallpaper can bring);
- * if Looks is left for another tab first, the shell shows the message as before. No answer in 30 s shows
- * "Requested", which a later answer replaces.
+ * message, the screen takes it from the shell (`clearMessage`) and says it itself: success in the shell's one
+ * snackbar host ([LocalStudioSnackbar]) with the time, failure in the card with a plain reason and Retry. It
+ * listens only while PadStudio is on screen, as the shell does, so an answer that comes while the user looks at
+ * the home screen waits for them. The wait survives a configuration change (rotation, split screen, the theme
+ * change a new wallpaper can bring); if Looks is left for another tab first, the shell shows the message as
+ * before. No answer in 30 s shows "Requested", which a later answer replaces.
  */
 @Composable
 fun LooksScreen(model: MainViewModel, modifier: Modifier = Modifier) {
@@ -89,7 +88,8 @@ fun LooksScreen(model: MainViewModel, modifier: Modifier = Modifier) {
     val config by model.config.collectAsStateWithLifecycle()
     val snapshot by model.snapshot.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    val snackbar = remember { SnackbarHostState() }
+    // The shell's one snackbar host: this screen's messages queue with the shell's instead of overlapping them.
+    val snackbar = LocalStudioSnackbar.current
 
     // Packs, the wallpaper policy and HyperOS Themes can change while PadStudio is in the background.
     var resumes by remember { mutableIntStateOf(0) }
@@ -120,6 +120,7 @@ fun LooksScreen(model: MainViewModel, modifier: Modifier = Modifier) {
 
     var seed by rememberSaveable { mutableLongStateOf(7L) }
     var dark by rememberSaveable { mutableStateOf(false) }
+    var target by rememberSaveable { mutableStateOf(WallpaperTarget.BOTH) }
     val accent = MaterialTheme.colorScheme.primary.toArgb()
     val activity = LocalActivity.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -144,9 +145,9 @@ fun LooksScreen(model: MainViewModel, modifier: Modifier = Modifier) {
         pendingUntil = null
         when (val result = wallpaperResultOf(raw)) {
             null -> outcome = ApplyOutcome.None
-            WallpaperResult.Set -> {
+            is WallpaperResult.Set -> {
                 outcome = ApplyOutcome.None
-                notice = wallpaperSetText(timeFormat.format(Date()))
+                notice = wallpaperSetText(result.target, timeFormat.format(Date()))
             }
             is WallpaperResult.Failed -> {
                 failureDetail = result.detail
@@ -161,10 +162,10 @@ fun LooksScreen(model: MainViewModel, modifier: Modifier = Modifier) {
         pendingUntil = null
         outcome = ApplyOutcome.Requested
     }
+    // Queued behind whatever the host shows now; null (no shell host) only outside MainActivity, where Looks isn't.
     LaunchedEffect(notice) {
         val text = notice ?: return@LaunchedEffect
-        snackbar.currentSnackbarData?.dismiss()
-        snackbar.showSnackbar(text)
+        snackbar?.showSnackbar(text)
         notice = null
     }
 
@@ -176,13 +177,13 @@ fun LooksScreen(model: MainViewModel, modifier: Modifier = Modifier) {
             outcome = ApplyOutcome.None
             failureDetail = null
             pendingUntil = SystemClock.elapsedRealtime() + APPLY_WAIT_MS
-            model.applyWallpaper(seed, dark, accent)
+            model.applyWallpaper(seed, dark, accent, target)
         }
     }
     val openThemes: (() -> Unit)? = themesIntent?.let { intent ->
         {
             if (runCatching { context.startActivity(intent) }.isFailure) {
-                scope.launch { snackbar.showSnackbar("Couldn't open HyperOS Themes.") }
+                scope.launch { snackbar?.showSnackbar("Couldn't open HyperOS Themes.") }
             }
         }
     }
@@ -225,6 +226,7 @@ fun LooksScreen(model: MainViewModel, modifier: Modifier = Modifier) {
                         seed = seed,
                         dark = dark,
                         accent = accent,
+                        target = target,
                         palette = if (config.matchWallpaperColours) null else palette,
                         allowed = wallpaperAllowed,
                         applying = applying,
@@ -239,12 +241,15 @@ fun LooksScreen(model: MainViewModel, modifier: Modifier = Modifier) {
                             dark = it
                             outcome = ApplyOutcome.None
                         },
+                        onTargetChange = {
+                            target = it
+                            outcome = ApplyOutcome.None
+                        },
                         onApply = apply,
                     )
                 },
             )
         }
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 }
 

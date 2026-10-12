@@ -2,11 +2,13 @@ package com.charan.padstudio.looks.screen
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.SaverScope
+import androidx.compose.ui.unit.dp
 import com.charan.padstudio.core.home.AppFacts
 import com.charan.padstudio.core.home.AppGroup
 import com.charan.padstudio.core.home.PlannedGroup
 import com.charan.padstudio.data.IconStyle
 import com.charan.padstudio.icons.IconPack
+import com.charan.padstudio.looks.WallpaperTarget
 import com.charan.padstudio.ui.theme.BrandPalette
 import java.io.File
 import kotlin.test.Test
@@ -138,18 +140,32 @@ class LooksStateTest {
     // --- Wallpaper -----------------------------------------------------------------------------------
 
     @Test fun `wallpaper results are read from MainViewModel's message`() {
-        assertEquals(WallpaperResult.Set, wallpaperResultOf("Wallpaper set on home and lock screen."))
+        assertEquals(WallpaperResult.Set(WallpaperTarget.BOTH), wallpaperResultOf("Wallpaper set on home and lock screen."))
+        assertEquals(WallpaperResult.Set(WallpaperTarget.HOME), wallpaperResultOf("Wallpaper set on the home screen."))
+        assertEquals(WallpaperResult.Set(WallpaperTarget.LOCK), wallpaperResultOf("Wallpaper set on the lock screen."))
         assertEquals(WallpaperResult.Failed("Permission denial: x"), wallpaperResultOf("Couldn't set the wallpaper: Permission denial: x"))
         assertEquals(WallpaperResult.Failed(null), wallpaperResultOf("Couldn't set the wallpaper: null"))
         assertEquals(WallpaperResult.Failed(null), wallpaperResultOf("Couldn't set the wallpaper: "))
         assertNull(wallpaperResultOf("Pen actions on."))
+        assertNull(wallpaperResultOf("Wallpaper set on the home screen"))
         assertNull(wallpaperResultOf(null))
+    }
+
+    @Test fun `every wallpaper target has its own success message`() {
+        assertEquals(WallpaperTarget.entries.toSet(), WALLPAPER_SET_MESSAGES.values.toSet())
+        assertEquals(WallpaperTarget.entries.size, WALLPAPER_SET_MESSAGES.size)
+        assertEquals(WallpaperTarget.entries.toSet(), TARGET_ORDER.toSet())
+        assertEquals(listOf("Home", "Lock", "Both"), TARGET_ORDER.map(::targetLabel))
     }
 
     @Test fun `MainViewModel still reports the wallpaper with the texts the screen reads`() {
         val source = sourceFile("MainViewModel.kt")
-        assertTrue("\"$WALLPAPER_SET_MESSAGE\"" in source, "MainViewModel.applyWallpaper's success message changed")
+        for (message in WALLPAPER_SET_MESSAGES.keys) {
+            assertTrue("\"$message\"" in source, "MainViewModel.applyWallpaper no longer says \"$message\"")
+        }
         assertTrue("\"$WALLPAPER_FAILED_PREFIX \${it.message}\"" in source, "MainViewModel.applyWallpaper's failure message changed")
+        // Apply passes a target; Both must stay what the old three-argument call did, so nothing else changes.
+        assertTrue("applyWallpaper(seed, dark, accent, WallpaperTarget.BOTH)" in source, "the three-argument applyWallpaper no longer sets both")
     }
 
     @Test fun `failures get a plain reason, never the raw exception text`() {
@@ -170,11 +186,29 @@ class LooksStateTest {
         raw.filterNotNull().zip(reasons).forEach { (detail, reason) -> assertFalse(detail in reason) }
     }
 
-    @Test fun `the wallpaper is named like the reference, and success says when`() {
+    @Test fun `the wallpaper is named like the reference, and success says where and when`() {
         assertEquals("Violet dusk", wallpaperName("Violet", dark = true))
         assertEquals("Violet dawn", wallpaperName("Violet", dark = false))
         assertEquals("Dusk, in your wallpaper's colours", wallpaperName(null, dark = true))
-        assertEquals("Wallpaper set on home and lock screen · 14:05", wallpaperSetText("14:05"))
+        assertEquals("Wallpaper set on home and lock screen · 14:05", wallpaperSetText(WallpaperTarget.BOTH, "14:05"))
+        assertEquals("Wallpaper set on the home screen · 14:05", wallpaperSetText(WallpaperTarget.HOME, "14:05"))
+        assertEquals("Wallpaper set on the lock screen · 2:05 PM", wallpaperSetText(WallpaperTarget.LOCK, "2:05 PM"))
+        assertEquals("home and lock screen", targetScreens(WallpaperTarget.BOTH))
+        assertEquals("lock screen", targetScreens(WallpaperTarget.LOCK))
+    }
+
+    @Test fun `Apply to stays segmented only while the chosen label fits on one line`() {
+        val padding = 24.dp // Material 3 segment: 12 dp each side
+        val check = 26.dp // the chosen segment's 18 dp check and 8 dp gap
+        // 125 % text: "Home" about 44 dp, three segments in the 287 dp side pane are 96 dp each.
+        assertTrue(segmentsFit(widestLabel = 44.dp, width = 287.dp, count = 3, padding = padding, check = check))
+        // 200 % text: "Home" about 72 dp needs 122 dp; stack the choice as rows instead of breaking the word.
+        assertFalse(segmentsFit(widestLabel = 72.dp, width = 287.dp, count = 3, padding = padding, check = check))
+        // A full-width card (one column) has room even at 200 %.
+        assertTrue(segmentsFit(widestLabel = 72.dp, width = 593.dp, count = 3, padding = padding, check = check))
+        // Exactly enough is enough: (287 + 2) / 3 = 96.33 dp.
+        assertTrue(segmentsFit(widestLabel = 46.dp, width = 287.dp, count = 3, padding = padding, check = check))
+        assertFalse(segmentsFit(widestLabel = 47.dp, width = 287.dp, count = 3, padding = padding, check = check))
     }
 
     @Test fun `an Apply waits until its deadline, then says Requested at once`() {

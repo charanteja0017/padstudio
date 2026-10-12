@@ -4,10 +4,13 @@ import android.os.Build
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.charan.padstudio.core.home.AppFacts
 import com.charan.padstudio.core.home.PlannedGroup
 import com.charan.padstudio.data.IconStyle
 import com.charan.padstudio.icons.IconPack
+import com.charan.padstudio.looks.WallpaperTarget
 import com.charan.padstudio.ui.theme.BrandPalette
 
 // The Looks screen's words and decisions, kept free of composition and Android state so unit tests can pin them
@@ -166,15 +169,22 @@ internal fun wallpaperName(palette: String?, dark: Boolean): String {
 
 /** How MainViewModel.applyWallpaper ended, read back from its message (it reports nothing else). */
 internal sealed interface WallpaperResult {
-    /** "Wallpaper set on home and lock screen." */
-    data object Set : WallpaperResult
+    /** One of [WALLPAPER_SET_MESSAGES]: the wallpaper was set on [target]. */
+    data class Set(val target: WallpaperTarget) : WallpaperResult
 
     /** "Couldn't set the wallpaper: …", with the exception's message as [detail] (null when it had none). */
     data class Failed(val detail: String?) : WallpaperResult
 }
 
-/** MainViewModel.applyWallpaper's success message. LooksStateTest checks it against MainViewModel.kt. */
-internal const val WALLPAPER_SET_MESSAGE = "Wallpaper set on home and lock screen."
+/**
+ * MainViewModel.applyWallpaper's success messages, one per target (the three-argument applyWallpaper is
+ * [WallpaperTarget.BOTH]). LooksStateTest checks each against MainViewModel.kt.
+ */
+internal val WALLPAPER_SET_MESSAGES: Map<String, WallpaperTarget> = mapOf(
+    "Wallpaper set on home and lock screen." to WallpaperTarget.BOTH,
+    "Wallpaper set on the home screen." to WallpaperTarget.HOME,
+    "Wallpaper set on the lock screen." to WallpaperTarget.LOCK,
+)
 
 /** The start of MainViewModel.applyWallpaper's failure message; the exception's message follows. */
 internal const val WALLPAPER_FAILED_PREFIX = "Couldn't set the wallpaper:"
@@ -182,11 +192,39 @@ internal const val WALLPAPER_FAILED_PREFIX = "Couldn't set the wallpaper:"
 /** The wallpaper result in a MainViewModel message, or null for any other message. */
 internal fun wallpaperResultOf(message: String?): WallpaperResult? = when {
     message == null -> null
-    message == WALLPAPER_SET_MESSAGE -> WallpaperResult.Set
+    message in WALLPAPER_SET_MESSAGES -> WallpaperResult.Set(WALLPAPER_SET_MESSAGES.getValue(message))
     message.startsWith(WALLPAPER_FAILED_PREFIX) -> WallpaperResult.Failed(
         message.removePrefix(WALLPAPER_FAILED_PREFIX).trim().takeUnless { it.isEmpty() || it == "null" },
     )
     else -> null
+}
+
+/** Looks → Apply to: Home, Lock or Both, in the mock-up's order. */
+internal val TARGET_ORDER: List<WallpaperTarget> = listOf(WallpaperTarget.HOME, WallpaperTarget.LOCK, WallpaperTarget.BOTH)
+
+/** A target as the Apply to choice names it. */
+internal fun targetLabel(target: WallpaperTarget): String = when (target) {
+    WallpaperTarget.HOME -> "Home"
+    WallpaperTarget.LOCK -> "Lock"
+    WallpaperTarget.BOTH -> "Both"
+}
+
+/** The screens a target sets, for a sentence: "Sets your home and lock screen." */
+internal fun targetScreens(target: WallpaperTarget): String = when (target) {
+    WallpaperTarget.HOME -> "home screen"
+    WallpaperTarget.LOCK -> "lock screen"
+    WallpaperTarget.BOTH -> "home and lock screen"
+}
+
+/**
+ * Whether [count] equal segments, [width] wide in all, each fit their widest label ([widestLabel]) on one line
+ * with the chosen segment's check ([check]) and the segment's side padding ([padding]). Segmented buttons share
+ * their 1 dp edges, so the row is 1 dp wider per joint than the segments laid end to end.
+ */
+internal fun segmentsFit(widestLabel: Dp, width: Dp, count: Int, padding: Dp, check: Dp): Boolean {
+    if (count <= 0) return true
+    val segment = (width + 1.dp * (count - 1)) / count
+    return segment >= widestLabel + padding + check
 }
 
 /**
@@ -225,8 +263,12 @@ internal fun <T : Any> keptAcrossConfigChange(changingConfigurations: () -> Bool
     restore = { saved -> mutableStateOf(saved) },
 )
 
-/** The success snackbar, with the time it was set, e.g. "Wallpaper set on home and lock screen · 14:05". */
-internal fun wallpaperSetText(time: String): String = "Wallpaper set on home and lock screen · $time"
+/**
+ * The success snackbar: MainViewModel's own words for [target] with the time instead of the full stop, e.g.
+ * "Wallpaper set on the home screen · 14:05".
+ */
+internal fun wallpaperSetText(target: WallpaperTarget, time: String): String =
+    WALLPAPER_SET_MESSAGES.entries.first { it.value == target }.key.removeSuffix(".") + " · $time"
 
 /** "Flipkart, Meesho and WiFiBar" for Developer details; "none" when [labels] is empty. */
 internal fun labelList(labels: List<String>): String = when (labels.size) {
