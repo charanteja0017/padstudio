@@ -19,6 +19,9 @@ android {
         targetSdk = 37
         versionCode = 2
         versionName = "0.2"
+        // Xiaomi pads are arm64-only (ro.product.cpu.abilist = arm64-v8a, abilist32 empty). SceneView/Filament
+        // ship four ABIs; the other three would add ~20 MB that never loads.
+        ndk { abiFilters += "arm64-v8a" }
     }
 
     buildFeatures {
@@ -54,6 +57,8 @@ dependencies {
     implementation(libs.glance.material3)
     implementation(libs.work.runtime)
     implementation(libs.kotlinx.coroutines.android)
+    // The live 3D pen (pen/PenModelView.kt). Brings Filament's native libraries; see the APK size note there.
+    implementation(libs.sceneview)
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test.junit)
 }
