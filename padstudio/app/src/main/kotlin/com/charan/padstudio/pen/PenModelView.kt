@@ -58,6 +58,7 @@ import io.github.sceneview.loaders.EnvironmentLoader
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.model.ModelInstance
+import io.github.sceneview.node.CameraNode
 import io.github.sceneview.node.LightNode
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
@@ -112,11 +113,15 @@ object PenModel {
  * - [clip]: `idle` loops. `squeeze`, `slide_up`, `slide_down`, `double_tap` and `write` play once each
  *   time the value changes to them (or [replay] changes), then the pen returns to `idle`. Changing back
  *   to `idle` doesn't cut a gesture short. Unknown names count as `idle`.
- * - [playing]: `false` holds the current pose.
+ * - [playing]: `false` holds the current pose; a close-up already under way still plays out (see below).
+ * - Gestures close in on the nib section: while `squeeze`, `slide_up`, `slide_down` or `double_tap` plays, the camera
+ *   eases (450 ms) from the whole-pen framing to a 220 mm close-up of the grip band, holds it for the clip's length
+ *   and eases back out. `write` swings the whole pen, so it doesn't zoom. The timeline is [ZoomTimeline]; it
+ *   freezes while the view can't be seen.
  * - Animation frames also stop while the view is scrolled out of sight, while the screen is below
  *   STARTED, and when the system animator duration scale is 0 ("Remove animations"); then the pen holds
- *   a still pose (a gesture shows its key pose for the gesture's length). Leaving the composition
- *   releases the whole Filament engine.
+ *   a still pose (a gesture shows its key pose for the gesture's length, with the close-up cut in and out
+ *   rather than eased). Leaving the composition releases the whole Filament engine.
  * - [onMarkers]: where `marker_squeeze`, `marker_slide_top`, `marker_slide_bottom`, `marker_double_tap`
  *   and `marker_nib` are, in this view's pixels, reported whenever they move (every animated frame, a
  *   resize). Draw callouts from these. Called on the main thread.
@@ -130,9 +135,10 @@ object PenModel {
  *
  * @param replay bump to play [clip] again from the start (the four parameters before it are the
  *   cross-task contract; this one is an optional addition).
- * @param onBusyChange `true` when a gesture or `write` starts, `false` once the pen is back at rest. Screens hide
- *   their callouts, and stop re-placing them, while busy (round 2 contract). Step 0 reports busy for the clip's
- *   nominal length; the zoom work (round 2, B1) replaces that with the real timeline, including the ease back.
+ * @param onBusyChange `true` once when a gesture or `write` starts, `false` once when the pen is back at rest framing
+ *   (after the close-up has eased out; for `write`, when its clip ends). Screens hide their callouts, and stop
+ *   re-placing them, while busy (round 2 contract). A gesture that starts while another is busy doesn't report
+ *   again. Reports `false` if the view leaves the composition while busy.
  */
 @Composable
 fun PenModelView(
@@ -164,17 +170,19 @@ fun PenModelView(
     val request = ClipRequest(clip.takeIf { it in PenModel.clips } ?: IDLE, replay)
     val live = playing && visible && started
 
-    // Step 0 stub of the busy signal: a gesture is busy for its nominal length. Round 2's B1 drives this from the
-    // zoom timeline instead (start, hold, ease back), which also follows pauses.
+    // One zoom timeline for both pens, and the busy signal: its edges are reported (true once at a start, false once
+    // z is back to 0 after the clip, false at once if the view leaves while busy). Time freezes while the view can't
+    // be seen, so a gesture isn't over before anyone watched it.
+    val zoom = remember { ZoomState { busy(it) } }
+    DisposableEffect(zoom) { onDispose { zoom.release() } }
     LaunchedEffect(request) {
         if (request.clip != IDLE) {
-            busy(true)
-            try {
-                delay((GESTURE_SECONDS * 1000).toLong())
-            } finally {
-                busy(false)
-            }
+            zoom.start(frameClockMs(), GESTURE_MS, zooms = request.clip != CLIP_WRITE, reducedMotion = !motionAllowed)
         }
+    }
+    val frozen = !(visible && started)
+    LaunchedEffect(frozen) {
+        if (frozen) zoom.pause(frameClockMs()) else zoom.resume(frameClockMs())
     }
 
     // Filament starts after the 2D pen has reached the screen, and only once the view is visible: the
@@ -198,6 +206,7 @@ fun PenModelView(
                 request = request,
                 live = live,
                 motionAllowed = motionAllowed,
+                zoom = zoom,
                 report = report,
                 onReady = { if (stage == Stage.Loading) stage = Stage.Ready },
                 onFailure = { error ->
@@ -213,6 +222,7 @@ fun PenModelView(
                 request = request,
                 live = live,
                 motionAllowed = motionAllowed,
+                zoom = zoom,
                 report = { markers -> if (stage != Stage.Ready) report(markers) },
             )
         }
@@ -228,12 +238,15 @@ internal val LocalPenModelDebug = staticCompositionLocalOf { PenModelDebug() }
 
 private const val TAG = "PenModelView"
 private const val IDLE = "idle"
+private const val CLIP_WRITE = "write" // the one gesture that doesn't zoom: it swings the whole pen
 private const val PEN_ASSET = "pen/focus_pen_pro.glb"
 
 // Pose and camera. Pen space is the model's: metres, +Y toward the end cap, +Z the face with the slide strip.
 private const val PEN_ROLL_DEG = 36f // pen top toward the upper right, measured from vertical
 private const val PEN_TILT_DEG = 12f // pen top toward the viewer
 private const val FOCAL_MM = 85f // a portrait lens keeps the long pen free of wide-angle distortion
+private const val BAND_FOCAL_MM = 220f // the close-up on the nib section (no dolly: only the lens and the pan change)
+private const val BAND_SPAN_M = 0.060f // the close-up centres on the middle of the pen from the nib up this far
 private const val SENSOR_HALF_MM = 12f // Filament's lens projection assumes a 24 mm high sensor
 private const val FILL_HEIGHT = 0.86f // share of the view's height the pen at rest covers
 private const val FILL_WIDTH = 0.94f // share of the width the widest pose (the `write` swing) may cover
@@ -263,6 +276,7 @@ private val PREVIEW_AT = mapOf("squeeze" to 0.38f, "slide_up" to 0.47f, "slide_d
 /** Clip lengths of the bundled model, used by the 2D pen and when a clip is missing from a model. */
 private const val GESTURE_SECONDS = 1.7f
 private const val IDLE_SECONDS = 6f
+private val GESTURE_MS = (GESTURE_SECONDS * 1000).toLong() // how long a gesture's close-up holds
 
 private sealed class Stage(val label: String) {
     data object Waiting : Stage("2D (waiting for the view to be visible)")
@@ -349,6 +363,181 @@ private class ClipClock(private val length: (String) -> Float) {
 }
 
 // ------------------------------------------------------------------------------------------------
+// The nib close-up: one timeline for the zoom a gesture plays, shared by the 3D and 2D pens
+// ------------------------------------------------------------------------------------------------
+
+/**
+ * How far the camera has closed in on the nib section while a gesture plays: `z` is 0 at rest and 1 fully in.
+ * [start] eases z up over [EASE_MS] (ease-in-out), holds it until the clip's length is up, then eases it back down
+ * over [EASE_MS]; [busy] is true from [start] until z is back to 0. A clip that doesn't zoom (`write`) keeps z at 0
+ * but is busy for the clip's length. With reduced motion z jumps to 1 at the start and to 0 at the end. A clip
+ * shorter than the ease still gets the whole ease in before it eases out. A [start] while busy carries on from the
+ * current z, so the camera never snaps.
+ *
+ * Pure Kotlin on a millisecond clock the caller supplies (the pens pass frame times), so it runs without Android.
+ * Main thread only.
+ */
+internal class ZoomTimeline {
+    enum class State { REST, IN, HOLD, OUT }
+
+    var state = State.REST
+        private set
+
+    /** The z of the latest [start] or [update], in 0..1. */
+    var z = 0f
+        private set
+
+    /** True from [start] until z is back to 0 after the clip. */
+    val busy: Boolean get() = state != State.REST
+
+    var paused = false
+        private set
+
+    private var skewMs = 0L // time spent paused, which the timeline doesn't count
+    private var pausedAtMs = 0L
+    private var lastMs = 0L // timeline time of the latest call; it never runs backwards
+    private var startMs = 0L
+    private var inEndMs = 0L // z has reached its peak
+    private var holdEndMs = 0L // the clip's length is up
+    private var endMs = 0L // z is back to 0
+    private var from = 0f // z when the run started
+    private var peak = 0f // 1 for a zoom, 0 for a clip that stays at rest
+
+    /**
+     * Starts a run at [nowMs] for a clip [clipMs] long. [zooms] `false` is for a clip that stays at the rest
+     * framing: z stays 0, and the run is still busy for [clipMs].
+     */
+    fun start(nowMs: Long, clipMs: Long, zooms: Boolean, reducedMotion: Boolean) {
+        val t = max(timeAt(nowMs), lastMs)
+        if (busy) evaluate(t)
+        from = z
+        peak = if (zooms) 1f else 0f
+        startMs = t
+        inEndMs = if (reducedMotion || from == peak) t else t + EASE_MS
+        holdEndMs = max(t + max(clipMs, 0L), inEndMs)
+        endMs = if (reducedMotion || !zooms) holdEndMs else holdEndMs + EASE_MS
+        lastMs = t
+        state = if (t < inEndMs) State.IN else State.HOLD
+        z = if (state == State.IN) from else peak
+    }
+
+    /** Moves the timeline to [nowMs] and returns z (0 once it is back at rest, and before any [start]). */
+    fun update(nowMs: Long): Float {
+        if (!busy) return 0f
+        val t = max(timeAt(nowMs), lastMs)
+        lastMs = t
+        evaluate(t)
+        return z
+    }
+
+    /** Freezes the timeline at [nowMs]: until [resume], [update] returns the same z and nothing finishes. */
+    fun pause(nowMs: Long) {
+        if (paused) return
+        paused = true
+        pausedAtMs = nowMs
+    }
+
+    /** Carries on from where [pause] stopped, as if no time had passed. */
+    fun resume(nowMs: Long) {
+        if (!paused) return
+        paused = false
+        skewMs += max(nowMs - pausedAtMs, 0L)
+    }
+
+    private fun timeAt(nowMs: Long): Long = (if (paused) pausedAtMs else nowMs) - skewMs
+
+    private fun evaluate(t: Long) {
+        when {
+            t >= endMs -> {
+                state = State.REST
+                z = 0f
+            }
+            t >= holdEndMs -> {
+                state = State.OUT
+                z = peak * (1f - ease((t - holdEndMs) / EASE_MS.toFloat()))
+            }
+            t >= inEndMs -> {
+                state = State.HOLD
+                z = peak
+            }
+            else -> {
+                state = State.IN
+                z = from + (peak - from) * ease((t - startMs) / EASE_MS.toFloat())
+            }
+        }
+    }
+
+    private companion object {
+        const val EASE_MS = 450L
+
+        /** Ease-in-out: smoothstep, flat at both ends, 0.5 at the middle. */
+        fun ease(u: Float): Float {
+            val t = u.coerceIn(0f, 1f)
+            return t * t * (3f - 2f * t)
+        }
+    }
+}
+
+/**
+ * The [ZoomTimeline] both pens follow, plus the busy signal. Whichever pen is drawing calls [update] with its frame
+ * time (the timeline never runs backwards, so two callers in one frame agree); [onBusy] hears each change of busy
+ * once. Main thread.
+ */
+private class ZoomState(private val onBusy: (Boolean) -> Unit) {
+    private val timeline = ZoomTimeline()
+    private var reported = false
+    private var released = false
+
+    /** True while frames are needed: the timeline is busy and not frozen. Snapshot state, so the pens react to it. */
+    var ticking by mutableStateOf(false)
+        private set
+
+    /** The z of the latest update. */
+    val z: Float get() = timeline.z
+
+    fun start(nowMs: Long, clipMs: Long, zooms: Boolean, reducedMotion: Boolean) {
+        timeline.start(nowMs, clipMs, zooms, reducedMotion)
+        sync()
+    }
+
+    fun update(nowMs: Long): Float = timeline.update(nowMs).also { sync() }
+
+    fun pause(nowMs: Long) {
+        timeline.pause(nowMs)
+        sync()
+    }
+
+    fun resume(nowMs: Long) {
+        timeline.resume(nowMs)
+        sync()
+    }
+
+    /** The view is leaving the composition: nobody waits for the end any more, so report not busy now. */
+    fun release() {
+        released = true
+        ticking = false
+        if (reported) {
+            reported = false
+            onBusy(false)
+        }
+    }
+
+    private fun sync() {
+        if (released) return
+        ticking = timeline.busy && !timeline.paused
+        if (timeline.busy != reported) {
+            reported = timeline.busy
+            onBusy(reported)
+        }
+    }
+}
+
+/** Milliseconds on the frame clock's timebase (Choreographer frame times are `System.nanoTime()`), for [ZoomTimeline]. */
+private fun frameClockMs(): Long = System.nanoTime() / 1_000_000L
+
+private fun mix(a: Float, b: Float, t: Float): Float = a + (b - a) * t
+
+// ------------------------------------------------------------------------------------------------
 // Framing: one camera model for the 3D scene and the 2D pen
 // ------------------------------------------------------------------------------------------------
 
@@ -377,11 +566,18 @@ private object PenPose {
 }
 
 /**
- * A camera on +Z looking down −Z with an [FOCAL_MM] lens, placed so the pen at rest fills [FILL_HEIGHT]
- * of the view's height, centred, and the `write` swing still fits [FILL_WIDTH] of its width.
+ * A camera on +Z looking down −Z with a [focalMm] lens. [fit] places one with the rest lens ([FOCAL_MM]) so the pen at
+ * rest fills [FILL_HEIGHT] of the view's height, centred, and the `write` swing still fits [FILL_WIDTH] of its width.
  */
-private class PenFraming(val width: Int, val height: Int, val camX: Float, val camY: Float, val camZ: Float) {
-    private val tanHalf = SENSOR_HALF_MM / FOCAL_MM
+private class PenFraming(
+    val width: Int,
+    val height: Int,
+    val camX: Float,
+    val camY: Float,
+    val camZ: Float,
+    val focalMm: Float = FOCAL_MM,
+) {
+    private val tanHalf = SENSOR_HALF_MM / focalMm
     private val aspect = width.toFloat() / height
     private val world = FloatArray(3)
 
@@ -453,6 +649,30 @@ private class PenFraming(val width: Int, val height: Int, val camX: Float, val c
     }
 }
 
+/** The rest framing and the nib close-up, and the camera in between for a zoom `z` (0 = rest, 1 = close-up). */
+private class ZoomFraming(val rest: PenFraming, val band: PenFraming) {
+    fun focalAt(z: Float): Float = mix(rest.focalMm, band.focalMm, z)
+    fun camXAt(z: Float): Float = mix(rest.camX, band.camX, z)
+    fun camYAt(z: Float): Float = mix(rest.camY, band.camY, z)
+
+    /** The whole framing at [z], for the 2D pen. */
+    fun at(z: Float): PenFraming =
+        if (z <= 0f) rest else PenFraming(rest.width, rest.height, camXAt(z), camYAt(z), rest.camZ, focalAt(z))
+
+    companion object {
+        /**
+         * The close-up: the same camera distance (no dolly), a [BAND_FOCAL_MM] lens, panned so the middle of the pen
+         * from the nib up [BAND_SPAN_M] is at the view's centre. A camera looking straight down −Z puts a point at
+         * the centre exactly when it is right above it in x and y, whatever the lens.
+         */
+        fun of(rest: PenFraming, dims: PenDims): ZoomFraming {
+            val middle = FloatArray(3)
+            PenPose.toWorld(0f, dims.centerY - dims.halfLength + BAND_SPAN_M / 2, 0f, middle)
+            return ZoomFraming(rest, PenFraming(rest.width, rest.height, middle[0], middle[1], rest.camZ, BAND_FOCAL_MM))
+        }
+    }
+}
+
 // ------------------------------------------------------------------------------------------------
 // 3D: SceneView (Filament + gltfio)
 // ------------------------------------------------------------------------------------------------
@@ -470,6 +690,7 @@ private fun Pen3d(
     request: ClipRequest,
     live: Boolean,
     motionAllowed: Boolean,
+    zoom: ZoomState,
     report: (Map<String, Offset>) -> Unit,
     onReady: () -> Unit,
     onFailure: (Throwable) -> Unit,
@@ -499,7 +720,7 @@ private fun Pen3d(
         far = 10f
         setExposure(12f, 1f / 200f, 200f)
         rotation = Rotation(0f, 0f, 0f)
-        position = Position(0f, 0f, 0.6f)
+        position = Position(0f, 0f, 0.6f) // until the view's size is known; Pen3dDriver.setFraming then places it
     }
     // Not SceneView's rememberNode: it is an inline function compiled for JVM 21, and this app targets 17.
     val keyLight = remember(engine) { keyLight(engine) }
@@ -534,8 +755,10 @@ private fun Pen3d(
     }
 
     val scope = rememberCoroutineScope()
-    val driver = remember { Pen3dDriver(scope) }
+    val driver = remember { Pen3dDriver(scope, zoom) }
     val nodeHolder = remember { arrayOfNulls<SceneModelNode>(1) }
+    // Read here, so a close-up starting or ending recomposes this and the SideEffect below re-arms the frame loop.
+    val zoomTicking = zoom.ticking
 
     SceneView(
         modifier = modifier,
@@ -573,13 +796,16 @@ private fun Pen3d(
         tuneView(view)
         invalidator.requestRender()
     }
+    // The rest framing goes through the same camera function the frames use (Pen3dDriver.applyCamera).
     LaunchedEffect(size, rig) {
-        val framing = PenFraming.fit(size.width, size.height, rig?.dims ?: PenDims.Bundled) ?: return@LaunchedEffect
-        cameraNode.position = Position(framing.camX, framing.camY, framing.camZ)
+        val dims = rig?.dims ?: PenDims.Bundled
+        val rest = PenFraming.fit(size.width, size.height, dims) ?: return@LaunchedEffect
+        driver.setFraming(ZoomFraming.of(rest, dims))
+        invalidator.requestRender()
     }
     SideEffect {
-        driver.bind(rig, nodeHolder[0], scene, view, report, onReady, onFailure)
-        driver.setMotion(allowed = motionAllowed, running = live && motionAllowed)
+        driver.bind(rig, nodeHolder[0], scene, view, cameraNode, report, onReady, onFailure)
+        driver.setMotion(allowed = motionAllowed, running = live && motionAllowed, zoomTicking = zoomTicking)
     }
     LaunchedEffect(request, rig) {
         if (rig != null) driver.request(request.clip)
@@ -622,11 +848,22 @@ private fun rimLight(engine: Engine): LightNode = LightNode(engine, LightManager
     castShadows(false)
 }
 
-/** No shadows, ambient occlusion or bloom (nothing to cast on, and a transparent target); 4× MSAA for the long thin edges. */
+/**
+ * No shadows (nothing to cast on); ambient occlusion for the grip band's depth in the close-up, and a faint bloom for the
+ * satin highlights; 4× MSAA for the long thin edges. The HDR colour buffer is HIGH quality, which keeps its alpha (the
+ * target is transparent). SceneView's own view setup, including its Filmic tone mapping, is left as it is.
+ */
 private fun tuneView(view: View) {
     view.setShadowingEnabled(false)
-    view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply { enabled = false }
-    view.bloomOptions = view.bloomOptions.apply { enabled = false }
+    view.ambientOcclusionOptions = view.ambientOcclusionOptions.apply {
+        enabled = true
+        quality = View.QualityLevel.MEDIUM
+    }
+    view.bloomOptions = view.bloomOptions.apply {
+        enabled = true
+        strength = 0.08f
+    }
+    view.renderQuality = view.renderQuality.apply { hdrColorBuffer = View.QualityLevel.HIGH }
     view.multiSampleAntiAliasingOptions = view.multiSampleAntiAliasingOptions.apply {
         enabled = true
         sampleCount = 4
@@ -690,12 +927,18 @@ private class PenRig(private val engine: Engine, instance: ModelInstance) {
     }
 }
 
-/** Advances the clip clock from the frame loop, poses the model, and reports markers after each frame. */
-private class Pen3dDriver(private val scope: CoroutineScope) {
+/**
+ * Advances the clip clock from the frame loop, poses the model, steers the camera for the close-up, and reports markers
+ * after each frame.
+ */
+private class Pen3dDriver(private val scope: CoroutineScope, private val zoom: ZoomState) {
     private var rig: PenRig? = null
     private var node: SceneModelNode? = null
     private var scene: Scene? = null
     private var view: View? = null
+    private var camera: CameraNode? = null
+    private var framing: ZoomFraming? = null
+    private var appliedZ = Float.NaN // the z the camera was last aimed for; NaN forces the next aim
     private var report: (Map<String, Offset>) -> Unit = {}
     private var onReady: () -> Unit = {}
     private var onFailure: (Throwable) -> Unit = {}
@@ -710,8 +953,12 @@ private class Pen3dDriver(private val scope: CoroutineScope) {
 
     private val tick: (Long) -> Unit = { frameNanos ->
         guard {
-            clock.advance(frameNanos)
-            rig?.pose(clock.clip, clock.time)
+            // The clip moves only while the pen plays; the close-up goes on until it has eased back out.
+            if (running) {
+                clock.advance(frameNanos)
+                rig?.pose(clock.clip, clock.time)
+            }
+            applyCamera(zoom.update(frameNanos / 1_000_000L))
         }
     }
 
@@ -720,6 +967,7 @@ private class Pen3dDriver(private val scope: CoroutineScope) {
         node: SceneModelNode?,
         scene: Scene,
         view: View,
+        camera: CameraNode,
         report: (Map<String, Offset>) -> Unit,
         onReady: () -> Unit,
         onFailure: (Throwable) -> Unit,
@@ -730,6 +978,11 @@ private class Pen3dDriver(private val scope: CoroutineScope) {
         this.report = report
         this.onReady = onReady
         this.onFailure = onFailure
+        if (camera !== this.camera) {
+            this.camera = camera
+            appliedZ = Float.NaN
+            guard { applyCamera(zoom.z) }
+        }
         if (rig !== this.rig) {
             this.rig = rig
             framesWithModel = 0
@@ -737,19 +990,41 @@ private class Pen3dDriver(private val scope: CoroutineScope) {
         }
     }
 
-    fun setMotion(allowed: Boolean, running: Boolean) {
+    fun setMotion(allowed: Boolean, running: Boolean, zoomTicking: Boolean) {
         if (allowed != motionAllowed) {
             motionAllowed = allowed
             stillJob?.cancel()
             if (!allowed) hold(IDLE, 0f)
         }
-        val run = running && rig != null && node != null && !failed
+        val ready = rig != null && node != null && !failed
+        val run = running && ready
         if (run != this.running) {
             this.running = run
             clock.pause()
         }
-        // A non-null Node.onFrame keeps SceneView's on-demand loop drawing; null lets it park.
-        node?.onFrame = if (run) tick else null
+        // A non-null Node.onFrame keeps SceneView's on-demand loop drawing; null lets it park. The loop also runs while a
+        // close-up is under way, even if the clip is held (`playing` false) or motion is reduced.
+        node?.onFrame = if (run || (zoomTicking && ready)) tick else null
+    }
+
+    /** The camera's rest framing and close-up for the current view size and model; aims the camera for the zoom as it stands. */
+    fun setFraming(framing: ZoomFraming) {
+        this.framing = framing
+        appliedZ = Float.NaN
+        guard { applyCamera(zoom.z) }
+    }
+
+    /**
+     * The one place the camera is aimed: the lens and the pan blend from the rest framing to the close-up as [z] goes
+     * 0 to 1 (SceneView re-projects when the focal length is set). The distance never changes.
+     */
+    private fun applyCamera(z: Float) {
+        val camera = camera ?: return
+        val framing = framing ?: return
+        if (z == appliedZ) return
+        appliedZ = z
+        camera.focalLength = framing.focalAt(z).toDouble()
+        camera.position = Position(framing.camXAt(z), framing.camYAt(z), framing.rest.camZ)
     }
 
     fun request(clip: String) {
@@ -843,12 +1118,12 @@ private val KitBody = Brush.horizontalGradient(
 private val KitNib = Color(0xFFB2BAC6)
 private val KitHairline = Color(0xFFBCC5D1)
 
-/** Marker positions in pen space, metres (the model's, from Branding/pen3d/README.md). */
+/** Marker positions in pen space, metres: the model's, with the gesture markers in the grip band near the nib. */
 private val MARKERS_PEN = mapOf(
-    "marker_squeeze" to floatArrayOf(0f, -0.01885f, 0.005f),
-    "marker_slide_top" to floatArrayOf(0f, 0.0203f, 0.005f),
-    "marker_slide_bottom" to floatArrayOf(0f, -0.0043f, 0.005f),
-    "marker_double_tap" to floatArrayOf(0f, 0.040f, 0.005f),
+    "marker_squeeze" to floatArrayOf(0f, -0.0505f, 0.005f),
+    "marker_slide_top" to floatArrayOf(0f, -0.0345f, 0.005f),
+    "marker_slide_bottom" to floatArrayOf(0f, -0.0565f, 0.005f),
+    "marker_double_tap" to floatArrayOf(0f, -0.0385f, 0.005f),
     "marker_nib" to floatArrayOf(0f, -0.0825f, 0f),
     "marker_top" to floatArrayOf(0f, 0.0825f, 0f),
 )
@@ -957,21 +1232,26 @@ private fun Pen2d(
     request: ClipRequest,
     live: Boolean,
     motionAllowed: Boolean,
+    zoom: ZoomState,
     report: (Map<String, Offset>) -> Unit,
 ) {
     val paths = remember { Kit2dPaths() }
     val clock = remember { ClipClock(::length2d) }
     var shownClip by remember { mutableStateOf(IDLE) }
     var shownTime by remember { mutableFloatStateOf(0f) }
-    val framing = remember(size) { PenFraming.fit(size.width, size.height, PenDims.Bundled) }
+    var shownZoom by remember { mutableFloatStateOf(0f) }
+    val framing = remember(size) {
+        PenFraming.fit(size.width, size.height, PenDims.Bundled)?.let { ZoomFraming.of(it, PenDims.Bundled) }
+    }
     val currentFraming by rememberUpdatedState(framing)
     val lastMarkers = remember { arrayOf<Map<String, Offset>>(emptyMap()) }
 
-    // Shows the clock's pose and reports where the markers went (from effects, never the draw pass).
+    // Shows the clock's pose and the timeline's zoom, and reports where the markers went (from effects, never the draw pass).
     fun show() {
         shownClip = clock.clip
         shownTime = clock.time
-        val projector = Pen2dProjector(currentFraming ?: return)
+        shownZoom = zoom.z
+        val projector = Pen2dProjector(currentFraming?.at(shownZoom) ?: return)
         projector.set(Pose2d().also { pose2d(clock.clip, clock.time, length2d(clock.clip), it) }, PenDims.Bundled)
         val markers = HashMap<String, Offset>(MARKERS_PEN.size)
         for ((name, p) in MARKERS_PEN) projector.project(p[0], p[1], p[2])?.let { markers[name] = it }
@@ -997,19 +1277,23 @@ private fun Pen2d(
             show()
         }
     }
-    LaunchedEffect(live, motionAllowed) {
+    // Frames run while the clip plays, and while a close-up is under way even if it doesn't (`playing` false, reduced motion).
+    val animate = live && motionAllowed
+    val frames = animate || zoom.ticking
+    LaunchedEffect(animate, frames) {
         clock.pause()
-        if (!live || !motionAllowed) return@LaunchedEffect
+        if (!frames) return@LaunchedEffect
         while (true) {
             withFrameNanos { frameNanos ->
-                clock.advance(frameNanos)
+                if (animate) clock.advance(frameNanos)
+                zoom.update(frameNanos / 1_000_000L)
                 show()
             }
         }
     }
     Canvas(modifier) {
         val pose = Pose2d().also { pose2d(shownClip, shownTime, length2d(shownClip), it) }
-        val projector = Pen2dProjector(framing ?: return@Canvas).also { it.set(pose, PenDims.Bundled) }
+        val projector = Pen2dProjector((framing ?: return@Canvas).at(shownZoom)).also { it.set(pose, PenDims.Bundled) }
         val matrix = projector.kitMatrix() ?: return@Canvas
         withTransform({ transform(matrix) }) {
             drawKitPen(paths, pose)
