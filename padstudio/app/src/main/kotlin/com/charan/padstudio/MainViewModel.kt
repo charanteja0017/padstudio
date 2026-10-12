@@ -20,6 +20,7 @@ import com.charan.padstudio.home.GroupWidget
 import com.charan.padstudio.home.WidgetPinning
 import com.charan.padstudio.icons.IconRepository
 import com.charan.padstudio.looks.WallpaperGenerator
+import com.charan.padstudio.looks.WallpaperTarget
 import com.charan.padstudio.pen.KeyMapperBridge
 import com.charan.padstudio.pen.PenPlan
 import kotlinx.coroutines.Dispatchers
@@ -236,13 +237,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateWidgets()
     }
 
-    fun applyWallpaper(seed: Long, dark: Boolean, accent: Int) {
+    fun applyWallpaper(seed: Long, dark: Boolean, accent: Int) = applyWallpaper(seed, dark, accent, WallpaperTarget.BOTH)
+
+    /** Looks → Apply to Home, Lock or Both (plan §10). The three-argument form above sets both, as before. */
+    fun applyWallpaper(seed: Long, dark: Boolean, accent: Int, target: WallpaperTarget) {
         viewModelScope.launch(Dispatchers.Default) {
             val bitmap = WallpaperGenerator.render(WallpaperGenerator.longSide(studio), seed, accent, dark)
-            runCatching { WallpaperGenerator.apply(studio, bitmap) }
+            runCatching { WallpaperGenerator.apply(studio, bitmap, target) }
                 .onSuccess {
                     studio.config.update { it.copy(wallpaperApplied = true) }
-                    _message.value = "Wallpaper set on home and lock screen."
+                    _message.value = when (target) {
+                        WallpaperTarget.BOTH -> "Wallpaper set on home and lock screen."
+                        WallpaperTarget.HOME -> "Wallpaper set on the home screen."
+                        WallpaperTarget.LOCK -> "Wallpaper set on the lock screen."
+                    }
                 }
                 .onFailure { _message.value = "Couldn't set the wallpaper: ${it.message}" }
         }
