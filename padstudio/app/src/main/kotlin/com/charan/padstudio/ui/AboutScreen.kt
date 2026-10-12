@@ -60,22 +60,25 @@ private val credits = listOf(
     "**FocusPen Pro X** (HMQYHM, GPL-3.0-only) documented how HyperOS reports Focus Pen Pro gestures.",
     "**Lawnicons** (Apache-2.0) and **Arcticons** (GPL-3.0 / CC BY-SA 4.0) supply themed icons when installed.",
     "**Material Symbols** (Apache-2.0): PadStudio’s icons.",
+    "**Manrope** (SIL Open Font License 1.1): PadStudio’s typeface.",
 )
 
 /**
  * About, as a card: PadStudio's version and licence, the work it builds on, and a row that opens every library's
- * licence through [onOpenLicences] (show [LicencesDialog]). Setup shows it as its last section (plan §10: About
- * moved into Setup).
+ * licence through [onOpenLicences] (show [LicencesDialog]). [showTitle] false leaves out the card's own "About"
+ * heading, for a page that already has that title ([AboutScreen]).
  */
 @Composable
-fun AboutCard(onOpenLicences: () -> Unit, modifier: Modifier = Modifier) {
+fun AboutCard(onOpenLicences: () -> Unit, modifier: Modifier = Modifier, showTitle: Boolean = true) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val type = MaterialTheme.typography
     val version = remember(context) { appVersion(context) }
     val name = SpanStyle(color = scheme.onSurface, fontWeight = Tokens.WeightMedium)
     StudioCard(modifier.fillMaxWidth()) {
-        Text("About", style = type.titleLarge, color = scheme.onSurface, modifier = Modifier.semantics { heading() })
+        if (showTitle) {
+            Text("About", style = type.titleLarge, color = scheme.onSurface, modifier = Modifier.semantics { heading() })
+        }
         Text(
             if (version.isNullOrBlank()) "PadStudio is free software under GPL-3.0. It builds on:" else "PadStudio $version is free software under GPL-3.0. It builds on:",
             style = type.bodyMedium,
@@ -161,7 +164,7 @@ fun LicencesDialog(onDismiss: () -> Unit) {
 fun AboutScreen(modifier: Modifier = Modifier) {
     var licencesOpen by rememberSaveable { mutableStateOf(false) }
     ScreenScaffold(title = "About", modifier = modifier) {
-        AboutCard(onOpenLicences = { licencesOpen = true })
+        AboutCard(onOpenLicences = { licencesOpen = true }, showTitle = false)
     }
     if (licencesOpen) LicencesDialog(onDismiss = { licencesOpen = false })
 }
