@@ -1,6 +1,7 @@
 package com.charan.padstudio.today
 
 import android.content.Intent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -21,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -28,6 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -41,6 +49,7 @@ import com.charan.padstudio.core.home.PlannedGroup
 import com.charan.padstudio.core.pen.DefaultProfiles
 import com.charan.padstudio.data.HomeSnapshot
 import com.charan.padstudio.data.InstalledApp
+import com.charan.padstudio.looks.WallpaperGenerator
 import com.charan.padstudio.ui.Sym
 import com.charan.padstudio.ui.components.AppIcon
 import com.charan.padstudio.ui.components.AppIconStack
@@ -59,6 +68,8 @@ import com.charan.padstudio.ui.components.SymIcon
 import com.charan.padstudio.ui.components.cardBleed
 import com.charan.padstudio.ui.components.statusInk
 import com.charan.padstudio.ui.theme.Tokens
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 // ---- Pen by app --------------------------------------------------------------------------------------------
 
@@ -86,7 +97,7 @@ internal fun PenByAppCard(
             )
             else -> Column(Modifier.cardBleed()) {
                 lines.forEachIndexed { index, line ->
-                    if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = scheme.outlineVariant.copy(alpha = 0.8f))
+                    if (index > 0) HorizontalDivider(Modifier.padding(horizontal = Tokens.GapM), color = scheme.outlineVariant.copy(alpha = 0.8f))
                     ListRow(
                         headline = line.title,
                         supporting = line.words,
@@ -172,7 +183,7 @@ internal fun HomeScreenCard(
                 text = "Home screen",
                 style = type.titleLarge,
                 color = scheme.onSurface,
-                modifier = Modifier.padding(end = 12.dp).semantics { heading() },
+                modifier = Modifier.padding(end = Tokens.GapS).semantics { heading() },
             )
             SegmentedChoice(
                 options = HomePreview.entries,
@@ -215,7 +226,7 @@ private fun PreviewPlaceholder(text: String) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(Tokens.CornerM))
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(24.dp),
+            .padding(Tokens.CardPadding),
         contentAlignment = Alignment.Center,
     ) {
         Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
@@ -255,7 +266,7 @@ private fun WidgetPreview(
             .fillMaxWidth()
             .clip(RoundedCornerShape(Tokens.CornerM))
             .background(wallpaperBrush(wallpaperColors))
-            .padding(PREVIEW_MARGIN)
+            .padding(Tokens.GapM)
             .clearAndSetSemantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
@@ -399,28 +410,39 @@ private fun wallpaperBrush(colors: List<Color>?): Brush {
 
 // ---- Make it yours -----------------------------------------------------------------------------------------
 
-/** Icon style, wallpaper and colour source in brief, with a swatch of the wallpaper's real colours. Opens Looks. */
+/**
+ * Icon style, wallpaper and colour source in brief, beside a thumbnail of PadStudio's own wallpaper style (the
+ * generator Looks uses, in the app's accent colour and theme). It is drawn off the main thread, and the
+ * gradient of the theme's containers shows until it is ready. Opens Looks.
+ */
 @Composable
 internal fun MakeItYoursCard(
     iconLine: String,
     wallpaperLine: String,
     coloursLine: String,
-    wallpaperColors: List<Color>?,
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
     val type = MaterialTheme.typography
+    val accent = scheme.primary
+    val dark = scheme.surface.luminance() < 0.5f
+    val thumbnail by produceState<ImageBitmap?>(null, accent, dark) {
+        value = withContext(Dispatchers.Default) {
+            WallpaperGenerator.render(THUMB_RENDER_PX, seed = THUMB_SEED, accent = accent.toArgb(), dark = dark).asImageBitmap()
+        }
+    }
     StudioCard(modifier.fillMaxWidth(), onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.GapM)) {
             Box(
                 Modifier
                     .size(THUMB)
                     .clip(RoundedCornerShape(Tokens.CornerM))
-                    .background(wallpaperBrush(wallpaperColors)),
-                contentAlignment = Alignment.Center,
+                    .background(wallpaperBrush(null)),
             ) {
-                if (wallpaperColors.isNullOrEmpty()) SymIcon(Sym.wallpaper, contentDescription = null, tint = scheme.onPrimaryContainer)
+                thumbnail?.let { picture ->
+                    Image(bitmap = picture, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                }
             }
             Column(Modifier.weight(1f)) {
                 Text("Make it yours", style = type.titleLarge, color = scheme.onSurface, modifier = Modifier.semantics { heading() })
@@ -474,7 +496,7 @@ internal fun HealthCard(
         if (top != null) {
             TopIssue(top, issueText(top))
         } else if (!loading) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.GapS)) {
                 SymIcon(Sym.ok, contentDescription = null, size = 20.dp, tint = statusInk(StatusLevel.Good))
                 Text("Nothing needs attention", style = type.bodyLarge, color = scheme.onSurface)
             }
@@ -494,7 +516,7 @@ private fun TopIssue(check: HealthCheck, words: String) {
     val scheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.semantics(mergeDescendants = true) {},
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(Tokens.GapS),
     ) {
         SymIcon(Sym.warning, contentDescription = "Needs attention", size = 20.dp, tint = statusInk(StatusLevel.Warn), modifier = Modifier.padding(top = 2.dp))
         Column(Modifier.weight(1f)) {
@@ -508,10 +530,13 @@ private val STACK_ICON = 36.dp
 
 /** Room for two icons and a "+N" tile overlapping by 30 % (AppIconStack). */
 private val STACK_SLOT = 88.dp
-private val PREVIEW_MARGIN = 16.dp
-private val THUMB = 80.dp
+private val THUMB = 64.dp
 private val RING = 72.dp
 private const val GROUP_COLUMNS = 3
+
+/** The Make it yours thumbnail is drawn at 192 px (three times its 64 dp), from a fixed seed so it doesn't change between visits. */
+private const val THUMB_RENDER_PX = 192
+private const val THUMB_SEED = 7L
 
 // The widget's own measures (GroupWidget and core's GroupPlanner): padding, header and corners, in dp before scaling.
 private const val PADDING_DP = 10f

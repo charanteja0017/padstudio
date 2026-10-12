@@ -261,7 +261,6 @@ internal fun TodayScreen(
                         iconLine = iconStyleText(iconStyle, savedPack, pack.label, pack.checked),
                         wallpaperLine = wallpaperText(config.wallpaperApplied),
                         coloursLine = coloursText(config.matchWallpaperColours),
-                        wallpaperColors = wallpaperColors,
                         onOpen = { onOpenTab(Tab.LOOKS) },
                     )
                     HealthCard(

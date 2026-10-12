@@ -110,9 +110,14 @@ internal class HeroActions(
  *
  * The callouts are placed from PenModelView's onMarkers offsets. Those arrive at display rate while the pen
  * moves, so they live in [CalloutController.markers], which only the overlay's placement and drawing read:
- * the hero itself recomposes only when the fit is decided again. Callouts go beside the text when they fit
- * there, else under it, else the gestures become a list of binding chips beside a smaller pen
- * (SCREENS-BRIEF), judged from the real marker offsets and the pills' measured sizes.
+ * the hero itself recomposes only when the fit is decided again. The gesture markers sit close together in
+ * the pen's grip band, so the callouts stand in one fanned column beside it (a pill each, in the order of
+ * their markers' heights, with a leader to each dot). Callouts go beside the text when they fit there, else
+ * under it, else the gestures become a list of binding chips beside a smaller pen (SCREENS-BRIEF), judged
+ * from the real marker offsets and the pills' measured sizes.
+ *
+ * While the pen plays a gesture or `write` (PenModelView's onBusyChange) the pills and dots are hidden and
+ * nothing is re-fitted or stepped down: the pen zooms and tilts then, and its markers with it.
  *
  * [heroWidth] is the card's width, from the page layout.
  */
@@ -162,7 +167,6 @@ internal fun TodayHero(
     val key = listOf(geometry, pills.px, gestures, calloutsPossible)
     val clip = pen.clip
     SideEffect {
-        controller.writing = clip == WRITE
         controller.configure(
             key,
             CalloutInputs(
@@ -185,6 +189,16 @@ internal fun TodayHero(
         controller.settle()
         delay(GIVE_UP_MS)
         controller.giveUp()
+    }
+    // Whatever was held back while the pen was busy is decided once it has been at rest for a moment (its
+    // last reports can still describe the gesture); a pen that is busy again within that moment restarts it.
+    LaunchedEffect(controller) {
+        snapshotFlow { controller.busy }.collectLatest { busy ->
+            if (!busy) {
+                delay(SETTLE_MS)
+                controller.rested()
+            }
+        }
     }
 
     val ink = remember { Animatable(1f) }
@@ -222,7 +236,7 @@ internal fun TodayHero(
                 HeroQuickActions(status = status, sentLine = sentLine, penEnabled = penEnabled, pending = note is HeroNote.Pending, actions = actions)
             },
             note = {
-                if (note != null) NoteLine(note, actions.onRemedy, Modifier.padding(horizontal = CARD_PADDING))
+                if (note != null) NoteLine(note, actions.onRemedy, Modifier.padding(horizontal = Tokens.CardPadding))
             },
             pen = {
                 val sink = controller.sink
@@ -234,6 +248,7 @@ internal fun TodayHero(
                     playing = pen.playing,
                     onMarkers = if (arrangement == HeroArrangement.LIST) ignore else sink,
                     replay = pen.replay,
+                    onBusyChange = { controller.busy = it },
                 )
             },
             overlay = {
@@ -242,7 +257,6 @@ internal fun TodayHero(
                 } else {
                     CalloutOverlay(
                         controller = controller,
-                        pen = pen,
                         gestures = gestures,
                         pills = pills,
                         metrics = metrics,
@@ -296,7 +310,7 @@ private fun HeroLayout(
         val (identities, actionBlocks, notes, pens, overlays) = slots
         val pauses = slots[5]
         val width = constraints.maxWidth
-        val padding = CARD_PADDING.roundToPx()
+        val padding = Tokens.CardPadding.roundToPx()
         val full = Constraints(maxWidth = width)
         val pause = pauses.firstOrNull()?.measure(Constraints())
         val pauseInset = PAUSE_INSET.roundToPx()
@@ -391,7 +405,7 @@ private fun HeroLayout(
 private fun HeroIdentity(status: PenStatus, text: HeroText, onFixKeyMapper: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val type = MaterialTheme.typography
-    Column(Modifier.padding(start = CARD_PADDING, top = CARD_PADDING, end = 12.dp)) {
+    Column(Modifier.padding(start = Tokens.CardPadding, top = Tokens.CardPadding, end = Tokens.GapS)) {
         Text(
             text = text.overline.uppercase(),
             style = type.labelMedium.copy(letterSpacing = 0.08.em),
@@ -405,7 +419,7 @@ private fun HeroIdentity(status: PenStatus, text: HeroText, onFixKeyMapper: () -
         )
         Text(text = text.subtitle, style = type.bodyLarge, color = scheme.onSurfaceVariant)
         FlowRow(
-            modifier = Modifier.padding(top = 12.dp),
+            modifier = Modifier.padding(top = Tokens.GapS),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             itemVerticalAlignment = Alignment.CenterVertically,
         ) {
@@ -420,7 +434,7 @@ private fun HeroIdentity(status: PenStatus, text: HeroText, onFixKeyMapper: () -
 /** Test pen, Pause or Resume pen, Edit controls, then when it was sent, with Send when there is something to send. */
 @Composable
 private fun HeroQuickActions(status: PenStatus, sentLine: String, penEnabled: Boolean, pending: Boolean, actions: HeroActions) {
-    Column(Modifier.padding(start = CARD_PADDING, top = 12.dp, end = CARD_PADDING)) {
+    Column(Modifier.padding(start = Tokens.CardPadding, top = Tokens.GapS, end = Tokens.CardPadding)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PillButton(text = "Test pen", onClick = actions.onTestPen, icon = Sym.testPen)
             PillButton(
@@ -580,7 +594,7 @@ private fun rememberPenStageState(): PenStageState {
 // ---- Callouts ----------------------------------------------------------------------------------------------
 
 /** Everything the fit needs besides the markers, refreshed from each composition. */
-private class CalloutInputs(
+internal class CalloutInputs(
     val geometry: HeroGeometry,
     val possible: Boolean,
     val markerNames: List<String>,
@@ -598,11 +612,13 @@ private class CalloutInputs(
  * - [markers] changes at display rate while the pen moves: only the callout overlay's placement and drawing
  *   read it, so it never recomposes anything.
  * - [arrangement] and [placements] change only when the fit is decided again: when the inputs change, when
- *   the pen first reports at a new size, or when the markers move further than a sway would (never during
- *   `write`, whose 22° tilt moves them by design).
+ *   the pen first reports at a new size, or when the markers move further than a sway would. Never while the
+ *   pen is [busy]: a gesture zooms or tilts it and its markers go with it, so a fit decided then describes
+ *   the gesture, and a failed one would step the hero down to the list for good. What is held back waits for
+ *   [rested].
  */
 @Stable
-private class CalloutController {
+internal class CalloutController {
     var markers by mutableStateOf<Map<String, Offset>>(emptyMap())
         private set
     var arrangement by mutableStateOf(HeroArrangement.SIDE)
@@ -617,10 +633,16 @@ private class CalloutController {
     /** Where the pen stands in the hero, for the glow behind it; written by the hero's layout. */
     var stageRect by mutableStateOf(Rect.Zero)
 
-    var writing = false
+    /**
+     * Whether the pen is playing a gesture or `write`, from PenModelView's onBusyChange. The overlay hides its
+     * pills and dots while it is, and nothing is decided, re-fitted or stepped down.
+     */
+    var busy by mutableStateOf(false)
+
     private var key: Any? = null
     private var inputs: CalloutInputs? = null
     private var settled = false
+    private var giveUpDue = false
     private var decidedFrom: Map<String, Offset> = emptyMap()
 
     /** [arrangement] once these inputs are in; before that (first frame, new size or text), [initial]. */
@@ -631,6 +653,7 @@ private class CalloutController {
         if (key == this.key) return
         this.key = key
         settled = false
+        giveUpDue = false
         placements = null
         arrangement = if (inputs.possible) inputs.geometry.initial else HeroArrangement.LIST
         epoch++
@@ -639,36 +662,48 @@ private class CalloutController {
     val sink: (Map<String, Offset>) -> Unit = { reported ->
         if (arrangement != HeroArrangement.LIST) {
             markers = reported
-            if (settled) {
-                val current = placements
-                if (current == null) {
-                    decide(reported)
-                } else if (!writing && markersMoved(decidedFrom, reported, inputs?.markerNames.orEmpty(), inputs?.moveThreshold ?: Float.MAX_VALUE)) {
-                    decide(reported)
-                }
-            }
+            if (settled && (placements == null || moved(reported))) decide(reported)
         }
     }
 
-    /** The pen has had time to report at its current size: decide with what it last said. */
+    /** The pen has had time to report at its current size: decide with what it last said (once it isn't busy). */
     fun settle() {
         settled = true
         if (placements == null && arrangement != HeroArrangement.LIST && markers.isNotEmpty()) decide(markers)
     }
 
-    /** No usable markers came: the list needs none. */
+    /** No usable markers came: the list needs none. Not while the pen is busy: it is asked again once it rests. */
     fun giveUp() {
+        giveUpDue = busy
+        if (busy) return
         if (placements == null && arrangement != HeroArrangement.LIST) arrangement = HeroArrangement.LIST
     }
 
+    /**
+     * The pen has been at rest for a moment: decide what was held back while it was busy (a first fit, or a
+     * pose that moved), and give up if that came due. A step down gives the new arrangement its own turn.
+     */
+    fun rested() {
+        if (busy || arrangement == HeroArrangement.LIST) return
+        val before = arrangement
+        if (settled && markers.isNotEmpty() && (placements == null || moved(markers))) decide(markers)
+        val due = giveUpDue
+        giveUpDue = false
+        if (due && arrangement == before) giveUp()
+    }
+
+    private fun moved(now: Map<String, Offset>): Boolean =
+        markersMoved(decidedFrom, now, inputs?.markerNames.orEmpty(), inputs?.moveThreshold ?: Float.MAX_VALUE)
+
     private fun decide(reported: Map<String, Offset>) {
+        if (busy) return
         val input = inputs ?: return
         val current = arrangement
         if (current == HeroArrangement.LIST) return
         val anchors = input.markerNames.map { reported[it] ?: return }
         if (anchors.size != input.pillSizes.size) return
         val stage = input.stageSize(current)
-        val fit = fitCallouts(stage, anchors, input.pillSizes, input.preferred, listOf(input.pauseRect(stage)), penBar(reported), input.metrics)
+        val fit = placeCallouts(stage, anchors, input.pillSizes, input.preferred, listOf(input.pauseRect(stage)), penBar(reported), input.metrics)
         when {
             fit != null -> {
                 decidedFrom = reported
@@ -715,12 +750,12 @@ private fun rememberPillSizes(gestures: List<HeroGesture>): PillSizes {
 
 /**
  * The callout pills, their leaders and marker dots, and the ink stroke at the nib. Placement and drawing
- * read the live marker offsets; measuring doesn't, so a moving pen only re-places and redraws.
+ * read the live marker offsets; measuring doesn't, so a moving pen only re-places and redraws. The pills,
+ * leaders and dots are hidden while the pen is [CalloutController.busy] (a gesture or `write` is playing).
  */
 @Composable
 private fun CalloutOverlay(
     controller: CalloutController,
-    pen: PenStageState,
     gestures: List<HeroGesture>,
     pills: PillSizes,
     metrics: CalloutMetrics,
@@ -739,7 +774,7 @@ private fun CalloutOverlay(
             val markers = controller.markers
             drawInk(markers, ink.value, primary, unit, metrics.inset)
             val placements = controller.placements ?: return@drawBehind
-            if (pen.clip == WRITE) return@drawBehind
+            if (controller.busy) return@drawBehind
             currentGestures.forEachIndexed { index, gesture ->
                 val anchor = markers[gesture.marker] ?: return@forEachIndexed
                 val size = pills.px.getOrNull(index) ?: return@forEachIndexed
@@ -777,7 +812,7 @@ private fun CalloutOverlay(
                 )
             }
             val placements = controller.placements ?: return@layout
-            if (pen.clip == WRITE) return@layout
+            if (controller.busy) return@layout
             pillPlaceables.forEachIndexed { index, placeable ->
                 val anchor = markers[gestures[index].marker] ?: return@forEachIndexed
                 val placement = placements.getOrNull(index) ?: return@forEachIndexed
@@ -918,7 +953,6 @@ private const val NANOS_PER_MS = 1_000_000L
 private const val INK_SHARE = 0.68f
 private const val SETTLE_MS = 160L
 private const val GIVE_UP_MS = 2_000L
-private val CARD_PADDING = 20.dp
 private val DOT_RADIUS = 6.dp
 private val LEADER = 22.dp
 private val STAGE_INSET = 8.dp

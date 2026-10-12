@@ -19,8 +19,12 @@ internal enum class PillSide {
     val other: PillSide get() = if (this == START) END else START
 }
 
-/** A pill's side and how far its centre is moved up (negative) or down from its marker, in px. */
-internal data class PillPlacement(val side: PillSide, val shift: Float)
+/**
+ * A pill's side, how far its centre is moved up (negative) or down from its marker, and how much farther than
+ * the usual dot and leader its near edge stands from the marker ([push], in px; only a column of pills sets it,
+ * to line their edges up and to clear the pen).
+ */
+internal data class PillPlacement(val side: PillSide, val shift: Float, val push: Float = 0f)
 
 /** The callout drawing's measures, in px: marker dot radius, leader length, keep-out inset at the stage edge, gap between things, and the vertical shifts tried. */
 internal data class CalloutMetrics(
@@ -36,22 +40,22 @@ internal data class CalloutMetrics(
 internal data class PenBar(val nib: Offset, val top: Offset, val halfWidth: Float)
 
 /**
- * The pen's axis from two of its markers, extended to the top by the model's proportions: the nib is
- * 82.5 mm below the middle and the double-tap spot 40 mm above it, on a 165 mm pen with a 10 mm barrel
- * (APP-BRIEF, the marker nodes of focus_pen_pro.glb). Null until both markers are known.
+ * The pen's axis, from the nib to its top: the top is `marker_top`, the end cap, when the model has it, else
+ * `marker_double_tap` (a model without the cap marker, which round 1's was). The barrel's half-width is the
+ * pen's length times 5 mm over 165 mm: the Focus Pen Pro's barrel radius and length (ROUND2-BRIEF's marker
+ * table, focus_pen_pro.glb). Null until the nib and a top are known.
  */
 internal fun penBar(markers: Map<String, Offset>): PenBar? {
     val nib = markers[NIB] ?: return null
-    val tap = markers[DOUBLE_TAP] ?: return null
-    val axis = tap - nib
-    if (axis.getDistance() < 1f) return null
-    val top = nib + axis * (PEN_LENGTH_MM / NIB_TO_DOUBLE_TAP_MM)
-    return PenBar(nib, top, (top - nib).getDistance() * BARREL_MM / 2f / PEN_LENGTH_MM)
+    val top = markers[TOP] ?: markers[DOUBLE_TAP] ?: return null
+    val length = (top - nib).getDistance()
+    if (length < 1f) return null
+    return PenBar(nib, top, length * BARREL_RADIUS_MM / PEN_LENGTH_MM)
 }
 
 /** The pill of [size] for a marker at [anchor], placed as [placement]. */
 internal fun pillRect(anchor: Offset, size: Size, placement: PillPlacement, metrics: CalloutMetrics): Rect {
-    val reach = metrics.dotRadius + metrics.leader
+    val reach = metrics.dotRadius + metrics.leader + placement.push
     val left = when (placement.side) {
         PillSide.START -> anchor.x - reach - size.width
         PillSide.END -> anchor.x + reach
@@ -61,11 +65,82 @@ internal fun pillRect(anchor: Offset, size: Size, placement: PillPlacement, metr
 }
 
 /**
+ * The hero's callouts: all the pills in one fanned column when that fits ([fanCallouts]), else each pill on
+ * its own side as [fitCallouts] places it. Null when neither fits, so the screen tries its next arrangement.
+ */
+internal fun placeCallouts(
+    stage: Size,
+    anchors: List<Offset>,
+    pills: List<Size>,
+    preferred: List<PillSide>,
+    obstacles: List<Rect>,
+    pen: PenBar?,
+    metrics: CalloutMetrics,
+): List<PillPlacement>? =
+    fanCallouts(stage, anchors, pills, obstacles, pen, metrics)
+        ?: fitCallouts(stage, anchors, pills, preferred, obstacles, pen, metrics)
+
+/**
+ * Puts all the pills in ONE vertical column on the side of the pen with more room, or says it doesn't fit
+ * (null). The gesture markers sit close together in the grip band, so pills level with each marker would
+ * collide; in a column they stack, [CalloutMetrics.gap] apart:
+ * - the column is centred on the mean height of the markers, its pills in the order of their markers' heights
+ *   (the higher marker's pill on top, equal heights in the callouts' own order), so the leaders fan out from
+ *   the grip without crossing;
+ * - its near edge is a dot and a leader beyond the marker nearest that side, so every leader is at least the
+ *   usual length and the pills' edges line up. If the pen's barrel is too close there, the whole column moves
+ *   outward in half-gap steps until it clears. No leader grows more than two leader lengths beyond the usual
+ *   (counting the markers' own spread across the column), so markers that are far apart get no column;
+ * - the side with more room between its outermost marker and the stage's inset edge is tried first, then the
+ *   other; a tie goes to [PillSide.END].
+ * Every pill must stay inside the [stage] inset, a [CalloutMetrics.gap] clear of the [obstacles] and of the
+ * pen, as in [fitCallouts]. A single pill has no column: null.
+ */
+internal fun fanCallouts(
+    stage: Size,
+    anchors: List<Offset>,
+    pills: List<Size>,
+    obstacles: List<Rect>,
+    pen: PenBar?,
+    metrics: CalloutMetrics,
+): List<PillPlacement>? {
+    require(anchors.size == pills.size) { "one anchor and pill size per callout" }
+    if (anchors.size < 2) return null
+    val bounds = stageBounds(stage, metrics) ?: return null
+    val order = anchors.indices.sortedBy { anchors[it].y }
+    val columnHeight = pills.sumOf { it.height.toDouble() }.toFloat() + metrics.gap * (pills.size - 1)
+    var top = (anchors.sumOf { it.y.toDouble() } / anchors.size).toFloat() - columnHeight / 2f
+    val centres = FloatArray(pills.size)
+    for (index in order) {
+        centres[index] = top + pills[index].height / 2f
+        top += pills[index].height + metrics.gap
+    }
+    val leftmost = anchors.minOf { it.x }
+    val rightmost = anchors.maxOf { it.x }
+    val spread = rightmost - leftmost
+    val sides = if (bounds.right - rightmost >= leftmost - bounds.left) listOf(PillSide.END, PillSide.START) else listOf(PillSide.START, PillSide.END)
+    val step = (metrics.gap / 2f).coerceAtLeast(1f)
+    for (side in sides) {
+        var out = 0f
+        while (spread + out <= 2f * metrics.leader) {
+            val placements = anchors.indices.map { i ->
+                val flush = if (side == PillSide.END) rightmost - anchors[i].x else anchors[i].x - leftmost
+                PillPlacement(side, centres[i] - anchors[i].y, flush + out)
+            }
+            if (anchors.indices.all { isClear(pillRect(anchors[it], pills[it], placements[it], metrics), bounds, obstacles, pen, metrics) }) return placements
+            out += step
+        }
+    }
+    return null
+}
+
+/**
  * Places one pill per anchor inside the [stage], or says they don't fit (null): each pill stays [inset]
  * from the stage edge, [gap] clear of the other pills, of the [obstacles] (the Pause button) and of the
  * pen's barrel. Each pill tries its [preferred] side first, then the other side, then the same with its
  * centre moved up or down by whole [CalloutMetrics.shiftStep]s; the first combination that fits wins, so a
- * level leader is chosen whenever one fits.
+ * level leader is chosen whenever one fits. [placeCallouts] falls back to this when the pills don't fit in
+ * a column.
  */
 internal fun fitCallouts(
     stage: Size,
@@ -77,8 +152,7 @@ internal fun fitCallouts(
     metrics: CalloutMetrics,
 ): List<PillPlacement>? {
     require(anchors.size == pills.size && pills.size == preferred.size) { "one anchor, pill size and side per callout" }
-    val bounds = Rect(metrics.inset, metrics.inset, stage.width - metrics.inset, stage.height - metrics.inset)
-    if (bounds.width <= 0f || bounds.height <= 0f) return null
+    val bounds = stageBounds(stage, metrics) ?: return null
     val shifts = buildList {
         add(0f)
         for (k in 1..metrics.shiftSteps) {
@@ -90,22 +164,27 @@ internal fun fitCallouts(
         shifts.flatMap { shift -> listOf(PillPlacement(preferred[i], shift), PillPlacement(preferred[i].other, shift)) }
     }
 
-    fun clear(rect: Rect): Boolean =
-        rect.left >= bounds.left && rect.top >= bounds.top && rect.right <= bounds.right && rect.bottom <= bounds.bottom &&
-            obstacles.none { it.inflate(metrics.gap).overlaps(rect) } &&
-            (pen == null || capsuleDistance(pen.nib, pen.top, rect) >= pen.halfWidth + metrics.gap)
-
     fun place(index: Int, placed: List<Rect>): List<PillPlacement>? {
         if (index == anchors.size) return emptyList()
         for (candidate in candidates[index]) {
             val rect = pillRect(anchors[index], pills[index], candidate, metrics)
-            if (!clear(rect) || placed.any { it.inflate(metrics.gap).overlaps(rect) }) continue
+            if (!isClear(rect, bounds, obstacles, pen, metrics) || placed.any { it.inflate(metrics.gap).overlaps(rect) }) continue
             place(index + 1, placed + rect)?.let { return listOf(candidate) + it }
         }
         return null
     }
     return place(0, emptyList())
 }
+
+/** The stage less its keep-out [CalloutMetrics.inset]; null when nothing is left. */
+private fun stageBounds(stage: Size, metrics: CalloutMetrics): Rect? =
+    Rect(metrics.inset, metrics.inset, stage.width - metrics.inset, stage.height - metrics.inset).takeIf { it.width > 0f && it.height > 0f }
+
+/** Whether a pill at [rect] is inside the [bounds], clear of the [obstacles] and clear of the [pen]'s barrel. */
+private fun isClear(rect: Rect, bounds: Rect, obstacles: List<Rect>, pen: PenBar?, metrics: CalloutMetrics): Boolean =
+    rect.left >= bounds.left && rect.top >= bounds.top && rect.right <= bounds.right && rect.bottom <= bounds.bottom &&
+        obstacles.none { it.inflate(metrics.gap).overlaps(rect) } &&
+        (pen == null || capsuleDistance(pen.nib, pen.top, rect) >= pen.halfWidth + metrics.gap)
 
 /** Whether any of [names] moved more than [threshold] px between [before] and [now] (or appeared or went). */
 internal fun markersMoved(before: Map<String, Offset>, now: Map<String, Offset>, names: List<String>, threshold: Float): Boolean =
@@ -159,6 +238,8 @@ private fun pointToSegment(point: Offset, a: Offset, b: Offset): Float {
 
 internal const val NIB = "marker_nib"
 internal const val DOUBLE_TAP = "marker_double_tap"
+
+/** The end cap (round 2): the pen's top, so its axis never assumes a length. */
+internal const val TOP = "marker_top"
 private const val PEN_LENGTH_MM = 165f
-private const val NIB_TO_DOUBLE_TAP_MM = 122.5f
-private const val BARREL_MM = 10f
+private const val BARREL_RADIUS_MM = 5f
