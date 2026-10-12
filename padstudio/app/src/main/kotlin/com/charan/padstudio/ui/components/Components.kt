@@ -5,6 +5,12 @@
  * docs/redesign/kit.css and docs/redesign/mock-*.html; previews of every component are in
  * ComponentPreviews.kt.
  *
+ * Round 2 gave the app its own look, glass, instead of the phone's flat Material: translucent panels sit
+ * over a soft backdrop (AmbientBackdrop). Cards (StudioCard), the SegmentedChoice track, Tonal and Outlined
+ * buttons and the chips are glass; SegmentedChoice is our own pill toggle, no longer Material's segmented
+ * button. The glass recipe is in Glass.kt (GlassDefaults): the surface container low fill at 62 % in dark
+ * themes and 70 % in light ones, a 1 dp white edge at 10 % and 60 %, 28 dp corners for cards and sheets.
+ *
  * Rules every component keeps
  * - Colours come from MaterialTheme.colorScheme. The one exception is status (Material 3 has no good or
  *   warn role): statusInk() in Status.kt gives the good/warn inks from a private fallback equal to W2
@@ -13,22 +19,24 @@
  * - Text comes from MaterialTheme.typography: page title displaySmall (medium weight), card title
  *   titleLarge, body bodyLarge, supporting text bodyMedium, labels and buttons labelLarge, small meta
  *   bodySmall, numbers headlineMedium with tabular figures. Weights are 400 and 500 only (Bold text adds
- *   300 on the tablet). Text wraps instead of clipping at 200 %.
+ *   300 on the tablet). Text wraps instead of clipping at 200 %; the one exception is SegmentedChoice,
+ *   whose labels stay on one line, so a screen checks SegmentedChoiceDefaults.requiredWidth first.
  * - Corners and spacing come from Tokens (ui/theme/Tokens.kt).
  * - Every touch target is at least 48 x 48 dp.
  * - Keyboard focus shows the kit's ring: 3 dp in colorScheme.secondary, 2 dp outside buttons, chips,
  *   binding chips and clickable cards (1 dp round icon buttons and swatches), just inside list rows and
- *   the Disclosure header (cards clip them); a focused segment's edge turns into it. Material 3 1.4.0
- *   alone shows only a faint state layer. Touch never moves focus, so the ring never shows under a
- *   finger or the pen.
- * - Shapes are set explicitly from Tokens, never left to Material's slots: cards 24 dp (Material's Card
- *   would take shapes.medium, 16 dp), buttons 12 dp, chips 8 dp (Material's chips take shapes.small,
- *   12 dp), binding chips 12 dp (the kit's `.binding`), dialogs 28 dp.
+ *   the Disclosure header (cards clip them); a focused SegmentedChoice segment gets it 1 dp outside the
+ *   pill, in the track's padding. Material 3 1.4.0 alone shows only a faint state layer. Touch never
+ *   moves focus, so the ring never shows under a finger or the pen.
+ * - Shapes are set explicitly from Tokens, never left to Material's slots: cards 28 dp
+ *   (GlassDefaults.Shape; Material's Card would take shapes.medium, 16 dp), buttons 12 dp, chips 12 dp
+ *   (Tokens.CornerS), the SegmentedChoice track and pill fully round, binding chips 12 dp (the kit's
+ *   `.binding`), dialogs 28 dp.
  * - Filled symbols mean selected, but 23 of the 66 symbols look the same filled and outlined (Home,
  *   Setup, chevrons, arrows, Close, Add, ...), so selection is always also shown by a container or
  *   colour change and by semantics. Check Sym.fillLooksDifferent(id).
- * - No @OptIn is needed: SingleChoiceSegmentedButtonRow and SegmentedButton are stable in Material 3
- *   1.4.0 (compiled without the opt-in; a known experimental API fails the same build).
+ * - No @OptIn is needed: the package uses only stable Material 3 1.4.0 APIs (a known experimental API
+ *   fails the same build), and SegmentedChoice no longer uses Material's SegmentedButton at all.
  * - Every `id`/`icon` Int parameter is a @DrawableRes symbol id from Sym.
  *
  * Symbols: ui/Symbols.kt, package com.charan.padstudio.ui
@@ -54,7 +62,7 @@
  *     scrollState: ScrollState? = rememberScrollState(), actions: @Composable RowScope.() -> Unit = {},
  *     content: @Composable ColumnScope.() -> Unit)
  * object ScreenDefaults { val MaxContentWidth: Dp; val Gutter: Dp; val TopPadding: Dp; val BottomPadding: Dp;
- *     val HeaderGap: Dp; val MinTitleWidth: Dp }    // 1040, 24, 12, 24, 20 and 280 dp
+ *     val HeaderGap: Dp; val MinTitleWidth: Dp }    // 1040, 32, 20, 32, 28 and 280 dp
  * @Composable fun CardGrid(modifier: Modifier = Modifier, minColumnWidth: Dp = 320.dp, maxColumns: Int = 3,
  *     spacing: Dp = Tokens.GapM, content: @Composable CardGridScope.() -> Unit)
  * interface CardGridScope { fun Modifier.span(columns: Int): Modifier }
@@ -72,7 +80,16 @@
  * @Composable fun SectionHeader(title: String, modifier: Modifier = Modifier, supporting: String? = null,
  *     overline: String? = null, accent: Boolean = false, actionLabel: String? = null,
  *     onAction: (() -> Unit)? = null)
- * fun Modifier.cardBleed(horizontal: Dp = 16.dp): Modifier
+ * fun Modifier.cardBleed(horizontal: Dp = Tokens.GapM): Modifier    // 20 dp: a ListRow's side padding
+ * ```
+ *
+ * Glass (Glass.kt)
+ * ```
+ * object GlassDefaults { fun alpha(): Float; const val OVER_CONTENT_ALPHA: Float; fun fill(): Color;
+ *     fun edge(): Color; val Shape: Shape }    // 0.62 dark / 0.70 light, 0.92, surface container low, 28 dp
+ * @Composable fun GlassSurface(modifier: Modifier = Modifier, shape: Shape = GlassDefaults.Shape,
+ *     alpha: Float = GlassDefaults.alpha(), content: @Composable BoxScope.() -> Unit)
+ * @Composable fun AmbientBackdrop(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit)
  * ```
  *
  * Lists
@@ -105,13 +122,16 @@
  *     modifier: Modifier = Modifier, style: PillStyle = PillStyle.Text, enabled: Boolean = true)
  * @Composable fun <T> SegmentedChoice(options: List<T>, selected: T, onSelect: (T) -> Unit,
  *     label: (T) -> String, modifier: Modifier = Modifier, enabled: Boolean = true,
- *     icon: ((T) -> Int?)? = null)
+ *     icon: ((T) -> Int?)? = null)                         // our pill toggle; hugs its labels unless fillMaxWidth
+ * object SegmentedChoiceDefaults { val MinSegmentWidth: Dp; val SegmentChrome: Dp;
+ *     fun requiredWidth(widestLabel: Dp, count: Int): Dp }    // 64 dp, 32 dp, segments * count + 8 dp
  * @Composable fun ChoiceChip(label: String, selected: Boolean, onClick: () -> Unit,
  *     modifier: Modifier = Modifier, icon: Int? = null, enabled: Boolean = true)
  * @Composable fun ActionChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier,
  *     icon: Int? = null, enabled: Boolean = true)
  * @Composable fun BindingChip(onClick: () -> Unit, modifier: Modifier = Modifier, action: String? = null,
  *     icon: Int? = null, control: String? = null, enabled: Boolean = true, addLabel: String = "Add action")
+ * object BindingChipDefaults { val Corner: Dp; val Shape: Shape }    // 12 dp
  * data class Swatch(val label: String, val color: Color, val contentColor: Color)
  * @Composable fun SwatchRow(swatches: List<Swatch>, selectedIndex: Int, onSelect: (Int) -> Unit,
  *     modifier: Modifier = Modifier, enabled: Boolean = true,
@@ -204,14 +224,14 @@ object ScreenDefaults {
     /** Space at the left and right of a page. */
     val Gutter: Dp = Tokens.Gutter
 
-    /** Above the title, under the shell's status-bar inset (the reference sets the title close to the top). */
-    val TopPadding: Dp = 12.dp
+    /** Above the title, under the shell's status-bar inset. */
+    val TopPadding: Dp = 20.dp
 
     /** Below the last card. */
-    val BottomPadding: Dp = 24.dp
+    val BottomPadding: Dp = 32.dp
 
     /** Between the title block and the first card. */
-    val HeaderGap: Dp = 20.dp
+    val HeaderGap: Dp = 28.dp
 
     /** The title keeps at least this width beside the actions; narrower, the actions wrap under it. */
     val MinTitleWidth: Dp = 280.dp
@@ -276,11 +296,12 @@ class SuperellipseShape(private val exponent: Float = 4.4f) : Shape {
 
 /**
  * Makes a child of a [StudioCard] full width plus [horizontal] on each side, reaching into the card's
- * 20 dp padding like the kit's `.card > .list`. A [ListRow] (or a Column of them) with this modifier keeps
+ * 24 dp padding like the kit's `.card > .list`. A [ListRow] (or a Column of them) with this modifier keeps
  * its text in line with the card's other content, while its pressed and selected background runs nearly
- * edge to edge.
+ * edge to edge. The default is a row's own side padding ([Tokens.GapM], 20 dp), which is what keeps the
+ * text lined up: give another value only for rows that pad differently.
  */
-fun Modifier.cardBleed(horizontal: Dp = 16.dp): Modifier = this.layout { measurable, constraints ->
+fun Modifier.cardBleed(horizontal: Dp = Tokens.GapM): Modifier = this.layout { measurable, constraints ->
     val bleed = horizontal.roundToPx()
     if (!constraints.hasBoundedWidth) {
         val placeable = measurable.measure(constraints)

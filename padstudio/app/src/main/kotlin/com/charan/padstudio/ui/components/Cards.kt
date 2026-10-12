@@ -1,19 +1,20 @@
 package com.charan.padstudio.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -33,18 +34,18 @@ import androidx.compose.ui.unit.em
 import com.charan.padstudio.ui.Sym
 import com.charan.padstudio.ui.theme.Tokens
 
-/** The surface a [StudioCard] sits on, as the kit's `.card` variants. */
+/** The glass a [StudioCard] is made of, as the kit's `.card` variants. */
 enum class CardTone {
-    /** Surface container low with a hairline edge: the default card. */
+    /** Glass at the theme's glass opacity with the highlight edge: the default card. */
     Low,
 
-    /** Surface container high with a hairline edge: a card inside a card, or one that must stand out a little. */
+    /** Glass 8 points more opaque: a card inside a card, or one that must stand out a little. */
     High,
 
-    /** Primary container: the one hero card of a page. */
+    /** Primary container, solid, with the highlight edge: the one hero card of a page. */
     Hero,
 
-    /** Secondary container: a callout such as "Changes not sent yet · Send". */
+    /** Secondary container at 55 % with the highlight edge: a callout such as "Changes not sent yet · Send". */
     Tonal,
 
     /** No fill, an outline-variant edge: optional or empty content. */
@@ -52,11 +53,11 @@ enum class CardTone {
 }
 
 /**
- * A flat tonal card (WiFiBar style, plan §3.2): 24 dp corners, 20 dp padding, no shadow, [content] in a
- * column with [spacing] between items. The default [tone] is surface container low with a hairline
- * outline-variant edge, as the mock-ups draw it.
+ * A glass card (round 2): translucent over the [AmbientBackdrop], 28 dp corners ([GlassDefaults.Shape]), a 1 dp
+ * highlight edge, no shadow, 24 dp padding, [content] in a column with [spacing] between items. The default
+ * [tone] is plain glass; see [CardTone] for the others.
  *
- * With [onClick] the whole card is one button (ripple, focus, 48 dp minimum).
+ * With [onClick] the whole card is one button (ripple clipped to the corners, focus ring, 48 dp minimum).
  */
 @Composable
 fun StudioCard(
@@ -68,43 +69,44 @@ fun StudioCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val container = when (tone) {
-        CardTone.Low -> scheme.surfaceContainerLow
-        CardTone.High -> scheme.surfaceContainerHigh
+    val glass = GlassDefaults.alpha()
+    val fill = when (tone) {
+        CardTone.Low -> GlassDefaults.fill().copy(alpha = glass)
+        CardTone.High -> GlassDefaults.fill().copy(alpha = glass + HIGH_EXTRA_ALPHA)
         CardTone.Hero -> scheme.primaryContainer
-        CardTone.Tonal -> scheme.secondaryContainer
+        CardTone.Tonal -> scheme.secondaryContainer.copy(alpha = TONAL_ALPHA)
         CardTone.Outlined -> Color.Transparent
     }
+    val edge = if (tone == CardTone.Outlined) scheme.outlineVariant else GlassDefaults.edge()
     val contentColor = when (tone) {
         CardTone.Hero -> scheme.onPrimaryContainer
         CardTone.Tonal -> scheme.onSecondaryContainer
         else -> scheme.onSurface
     }
-    val border = when (tone) {
-        CardTone.Low, CardTone.High -> BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = HAIRLINE_ALPHA))
-        CardTone.Outlined -> BorderStroke(1.dp, scheme.outlineVariant)
-        CardTone.Hero, CardTone.Tonal -> null
-    }
-    // Set explicitly: Material's Card would use shapes.medium (16 dp), the preview's cards are 24 dp.
-    val shape = RoundedCornerShape(Tokens.CornerL)
-    val body: @Composable () -> Unit = {
+    val shape = GlassDefaults.Shape
+    val body: @Composable BoxScope.() -> Unit = {
         Column(Modifier.padding(contentPadding), verticalArrangement = Arrangement.spacedBy(spacing), content = content)
     }
-    if (onClick != null) {
-        val interaction = remember { MutableInteractionSource() }
-        val focused by interaction.collectIsFocusedAsState()
-        Surface(
-            onClick = onClick,
-            modifier = modifier.focusRing(focused, shape, scheme.secondary, gap = FocusRingGap),
-            shape = shape,
-            color = container,
-            contentColor = contentColor,
-            border = border,
-            interactionSource = interaction,
-            content = body,
-        )
-    } else {
-        Surface(modifier = modifier, shape = shape, color = container, contentColor = contentColor, border = border, content = body)
+    // A glass panel is a plain Box, so the content colour that Material's Surface used to set is set here,
+    // around the panel like Surface did: the ripple takes it too.
+    CompositionLocalProvider(LocalContentColor provides contentColor) {
+        if (onClick != null) {
+            val interaction = remember { MutableInteractionSource() }
+            val focused by interaction.collectIsFocusedAsState()
+            GlassSurface(
+                modifier = modifier
+                    .focusRing(focused, shape, scheme.secondary, gap = FocusRingGap)
+                    .minimumInteractiveComponentSize(),
+                shape = shape,
+                fill = fill,
+                edge = edge,
+                onClick = onClick,
+                interactionSource = interaction,
+                content = body,
+            )
+        } else {
+            GlassSurface(modifier = modifier, shape = shape, fill = fill, edge = edge, content = body)
+        }
     }
 }
 
@@ -282,7 +284,11 @@ fun CardColumns(
     }
 }
 
-private const val HAIRLINE_ALPHA = 0.8f
+/** A [CardTone.High] card is this much more opaque than plain glass. */
+private const val HIGH_EXTRA_ALPHA = 0.08f
+
+/** How much of the secondary container a [CardTone.Tonal] card shows. */
+private const val TONAL_ALPHA = 0.55f
 
 @Immutable
 private data class GridSpan(val columns: Int) : ParentDataModifier {
