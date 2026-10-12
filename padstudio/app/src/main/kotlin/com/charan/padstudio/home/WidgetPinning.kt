@@ -30,8 +30,12 @@ object WidgetPinning {
         return manager.requestPinAppWidget(ComponentName(context, size.receiver), null, callback)
     }
 
-    fun placedCount(context: Context) = WidgetSize.entries.sumOf { size ->
-        AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, size.receiver)).size
+    fun placedCount(context: Context) = placedIds(context).size
+
+    /** Every group widget on the home screen, in all three sizes. */
+    fun placedIds(context: Context): List<Int> {
+        val manager = AppWidgetManager.getInstance(context)
+        return WidgetSize.entries.flatMap { size -> manager.getAppWidgetIds(ComponentName(context, size.receiver)).toList() }
     }
 }
 

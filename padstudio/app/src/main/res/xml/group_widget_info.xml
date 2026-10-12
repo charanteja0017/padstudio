@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Glance renders the content; initialLayout is Glance's own placeholder while it loads. -->
+<!-- Glance renders the content; initialLayout is Glance's own placeholder while it loads. The widget
+     picker shows previewLayout (Android 12 and later) or previewImage. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:configure="com.charan.padstudio.home.EditGroupWidgetActivity"
     android:description="@string/group_widget_description"
@@ -8,6 +9,8 @@
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
     android:minResizeHeight="80dp"
+    android:previewImage="@drawable/widget_preview_wide"
+    android:previewLayout="@layout/widget_preview_wide"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="4"
     android:targetCellHeight="2"
