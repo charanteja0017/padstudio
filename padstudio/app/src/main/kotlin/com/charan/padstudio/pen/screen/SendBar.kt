@@ -53,12 +53,14 @@ fun levelOf(tone: PenStatus.Tone): StatusLevel = when (tone) {
 /**
  * The bottom bar (mock-up): whether Key Mapper has the current profile ([sentLine], from PenStatus.sentText),
  * Send to Key Mapper (the one explicit apply, plan §13; filled while there are changes to send) and Test pen. Under
- * the status: the last action's [note], and pills for Key Mapper being off (with Fix) or the pen being paused.
+ * the status: the last action's [note], and pills for Key Mapper being off (with Fix), or not installed
+ * ([keyMapperInstalled] false: there is nothing for Fix to open, so no Fix), or the pen being paused.
  * The buttons sit beside the status when there's room and under it otherwise.
  */
 @Composable
 fun SendBar(
     status: PenStatus,
+    keyMapperInstalled: Boolean,
     sentLine: String,
     canSend: Boolean,
     note: ActionNote?,
@@ -113,8 +115,14 @@ fun SendBar(
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         if (status.keyMapper != PenStatus.KeyMapper.LISTENING) {
-                            StatusPill(text = status.keyMapperText, level = levelOf(status.keyMapper.tone), modifier = Modifier.align(Alignment.CenterVertically))
-                            PillButton(text = "Fix", onClick = onFixKeyMapper, style = PillStyle.Text)
+                            StatusPill(
+                                text = keyMapperBarText(status, keyMapperInstalled),
+                                level = levelOf(status.keyMapper.tone),
+                                modifier = Modifier.align(Alignment.CenterVertically),
+                            )
+                            if (offersKeyMapperFix(status, keyMapperInstalled)) {
+                                PillButton(text = "Fix", onClick = onFixKeyMapper, style = PillStyle.Text)
+                            }
                         }
                         if (status.penActions == PenStatus.PenActions.OFF_AS_REQUESTED) {
                             StatusPill(

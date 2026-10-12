@@ -7,9 +7,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,22 +22,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.charan.padstudio.core.pen.DefaultProfiles
 import com.charan.padstudio.core.pen.PenContext
-import com.charan.padstudio.core.pen.PenKind
-import com.charan.padstudio.core.pen.PenMode
 import com.charan.padstudio.core.pen.PenProfile
 import com.charan.padstudio.data.InstalledApp
 import com.charan.padstudio.ui.Sym
-import com.charan.padstudio.ui.components.ActionChip
+import com.charan.padstudio.ui.components.AppIcon
 import com.charan.padstudio.ui.components.AppIconStack
 import com.charan.padstudio.ui.components.CardTone
 import com.charan.padstudio.ui.components.ListRow
 import com.charan.padstudio.ui.components.RowLeading
 import com.charan.padstudio.ui.components.RowTrailing
-import com.charan.padstudio.ui.components.SegmentedChoice
 import com.charan.padstudio.ui.components.StatusLevel
 import com.charan.padstudio.ui.components.StudioCard
 import com.charan.padstudio.ui.components.SuperellipseShape
@@ -51,27 +55,9 @@ data class ContextItem(
 )
 
 /**
- * The pen kind (plan §10, left pane: a segmented choice), a line on what that pen has, and the setup-mode chip
- * ("Expert setup"), which opens Advanced, where the setup is chosen.
- */
-@Composable
-fun PenChoice(kind: PenKind, mode: PenMode, onKind: (PenKind) -> Unit, onSetupChip: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SegmentedChoice(
-            options = PenKind.entries,
-            selected = kind,
-            onSelect = onKind,
-            label = ::penKindChoice,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Text(text = penKindDetail(kind), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        ActionChip(label = setupName(mode), onClick = onSetupChip, icon = Sym.settings)
-    }
-}
-
-/**
- * Where the pen works: one row per context with its apps' icons (an icon stack) or a symbol tile, its supporting
- * line, and "Needs a look" with a warning symbol when core warns about it. The chosen row is highlighted.
+ * Where the pen works: one row per context with its first app's icon (and a "+N" badge when it has more apps) or a
+ * symbol tile, its supporting line, and "Needs a look" with a warning symbol when core warns about it. The chosen
+ * row is highlighted.
  */
 @Composable
 fun ContextList(
@@ -87,8 +73,8 @@ fun ContextList(
             ListRow(
                 headline = item.labels.title,
                 supporting = if (needsLook) NEEDS_A_LOOK else item.labels.supporting,
-                // One icon and a "+N" tile: the narrow pane keeps its room for the name.
-                leading = RowLeading.Custom { ContextBadge(item, size = 36.dp, max = 1) },
+                // One icon, and the rest of the apps as a "+N" badge on its corner: the narrow pane keeps its room for the name.
+                leading = RowLeading.Custom { ContextBadge(item, size = ROW_ICON_SIZE, max = 1) },
                 trailing = if (needsLook) {
                     RowTrailing.Custom { SymIcon(Sym.warning, contentDescription = null, tint = statusInk(StatusLevel.Warn)) }
                 } else {
@@ -101,11 +87,20 @@ fun ContextList(
     }
 }
 
-/** A context's picture: its apps' icons, or a symbol on a tonal tile in the HyperOS icon shape. */
+/**
+ * A context's picture. With one icon to show ([max] 1, the list's rows) it is the first app's icon at [size], and
+ * when the context has more apps a small "+N" badge on the icon's bottom-end corner. With a larger [max] (the
+ * hero) it is a stack of up to [max] icons and a "+N" tile. A context with no apps gets a symbol on a tonal tile in
+ * the HyperOS icon shape.
+ */
 @Composable
 fun ContextBadge(item: ContextItem, size: Dp, max: Int = 2) {
     if (item.apps.isNotEmpty()) {
-        AppIconStack(apps = item.apps, size = size, max = max, contentDescription = null)
+        if (max <= 1) {
+            AppWithMoreBadge(item.apps, size)
+        } else {
+            AppIconStack(apps = item.apps, size = size, max = max, contentDescription = null)
+        }
         return
     }
     val scheme = MaterialTheme.colorScheme
@@ -116,6 +111,48 @@ fun ContextBadge(item: ContextItem, size: Dp, max: Int = 2) {
         else -> Triple(Sym.widgets, scheme.tertiaryContainer, scheme.onTertiaryContainer)
     }
     SymbolTile(icon, container, content, size)
+}
+
+/** The first app's icon at [size], with a "+N" badge on its bottom-end corner for the apps beyond it. */
+@Composable
+private fun AppWithMoreBadge(apps: List<InstalledApp>, size: Dp) {
+    val first = apps.first()
+    val more = apps.size - 1
+    // TalkBack reads it as one image ("ReadEra and 2 more"), as the icon stack does.
+    Box(Modifier.clearAndSetSemantics { contentDescription = appsDescription(first.facts.label, more) }) {
+        AppIcon(app = first, size = size, contentDescription = null)
+        if (more > 0) {
+            MoreBadge(more, Modifier.align(Alignment.BottomEnd).offset(x = BADGE_OFFSET, y = BADGE_OFFSET))
+        }
+    }
+}
+
+/**
+ * The "+N" badge: a 16 dp circle in secondary container (a pill when the number is wider than that) with
+ * label-small text in on-secondary-container.
+ */
+@Composable
+private fun MoreBadge(more: Int, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    val label = MaterialTheme.typography.labelSmall
+    // Sized with the badge, not the text setting (as the icon stack's "+N" tile is): at 200 % text it must stay a
+    // small mark on a 40 dp icon, and the row's "3 apps" line carries the count at the user's size.
+    val glyph = with(LocalDensity.current) { label.fontSize.value.dp.toSp() }
+    Box(
+        modifier
+            .defaultMinSize(minWidth = BADGE_SIZE, minHeight = BADGE_SIZE)
+            .background(scheme.secondaryContainer, CircleShape)
+            .padding(horizontal = BADGE_PADDING),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = moreAppsBadge(more),
+            style = label.copy(fontSize = glyph, lineHeight = glyph),
+            color = scheme.onSecondaryContainer,
+            maxLines = 1,
+            softWrap = false,
+        )
+    }
 }
 
 @Composable
@@ -142,3 +179,11 @@ fun PenNotice(warnings: List<PenWarning>, modifier: Modifier = Modifier) {
 
 /** The words of the "Needs a look" chip and row line (the mock-up's). */
 const val NEEDS_A_LOOK = "Needs a look"
+
+/** A row's app icon: the size of a list row's other leading pictures. */
+private val ROW_ICON_SIZE = 40.dp
+private val BADGE_SIZE = 16.dp
+private val BADGE_PADDING = 2.dp
+
+/** How far the badge sits past the icon's bottom-end corner, on each axis. */
+private val BADGE_OFFSET = 4.dp
