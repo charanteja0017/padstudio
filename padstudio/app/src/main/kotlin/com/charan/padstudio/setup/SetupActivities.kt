@@ -7,27 +7,36 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.charan.padstudio.studio
 import com.charan.padstudio.ui.PadStudioTheme
+import com.charan.padstudio.ui.ShellDefaults
+import com.charan.padstudio.ui.Sym
+import com.charan.padstudio.ui.components.EmptyState
+import com.charan.padstudio.ui.components.PillButton
+import com.charan.padstudio.ui.components.PillStyle
+import com.charan.padstudio.ui.components.ScreenScaffold
+import com.charan.padstudio.ui.components.StudioCard
 import java.io.File
 
 /**
@@ -39,23 +48,12 @@ class PenProbeActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         // Tests take a while; the screen going off would stop HyperOS delivering pen events.
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
             PadStudioTheme {
-                Surface(Modifier.fillMaxSize()) {
-                    Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Pen probe", style = MaterialTheme.typography.headlineSmall)
-                        Text("Hover, write and press every pen button and gesture. Each event is listed below.")
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Button(onClick = ::save) { Text("Save to files/pen-probe.txt") }
-                            OutlinedButton(onClick = { lines.clear() }) { Text("Clear") }
-                        }
-                        LazyColumn {
-                            items(lines.asReversed()) { Text(it, fontFamily = FontFamily.Monospace, fontSize = 12.sp) }
-                        }
-                    }
-                }
+                PenProbePage(lines, onSave = ::save, onClear = { lines.clear() })
             }
         }
     }
@@ -99,6 +97,50 @@ class PenProbeActivity : ComponentActivity() {
         val file = File(filesDir, "pen-probe.txt")
         file.writeText(lines.joinToString("\n"))
         lines += "saved ${file.absolutePath} (adb exec-out run-as ${packageName} cat files/pen-probe.txt)"
+    }
+}
+
+/**
+ * The pen probe's page, in the house style: Save and Clear at the top right, the events newest first in a card.
+ * [lines] is the activity's log; the page only shows it. Keys never reach the buttons here (the activity takes
+ * every key event for the log), so they're for touch and the pen.
+ */
+@Composable
+private fun PenProbePage(lines: List<String>, onSave: () -> Unit, onClear: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    val type = MaterialTheme.typography
+    Surface(Modifier.fillMaxSize(), color = ShellDefaults.canvasColor(), contentColor = scheme.onSurface) {
+        ScreenScaffold(
+            title = "Pen probe",
+            subtitle = "Hover, write and press every pen button and gesture. Each event is listed below, newest first.",
+            modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
+            scrollState = null,
+            actions = {
+                PillButton("Save to files/pen-probe.txt", onClick = onSave)
+                PillButton("Clear", onClick = onClear, style = PillStyle.Outlined, icon = Sym.close)
+            },
+        ) {
+            StudioCard(Modifier.fillMaxWidth().weight(1f)) {
+                Text(
+                    if (lines.isEmpty()) "Events" else "Events (${lines.size})",
+                    style = type.titleLarge,
+                    modifier = Modifier.semantics { heading() },
+                )
+                if (lines.isEmpty()) {
+                    EmptyState(
+                        title = "Nothing yet",
+                        icon = Sym.testPen,
+                        body = "Each key and pen event this window receives appears here.",
+                    )
+                } else {
+                    LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        items(lines.asReversed()) {
+                            Text(it, style = type.bodyMedium.copy(fontFamily = FontFamily.Monospace), color = scheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
