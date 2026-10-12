@@ -1,6 +1,8 @@
 package com.charan.padstudio.pen.screen
 
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -8,8 +10,9 @@ import kotlin.math.sqrt
 
 // Where the binding chips go around the pen drawing (plan §10 "Pen": callouts). Plain geometry in the stage's
 // pixels, so it can be tested without a device. The pen comes from PenModelView's marker offsets, never from
-// positions written here: its axis runs from marker_nib to marker_double_tap. The screen calls this with a
-// steady copy of the markers (not every animated frame), so the chips don't move or flip while the pen sways.
+// positions written here: its axis runs from marker_nib to marker_top (marker_double_tap in a model without it).
+// The screen calls this with a steady copy of the markers (not every animated frame), so the chips don't move
+// or flip while the pen sways.
 
 /** A point in the stage, in pixels. */
 data class StagePoint(val x: Float, val y: Float)
@@ -51,11 +54,18 @@ data class CalloutRules(
  * or returns null when they can't all fit without covering the pen, each other or an obstacle; the screen then
  * lists the bindings instead (the W1 note on callouts at large text).
  *
- * Chips keep the vertical order of their markers and sit as near their marker's height as the [CalloutRules.gap]
- * allows. All of them go on the pen's left if they fit, else all on its right, else each on the side with room
- * at its marker, else any other split between the sides (fewest changes of side first), so a layout that fits
- * is always found and narrower chips never fit worse than wider ones. On a side, chips line up in one column like
- * the mock-up's when that fits, else each hugs the pen.
+ * The first choice is the fan (round 2: the gesture markers sit together in the pen's grip band, closer than a
+ * chip is tall): ALL the chips in ONE column on the side of the pen's axis with more horizontal room, in the
+ * order of their markers' heights, [CalloutRules.gap] apart and clear of the pen's half-width band (and its
+ * [CalloutRules.lead]), the column centred on the markers' mean height. Their leader lines then fan out from the
+ * markers to it. The centring gives way only as far as the stage's margins need. When the column doesn't fit the
+ * stage, or covers an obstacle, the arrangements below are tried.
+ *
+ * In those, chips keep the vertical order of their markers and sit as near their marker's height as the
+ * [CalloutRules.gap] allows. All of them go on the pen's left if they fit, else all on its right, else each on the
+ * side with room at its marker, else any other split between the sides (fewest changes of side first), so a layout
+ * that fits is always found and narrower chips never fit worse than wider ones. On a side, chips line up in one
+ * column like the mock-up's when that fits, else each hugs the pen.
  */
 fun placeCallouts(
     width: Int,
@@ -69,6 +79,7 @@ fun placeCallouts(
     if (width <= 0 || height <= 0) return null
     val axis = PenAxis.of(axisFrom, axisTo, rules.penHalfWidth) ?: return null
     val sorted = chips.sortedBy { it.anchor.y }
+    fannedColumn(sorted, axis, width, height, rules)?.let { return it }
     val fitsBefore = sorted.map { chip -> axis.roomBefore(chip.anchor.y, chip.height, rules) >= chip.width }
     val fitsAfter = sorted.map { chip -> axis.roomAfter(chip.anchor.y, chip.height, width, rules) >= chip.width }
     val assignments = (
@@ -169,9 +180,45 @@ private fun arrange(
             spots += CalloutSpot(chip.id, left.roundToInt(), tops[i].roundToInt(), chip.width, chip.height, before)
         }
     }
-    if (spots.any { spot -> rules.obstacles.any { it.intersects(spot.rect) } }) return null
+    if (coversObstacle(spots, rules)) return null
     return spots
 }
+
+/**
+ * The fan: every chip of [sorted] (by marker height) in one column on the side of the pen with more room across
+ * the column's height, or null when that column doesn't fit the stage or covers an obstacle. The column is a block,
+ * [CalloutRules.gap] between its chips, centred on the markers' mean height, then moved up or down only as far as
+ * the stage's margins need ([stack]; null when it is taller than the stage). Everything is whole pixels before
+ * the pen's band is measured: the column's edge nearest the pen is as near as the band and the lead allow, rounded
+ * away from the pen, so no chip is ever closer than the rules say.
+ */
+private fun fannedColumn(
+    sorted: List<CalloutChip>,
+    axis: PenAxis,
+    width: Int,
+    height: Int,
+    rules: CalloutRules,
+): List<CalloutSpot>? {
+    val heights = sorted.map { it.height }
+    val column = heights.sum() + rules.gap * (sorted.size - 1)
+    val centre = sorted.map { it.anchor.y }.average().toFloat()
+    val first = stack(listOf(centre - column / 2f), listOf(column), rules.margin.toFloat(), (height - rules.margin).toFloat(), 0f)
+        ?.single()?.roundToInt() ?: return null
+    val tops = heights.runningFold(first) { top, h -> top + h + rules.gap }
+    val rightLimit = axis.rightLimit(first.toFloat(), (first + column).toFloat(), rules)
+    val leftLimit = axis.leftLimit(first.toFloat(), (first + column).toFloat(), rules)
+    val before = rightLimit - rules.margin >= width - rules.margin - leftLimit
+    val edge = if (before) rightLimit else leftLimit
+    if (sorted.any { chip -> !fitsAcross(before, edge, chip.width, width, rules) }) return null
+    val spots = sorted.mapIndexed { i, chip ->
+        val left = if (before) floor(edge - chip.width) else ceil(edge)
+        CalloutSpot(chip.id, left.toInt(), tops[i], chip.width, chip.height, before)
+    }
+    return if (coversObstacle(spots, rules)) null else spots
+}
+
+private fun coversObstacle(spots: List<CalloutSpot>, rules: CalloutRules): Boolean =
+    spots.any { spot -> rules.obstacles.any { it.intersects(spot.rect) } }
 
 private fun fitsAcross(before: Boolean, edge: Float, chipWidth: Int, width: Int, rules: CalloutRules): Boolean =
     if (before) edge - chipWidth >= rules.margin else edge + chipWidth <= width - rules.margin
