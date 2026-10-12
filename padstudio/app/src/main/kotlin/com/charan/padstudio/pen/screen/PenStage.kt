@@ -54,12 +54,18 @@ data class StageChip(
 
 /**
  * The pen drawing with its callouts (plan §10 "Pen", right pane): [PenModelView] filling the stage, a dot on
- * each control's marker, a hairline to that control's binding chip, and the chip beside the pen. Tapping a chip
- * calls [onChip] with its control. The live pen's markers move every animated frame; they reach only the dots and
- * hairlines, in the draw phase. The chips are placed from a steady copy that changes only when the pen moves
- * further than a sway ([STEADY_THRESHOLD], a resize does), so they never jump or flip while the pen sways.
- * When the stage itself is resized (the side sheet opening, a window resize), the pen view re-frames a frame or
- * two later; until its new markers arrive the chips are hidden rather than placed from the old ones.
+ * each control's marker, a hairline to that control's binding chip, and the chips beside the pen. Round 2: the
+ * markers sit close together in the pen's grip band, so the chips fan out from them in one column on the pen's
+ * roomier side ([placeCallouts]). Tapping a chip calls [onChip] with its control. The live pen's markers move
+ * every animated frame; they reach only the dots and hairlines, in the draw phase. The chips are placed from a
+ * steady copy that changes only when the pen moves further than a sway ([STEADY_THRESHOLD], a resize does), so
+ * they never jump or flip while the pen sways. When the stage itself is resized (the side sheet opening, a
+ * window resize), the pen view re-frames a frame or two later; until its new markers arrive the chips are
+ * hidden rather than placed from the old ones.
+ *
+ * While the pen is busy (its `onBusyChange`: a gesture animates and the camera zooms, until the pen is back at
+ * rest) the stage shows the pen alone, no chips and no lines, and the board ignores the markers the pen
+ * reports, so the chips come back exactly where they were.
  *
  * When the chips can't fit beside the pen (large text, a narrow stage), the stage shows them as a list next to
  * a smaller pen instead: a measured decision ([placeCallouts] with the chips' measured sizes), not a font-scale
@@ -80,16 +86,20 @@ fun PenStage(
     reserveBottomEnd: DpSize = DpSize.Zero,
     replay: Int = 0,
 ) {
-    val board = remember { MarkerBoard() }
+    // True while the pen plays a gesture and the camera follows it (PenModelView's busy signal): the stage shows
+    // the pen alone, and the board, which asks, ignores the markers the pen reports meanwhile.
+    var busy by remember { mutableStateOf(false) }
+    val board = remember { MarkerBoard(isBusy = { busy }) }
     var waited by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(MARKER_WAIT_MS)
         waited = true
     }
     // After a resize, should the pen view's re-framed markers not come (a parked renderer), the last ones it
-    // reported stand after the same wait, so the chips never stay hidden.
+    // reported stand after the same wait, so the chips never stay hidden. A busy pen's markers aren't heard, so
+    // the wait is not running then: it starts over once the pen is back at rest.
     LaunchedEffect(board) {
-        snapshotFlow { board.awaiting }.collectLatest { size ->
+        snapshotFlow { if (busy) null else board.awaiting }.collectLatest { size ->
             if (size != null) {
                 delay(MARKER_WAIT_MS)
                 board.settle()
@@ -101,7 +111,6 @@ fun PenStage(
     val dotColor = scheme.primary
     val ringColor = scheme.surfaceContainerLow.copy(alpha = RING_ALPHA)
     val selectedColor = scheme.primary
-    val hideCallouts = clip == WRITE_CLIP
     val reportMarkers: (Map<String, Offset>) -> Unit = remember(board) { { markers -> board.report(markers) } }
 
     SubcomposeLayout(modifier) { constraints ->
@@ -121,10 +130,10 @@ fun PenStage(
 
         val markers = board.steady
         val haveMarkers = !stale && chips.isNotEmpty() && chips.all { it.marker in markers }
-        val spots = if (haveMarkers && !hideCallouts) {
+        val spots = if (haveMarkers && !busy) {
             val anchors = chips.map { chip -> markers.getValue(chip.marker) }
             val from = markers[NIB_MARKER] ?: anchors.maxBy { it.y }
-            val to = markers[TOP_MARKER] ?: anchors.minBy { it.y }
+            val to = markers[TOP_MARKER] ?: markers[FALLBACK_TOP_MARKER] ?: anchors.minBy { it.y }
             val span = hypot(to.x - from.x, to.y - from.y)
             val reserve = StageRect(
                 left = (width - reserveBottomEnd.width.toPx()),
@@ -147,7 +156,7 @@ fun PenStage(
             null
         }
         val form = when {
-            hideCallouts -> StageForm.PenOnly
+            busy -> StageForm.PenOnly // a gesture is playing: the pen alone, no chips and no lines
             spots != null -> StageForm.Callouts
             stale -> StageForm.PenOnly // just resized: the pen's markers at its new size are a frame or two away
             haveMarkers || waited || chips.isEmpty() -> StageForm.List
@@ -155,7 +164,14 @@ fun PenStage(
         }
 
         val pen = subcompose(StageSlot.Pen) {
-            PenModelView(modifier = Modifier.fillMaxSize(), clip = clip, playing = playing, onMarkers = reportMarkers, replay = replay)
+            PenModelView(
+                modifier = Modifier.fillMaxSize(),
+                clip = clip,
+                playing = playing,
+                onMarkers = reportMarkers,
+                replay = replay,
+                onBusyChange = { busy = it },
+            )
         }.map { it.measure(full) }
 
         when (form) {
@@ -261,6 +277,10 @@ private fun CalloutLines(
  * Where the pen's markers are: [live] as last reported (read only while drawing), and [steady], which follows
  * only moves larger than [threshold] pixels, for laying out the chips.
  *
+ * While the pen is busy ([isBusy]: a gesture animates and the camera zooms) the board is frozen. What the pen
+ * reports then is the animated pose, not where it rests, so [report] and [settle] do nothing: [live] and
+ * [steady] stay at the pen's rest pose, and the chips come back where they were once it is at rest.
+ *
  * [steady] also remembers the stage size it was taken at. After the stage is resized by more than
  * [RESIZE_SLACK] thresholds, the pen view re-frames a frame or two later, and in between it may still report
  * markers from its old framing (an animated frame runs before it recomposes). Those have moved only by the sway,
@@ -270,7 +290,7 @@ private fun CalloutLines(
  * nothing. Main thread only (measure and PenModelView's callbacks).
  */
 @Stable
-internal class MarkerBoard {
+internal class MarkerBoard(private val isBusy: () -> Boolean = { false }) {
     var live: Map<String, Offset> by mutableStateOf(emptyMap())
         private set
     var steady: Map<String, Offset> by mutableStateOf(emptyMap())
@@ -292,12 +312,14 @@ internal class MarkerBoard {
     }
 
     fun report(markers: Map<String, Offset>) {
+        if (isBusy()) return
         live = markers
         if (movedMoreThan(steady, markers, threshold)) take(markers)
     }
 
-    /** No re-framed markers came: the last reported ones stand for the current size. */
+    /** No re-framed markers came: the last reported ones stand for the current size. Not while busy ([awaiting] stays). */
     fun settle() {
+        if (isBusy()) return
         if (live.isNotEmpty()) take(live)
         awaiting = null
     }
@@ -338,8 +360,10 @@ private enum class StageForm { PenOnly, Callouts, List }
 internal const val NOT_SET = "Not set"
 
 private const val NIB_MARKER = "marker_nib"
-private const val TOP_MARKER = "marker_double_tap"
-private const val WRITE_CLIP = "write"
+
+/** The pen's end cap (round 2). A model without it reports none, and the axis then ends at [FALLBACK_TOP_MARKER]. */
+private const val TOP_MARKER = "marker_top"
+private const val FALLBACK_TOP_MARKER = "marker_double_tap"
 
 /** The idle clip twists the pen ±12° about its axis and lifts it 2 mm: markers drift a few dp; a resize moves them far more. */
 private val STEADY_THRESHOLD = 12.dp
@@ -347,8 +371,8 @@ private val STEADY_THRESHOLD = 12.dp
 /** How long to wait for the pen's first markers before listing the bindings instead. */
 private const val MARKER_WAIT_MS = 800L
 
-/** The pen's half-width as a share of the nib-to-double-tap span (5 mm in 122.5 mm on the model), with room for the sway. */
-private const val PEN_HALF_WIDTH_SHARE = 0.05f
+/** The pen's half-width as a share of the nib-to-end-cap span: 5 mm in 165 mm on the model (the chips' lead leaves room for the sway). */
+private const val PEN_HALF_WIDTH_SHARE = 5f / 165f
 private val MIN_PEN_HALF_WIDTH = 4.dp
 private val EDGE_MARGIN = 12.dp
 private val CHIP_GAP = 8.dp
