@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -45,6 +42,7 @@ import com.charan.padstudio.home.kit.rememberHyperOsLinks
 import com.charan.padstudio.home.kit.rememberPlacedWidgets
 import com.charan.padstudio.home.kit.resetMessage
 import com.charan.padstudio.home.kit.timeNow
+import com.charan.padstudio.ui.LocalStudioSnackbar
 import com.charan.padstudio.ui.Sym
 import com.charan.padstudio.ui.components.CardColumns
 import com.charan.padstudio.ui.components.PillButton
@@ -90,9 +88,10 @@ fun HomeKitScreen(model: MainViewModel, modifier: Modifier = Modifier) {
     val gridCard = remember { BringIntoViewRequester() }
     BackHandler(enabled = organizing) { organizing = false }
 
-    // Success states (plan §13) go to this screen's own snackbar: MainViewModel's messages are only for its own.
-    val snackbar = remember { SnackbarHostState() }
-    val notify: (String) -> Unit = { text -> scope.launch { snackbar.showSnackbar(text) } }
+    // Success states with the time (plan §13) go to the shell's one snackbar host, where they queue with
+    // MainViewModel's messages (pinWidget's failure, for one) instead of overlapping them in a second host.
+    val snackbar = LocalStudioSnackbar.current
+    val notify: (String) -> Unit = { text -> scope.launch { snackbar?.showSnackbar(text) } }
 
     // Add widget: the launcher answers on the home screen, so success is a widget that wasn't there before.
     var pinRequest by remember { mutableStateOf<PinRequest?>(null) }
@@ -188,7 +187,6 @@ fun HomeKitScreen(model: MainViewModel, modifier: Modifier = Modifier) {
                 }
             }
         }
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 
     // Outside the one- and two-column layouts, so the dialog and its draft stay through a rotation.
