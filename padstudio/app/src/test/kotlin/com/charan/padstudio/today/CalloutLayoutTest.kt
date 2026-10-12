@@ -84,7 +84,7 @@ class CalloutLayoutTest {
         assertNull(fitCallouts(Size(400f, 300f), listOf(Offset(200f, 100f)), listOf(Size(100f, 40f)), listOf(PillSide.START), emptyList(), pen, metrics))
     }
 
-    @Test fun `a tall pill sits level beside a pen leaning 36 degrees, as at 125 % Bold`() {
+    @Test fun `a tall pill sits level beside a pen leaning 36 degrees, as at 125 percent with Bold`() {
         // The pill's bounding box would graze the barrel at its corner; its rounded end keeps 17 dp clear.
         val anchor = Offset(200f, 200f)
         val along = Offset(sin(Math.toRadians(36.0)).toFloat(), -cos(Math.toRadians(36.0)).toFloat())
