@@ -37,6 +37,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
@@ -200,7 +201,7 @@ private fun <T> FloatingRail(destinations: List<ShellDestination<T>>, selected: 
                 verticalArrangement = Arrangement.spacedBy(ButtonGap),
             ) {
                 destinations.forEach { destination ->
-                    RailIconButton(destination, destination.key == selected) { onSelect(destination.key) }
+                    RailIconButton(destination, destination.key == selected, TooltipAnchorPosition.End) { onSelect(destination.key) }
                 }
             }
         }
@@ -236,7 +237,7 @@ private fun <T> FloatingBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             destinations.forEach { destination ->
-                RailIconButton(destination, destination.key == selected) { onSelect(destination.key) }
+                RailIconButton(destination, destination.key == selected, TooltipAnchorPosition.Above) { onSelect(destination.key) }
             }
         }
     }
@@ -248,12 +249,12 @@ private fun <T> FloatingBar(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RailIconButton(destination: ShellDestination<*>, selected: Boolean, onClick: () -> Unit) {
+private fun RailIconButton(destination: ShellDestination<*>, selected: Boolean, tooltipAt: TooltipAnchorPosition, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(tooltipAt),
         tooltip = { PlainTooltip { Text(destination.label) } },
         state = rememberTooltipState(),
     ) {
