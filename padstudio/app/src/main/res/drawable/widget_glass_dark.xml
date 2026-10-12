@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The dark glass's edge and sheen (GroupWidget.kt), drawn over the widget's 55 % black fill: a 1 dp white
+     14 % edge, and a white 10 % sheen that fades out by 35 % of the height. HyperOS can't blur what is behind a
+     third-party widget, so this and the translucent fill are the glass. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="@android:dimen/system_app_widget_background_radius" />
+            <solid android:color="#00000000" />
+            <stroke
+                android:width="1dp"
+                android:color="#24FFFFFF" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="@android:dimen/system_app_widget_background_radius" />
+            <gradient
+                android:angle="270"
+                android:centerColor="#00FFFFFF"
+                android:centerY="0.35"
+                android:endColor="#00FFFFFF"
+                android:startColor="#1AFFFFFF" />
+        </shape>
+    </item>
+</layer-list>

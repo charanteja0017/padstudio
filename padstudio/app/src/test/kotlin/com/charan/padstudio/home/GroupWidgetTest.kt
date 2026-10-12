@@ -1,7 +1,8 @@
 package com.charan.padstudio.home
 
+import android.app.WallpaperColors
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import com.charan.padstudio.core.home.AppFacts
@@ -9,8 +10,6 @@ import com.charan.padstudio.core.home.AppGroup
 import com.charan.padstudio.core.home.Density
 import com.charan.padstudio.core.home.GroupPlanner
 import com.charan.padstudio.core.home.Placement
-import com.charan.padstudio.ui.theme.BrandPalette
-import com.charan.padstudio.ui.theme.Tokens
 import java.io.File
 import java.io.IOException
 import javax.xml.parsers.DocumentBuilderFactory
@@ -26,8 +25,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
+import org.w3c.dom.Element
 
-/** The group widget's rules (plan §6b, §10 Widget): grid choice, designed states, header, colours, picker. */
+/** The group widget's rules (plan §6b, §10 Widget): grid choice, designed states, header, glass colours, picker. */
 class GroupWidgetTest {
     /** About one 11 sp label line at 100 % text. */
     private val line = 13f
@@ -318,33 +318,127 @@ class GroupWidgetTest {
         }
     }
 
-    // --- Colours -----------------------------------------------------------------------------------
+    // --- Glass -------------------------------------------------------------------------------------
 
-    @Test fun `the brand surface is mock-widget's colour-mix in Oklab`() {
-        // color-mix(in oklab, surfaceContainerLow 86 % | 94 %, primaryContainer), computed outside Compose
-        // (CSS Color 4's Oklab matrices in Python): dark #292A3C, light #F3F4FE.
-        assertClose(0xFF292A3C.toInt(), brandSurface(Tokens.darkScheme(BrandPalette.VIOLET), dark = true).toArgb(), "dark")
-        assertClose(0xFFF3F4FE.toInt(), brandSurface(Tokens.lightScheme(BrandPalette.VIOLET), dark = false).toArgb(), "light")
-        val dark = Tokens.darkScheme(BrandPalette.VIOLET)
-        assertEquals(lerp(dark.surfaceContainerLow, dark.primaryContainer, 0.14f), brandSurface(dark, dark = true))
+    @Test fun `the wallpaper picks the glass, and dark is the default`() {
+        assertEquals(WidgetGlass.DARK, widgetGlass(null), "hints that can't be read")
+        assertEquals(WidgetGlass.DARK, widgetGlass(0), "no hints")
+        assertEquals(WidgetGlass.LIGHT, widgetGlass(WallpaperColors.HINT_SUPPORTS_DARK_TEXT), "a wallpaper that asks for dark text")
+        assertEquals(
+            WidgetGlass.LIGHT,
+            widgetGlass(WallpaperColors.HINT_SUPPORTS_DARK_TEXT or WallpaperColors.HINT_SUPPORTS_DARK_THEME),
+            "other hints beside it don't hide it",
+        )
+        assertEquals(WidgetGlass.DARK, widgetGlass(WallpaperColors.HINT_SUPPORTS_DARK_THEME), "dark theme alone isn't dark text")
     }
 
-    @Test fun `text and the fit icon stay readable on the brand surface, in every palette`() {
-        for (palette in BrandPalette.entries) for (dark in listOf(false, true)) {
-            val scheme = if (dark) Tokens.darkScheme(palette) else Tokens.lightScheme(palette)
-            val surface = brandSurface(scheme, dark)
-            val at = "$palette ${if (dark) "dark" else "light"}"
-            assertAtLeast(4.5f, scheme.onSurface, surface, "labels and state titles, $at")
-            assertAtLeast(4.5f, scheme.onSurfaceVariant, surface, "fit note and help line, $at")
-            assertAtLeast(3f, Tokens.warnInk(dark), surface, "fit icon, $at")
-            assertAtLeast(3f, scheme.onSurfaceVariant, surface, "edit icon, $at")
-            assertAtLeast(4.5f, scheme.onSecondaryContainer, scheme.secondaryContainer, "pill, +N and Edit, $at")
-            assertAtLeast(3f, scheme.onTertiaryContainer, scheme.tertiaryContainer, "an initial (large text), $at")
-            assertAtLeast(4.5f, scheme.onPrimary, scheme.primary, "Choose, $at")
+    @Test fun `the fill is translucent white or black by tint, never fully transparent`() {
+        assertEquals(Color.White.copy(alpha = 0.52f), glassFill(WidgetGlass.LIGHT))
+        assertEquals(Color.Black.copy(alpha = 0.55f), glassFill(WidgetGlass.DARK))
+        for (glass in WidgetGlass.entries) {
+            assertTrue(glassFill(glass).alpha in 0.4f..0.7f, "$glass: translucent, neither transparent nor solid")
+        }
+    }
+
+    @Test fun `Match wallpaper colours mixes 20 per cent of the wallpaper's colour into the fill and keeps its alpha`() {
+        // Oklab mixes computed outside Compose (CSS Color 4's matrices in Python): 20 % of the colour into
+        // black (dark glass) or white (light glass). The alphas are 55 % (0x8C) and 52 % (0x85) of 255.
+        val cases = listOf(
+            MixCase(WidgetGlass.DARK, Color.White, expected = 0xFF161616.toInt(), tolerance = 1),
+            MixCase(WidgetGlass.DARK, Color(0xFFE53935), expected = 0xFF120101.toInt(), tolerance = 2),
+            MixCase(WidgetGlass.LIGHT, Color.Black, expected = 0xFFBEBEBE.toInt(), tolerance = 1),
+            MixCase(WidgetGlass.LIGHT, Color(0xFF3366CC), expected = 0xFFD4E1F7.toInt(), tolerance = 2),
+        )
+        for (case in cases) {
+            val fill = glassFill(case.glass, case.wallpaper).toArgb()
+            val at = "${case.glass} glass, wallpaper colour #%06X".format(case.wallpaper.toArgb() and 0xFFFFFF)
+            assertClose(case.expected, fill, at, case.tolerance)
+            assertEquals(if (case.glass == WidgetGlass.DARK) 0x8C else 0x85, (fill ushr 24) and 0xFF, "$at: the alpha is the glass's own")
+        }
+        assertEquals(glassFill(WidgetGlass.DARK), glassFill(WidgetGlass.DARK, null), "no wallpaper colour: the plain fill")
+    }
+
+    @Test fun `each glass has one fixed set of inks`() {
+        val dark = glassPalette(WidgetGlass.DARK)
+        assertEquals(Color.White, dark.text, "dark glass: white text and icons")
+        assertEquals(Color.White.copy(alpha = 0.7f), dark.secondary, "dark glass: secondary text, white at 70 per cent")
+        assertEquals(Color.White.copy(alpha = 0.14f), dark.chip, "dark glass: the pill and the +N tile, white at 14 per cent")
+        val light = glassPalette(WidgetGlass.LIGHT)
+        assertEquals(Color(0xFF1B1C1C), light.text, "light glass: dark text and icons")
+        assertEquals(Color(0xFF4A4A55), light.secondary, "light glass: secondary text")
+        assertEquals(Color.Black.copy(alpha = 0.08f), light.chip, "light glass: the pill and the +N tile, black at 8 per cent")
+        // The main action (Choose) is the text colour turned over, so it reads on its own button.
+        assertAtLeast(4.5f, dark.onAction, dark.action, "Choose on dark glass")
+        assertAtLeast(4.5f, light.onAction, light.action, "Choose on light glass")
+    }
+
+    @Test fun `text stays readable on the glass, even over the worst wallpaper for each tint`() {
+        // Dark glass is at its brightest over pure white: white text on 55 per cent black composited over white.
+        val darkOverWhite = glassFill(WidgetGlass.DARK).compositeOver(Color.White)
+        assertAtLeast(4.5f, glassPalette(WidgetGlass.DARK).text, darkOverWhite, "white text on dark glass over white")
+        // Light glass is at its darkest over pure black: #1B1C1C text on 52 per cent white composited over black.
+        val lightOverBlack = glassFill(WidgetGlass.LIGHT).compositeOver(Color.Black)
+        assertAtLeast(4.5f, glassPalette(WidgetGlass.LIGHT).text, lightOverBlack, "dark text on light glass over black")
+    }
+
+    @Test fun `the contrast check can fail`() {
+        // Instrument check for the test above: the helper must tell 21 from 1, and a thinner fill must fall under 4.5.
+        assertEquals(21f, contrast(Color.White, Color.Black), 0.01f)
+        assertEquals(1f, contrast(Color.White, Color.White), 0.001f)
+        val thin = Color.Black.copy(alpha = 0.4f).compositeOver(Color.White)
+        assertTrue(contrast(Color.White, thin) < 4.5f, "40 per cent black over white is too thin for white text: ${contrast(Color.White, thin)}")
+        // And the worst cases are the greys they should be: 45 per cent white (#737373) and 52 per cent white (#858585).
+        assertClose(0xFF737373.toInt(), glassFill(WidgetGlass.DARK).compositeOver(Color.White).toArgb(), "dark glass over white")
+        assertClose(0xFF858585.toInt(), glassFill(WidgetGlass.LIGHT).compositeOver(Color.Black).toArgb(), "light glass over black")
+    }
+
+    @Test fun `the glass drawables are an edge and a sheen in the system's corner radius`() {
+        val res = resDir()
+        for ((name, edge, sheen) in listOf(Triple("dark", "#24FFFFFF", "#1AFFFFFF"), Triple("light", "#99FFFFFF", "#4DFFFFFF"))) {
+            val root = parse(File(res, "drawable/widget_glass_$name.xml")).documentElement
+            assertEquals("layer-list", root.tagName, name)
+            val shapes = root.getElementsByTagName("shape")
+            assertEquals(2, shapes.length, "$name: an edge and a sheen")
+            for (index in 0 until shapes.length) {
+                val corners = (shapes.item(index) as Element).first("corners")
+                assertEquals("@android:dimen/system_app_widget_background_radius", corners.getAttribute("android:radius"), "$name shape $index")
+            }
+            val edgeShape = shapes.item(0) as Element
+            assertEquals("1dp", edgeShape.first("stroke").getAttribute("android:width"), "$name edge width")
+            assertEquals(edge, edgeShape.first("stroke").getAttribute("android:color"), "$name edge")
+            assertEquals("#00000000", edgeShape.first("solid").getAttribute("android:color"), "$name: nothing inside the edge")
+            val gradient = (shapes.item(1) as Element).first("gradient")
+            assertEquals("270", gradient.getAttribute("android:angle"), "$name sheen: top to bottom")
+            assertEquals(sheen, gradient.getAttribute("android:startColor"), "$name sheen")
+            assertEquals("#00FFFFFF", gradient.getAttribute("android:centerColor"), "$name sheen centre")
+            assertEquals("#00FFFFFF", gradient.getAttribute("android:endColor"), "$name sheen end")
+            assertEquals("0.35", gradient.getAttribute("android:centerY"), "$name sheen fades out by 35 per cent")
         }
     }
 
     // --- Widget picker -----------------------------------------------------------------------------
+
+    @Test fun `the picker previews are translucent dark glass in the system's corner radius`() {
+        val res = resDir()
+        val surface = parse(File(res, "drawable/widget_preview_surface.xml")).documentElement
+        assertEquals("#8C000000", surface.first("solid").getAttribute("android:color"), "surface fill")
+        assertEquals("#24FFFFFF", surface.first("stroke").getAttribute("android:color"), "surface edge, white at 14 per cent")
+        assertEquals("@android:dimen/system_app_widget_background_radius", surface.first("corners").getAttribute("android:radius"))
+        for (size in listOf("small", "wide", "large")) {
+            // The image, in the light and the dark theme: the glass and its edge are the first two paths.
+            for (folder in listOf("drawable", "drawable-night")) {
+                val paths = parse(File(res, "$folder/widget_preview_$size.xml")).getElementsByTagName("path")
+                assertEquals("#8C000000", (paths.item(0) as Element).getAttribute("android:fillColor"), "$folder $size glass")
+                assertEquals("#24FFFFFF", (paths.item(1) as Element).getAttribute("android:strokeColor"), "$folder $size edge")
+            }
+            // The layout's text sits on the chips, so it's white.
+            val texts = parse(File(res, "layout/widget_preview_$size.xml")).getElementsByTagName("TextView")
+            assertEquals(3, texts.length, "$size: the group, its count and the +N tile")
+            for (index in 0 until texts.length) {
+                assertEquals("#FFFFFFFF", (texts.item(index) as Element).getAttribute("android:textColor"), "$size text $index")
+            }
+        }
+    }
 
     @Test fun `each size has a picker preview, an image and its own description`() {
         val res = listOf(File("src/main/res"), File("app/src/main/res")).first { it.isDirectory }
@@ -395,12 +489,20 @@ class GroupWidgetTest {
         assertTrue(ratio >= minimum, "$what: $ratio:1, needs $minimum:1")
     }
 
-    /** Equal to within 1 in each channel (Oklab round trips differ in the last bit). */
-    private fun assertClose(expected: Int, actual: Int, what: String) {
+    /** Equal to within [tolerance] (1 by default) in each channel (Oklab round trips differ in the last bit). */
+    private fun assertClose(expected: Int, actual: Int, what: String, tolerance: Int = 1) {
         for (shift in listOf(16, 8, 0)) {
             val e = (expected shr shift) and 0xFF
             val a = (actual shr shift) and 0xFF
-            assertTrue(abs(e - a) <= 1, "$what: expected #%06X, was #%06X".format(expected and 0xFFFFFF, actual and 0xFFFFFF))
+            assertTrue(abs(e - a) <= tolerance, "$what: expected #%06X, was #%06X".format(expected and 0xFFFFFF, actual and 0xFFFFFF))
         }
     }
+
+    /** A wallpaper colour mixed into a glass fill, and the fill's colour worked out outside Compose. */
+    private class MixCase(val glass: WidgetGlass, val wallpaper: Color, val expected: Int, val tolerance: Int)
+
+    private fun resDir(): File = listOf(File("src/main/res"), File("app/src/main/res")).first { it.isDirectory }
+
+    /** The first descendant element with this tag. */
+    private fun Element.first(tag: String): Element = getElementsByTagName(tag).item(0) as Element
 }

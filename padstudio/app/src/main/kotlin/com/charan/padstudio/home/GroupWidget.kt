@@ -1,5 +1,7 @@
 package com.charan.padstudio.home
 
+import android.app.WallpaperColors
+import android.app.WallpaperManager
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
@@ -12,7 +14,6 @@ import android.os.Build
 import android.util.Log
 import android.util.TypedValue
 import androidx.annotation.DrawableRes
-import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,7 +28,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
@@ -43,13 +43,12 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
-import androidx.glance.color.ColorProviders
-import androidx.glance.color.DynamicThemeColorProviders
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.RowScope
 import androidx.glance.layout.Spacer
@@ -69,6 +68,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.charan.padstudio.R
 import com.charan.padstudio.core.home.AppFacts
 import com.charan.padstudio.core.home.AppGroup
 import com.charan.padstudio.core.home.Density
@@ -91,8 +91,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import androidx.glance.color.ColorProvider as DayNight
-import androidx.glance.material3.ColorProviders as materialColors
 
 /**
  * One home-screen widget per app group (plan §6b, §10 Widget, docs/redesign/mock-widget.html).
@@ -105,9 +103,11 @@ import androidx.glance.material3.ColorProviders as materialColors
  *   Rows share the height; when a group has more apps than cells, the last cell is "+N" and opens the folder.
  * - **Designed states, never blanks:** "Choose a group" (no group saved), "No apps in Games right now"
  *   (an empty group), and the app's initial on a tile when its icon can't be loaded.
- * - **Colours:** the brand surface from [Tokens] in light or dark as the system is, or the wallpaper's
- *   colours (Glance's dynamic colours) while Looks → "Match wallpaper colours" is on; the system's widget
- *   corner radius.
+ * - **Glass:** a translucent fill over the wallpaper with an edge and a sheen on top, in the system's widget
+ *   corner radius. HyperOS can't blur what is behind a third-party widget, so it's translucency, not frosting.
+ *   The wallpaper picks the tint ([WidgetGlass]): dark glass with white ink, or light glass with dark ink when
+ *   it asks for dark text. While Looks → "Match wallpaper colours" is on, 20 % of the wallpaper's main colour
+ *   is mixed into the fill ([glassFill]). The inks are one fixed set per tint, never day/night.
  *
  * Glance lays out at most 10 children per Row and Column. Exact grids stay inside that ([GridSpec]: 10 columns,
  * 8 rows); Auto caps columns at 10 but not rows, so a taller Auto grid draws at most 10 rows ([drawnRows]).
@@ -121,6 +121,10 @@ class GroupWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val studio = context.studio
         val first = withContext(Dispatchers.Default) { studio.apps.snapshot() }
+        // The wallpaper picks the glass (light or dark) and gives the colour "Match wallpaper colours" mixes in.
+        // A call to the system, so on IO and before the content.
+        val wallpaper = withContext(Dispatchers.IO) { readWallpaper(context) }
+        val glass = widgetGlass(wallpaper.hints)
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val keptGroup = keepLegacyGroups(context, first)[appWidgetId]
         provideContent {
@@ -133,9 +137,8 @@ class GroupWidget : GlanceAppWidget() {
             val state = currentState<Preferences>()
             // Each widget may keep its own density; otherwise it follows PadStudio's setting.
             val density = state[DENSITY]?.let { name -> Density.entries.firstOrNull { it.name == name } } ?: config.density
-            GlanceTheme(colors = widgetColors(config.matchWallpaperColours)) {
-                WidgetContent(context, appWidgetId, snapshot, config, state[GROUP] ?: keptGroup, state[GRID], density)
-            }
+            val fill = glassFill(glass, if (config.matchWallpaperColours) wallpaper.primary else null)
+            WidgetContent(context, appWidgetId, snapshot, config, state[GROUP] ?: keptGroup, state[GRID], density, glass, fill)
         }
     }
 
@@ -179,11 +182,14 @@ private fun WidgetContent(
     savedGroup: String?,
     savedGrid: String?,
     density: Density,
+    glass: WidgetGlass,
+    fill: Color,
 ) {
     val size = LocalSize.current
     val widthDp = size.width.value
     val heightDp = size.height.value
     val meter = TextMeter(context)
+    val ink = inkFor(glass)
     val edit = actionStartActivity(
         Intent(context, EditGroupWidgetActivity::class.java)
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
@@ -197,97 +203,111 @@ private fun WidgetContent(
     val headerDp = PAD_DP + pillHeightDp + HEADER_GAP_DP
     val bodyHeightDp = heightDp - headerDp - PAD_DP
 
-    Column(
+    // The root is the glass: the translucent fill is its background, an image underlay draws the edge and the
+    // sheen over it, and the content sits on top. The fill is never fully transparent.
+    Box(
         modifier = GlanceModifier
             .fillMaxSize()
             .appWidgetBackground()
             .cornerRadius(android.R.dimen.system_app_widget_background_radius)
-            .background(widgetSurface(config.matchWallpaperColours))
-            .padding(bottom = PAD_DP.dp),
+            .background(ColorProvider(fill)),
     ) {
-        when (shows) {
-            is WidgetShows.Apps -> {
-                val group = shows.group
-                val layout = widgetLayout(widthDp, heightDp, savedGrid, config.widgetGrid, density, meter.labelLineDp)
-                logInvalidGrids(appWidgetId, savedGrid, config.widgetGrid)
-                // The widget id lets the folder panel offer Edit widget for this widget (Panels, 840 dp and wider).
-                val openPanel = actionStartActivity(
-                    Intent(context, FolderPanelActivity::class.java)
-                        .putExtra(FolderPanelActivity.EXTRA_GROUP, group.group.name)
-                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        .setIdentifier(widgetIntentId(appWidgetId, "panel")),
-                )
-                val count = group.apps.size.toString()
-                val note = layout.note
-                val pillDp = meter.pillWidthDp(group.group.title, count)
-                val noteTextDp = note?.let { meter.widthDp(it, LABEL_SP, WEIGHT_REGULAR) }
-                val headerRoomDp = widthDp - 2 * PAD_DP - EDIT_START_DP - EDIT_BOX_DP
-                val showPill = headerShowsPill(headerRoomDp, pillDp, noteTextDp?.let { NOTE_FRAME_DP + it })
-                Header(
-                    title = group.group.title,
-                    count = count,
-                    showPill = showPill,
-                    primary = openPanel,
-                    primaryDescription = "${group.group.title}, ${appsPhrase(group.apps.size)}. Opens the folder",
-                    note = note,
-                    noteWidthDp = noteTextDp?.let { noteWidth(headerRoomDp - (if (showPill) pillDp + PILL_NOTE_GAP_DP else 0f) - NOTE_FRAME_DP, it) },
-                    edit = edit,
-                )
-                AppGrid(context, snapshot, config, group, layout, cellGeometry(layout, bodyHeightDp, meter), meter, openPanel)
-            }
-            is WidgetShows.NoApps -> {
-                val title = shows.group.title
-                Header(
-                    title = title,
-                    count = shows.inMore.toString(),
-                    showPill = true,
-                    primary = edit,
-                    primaryDescription = "$title, ${appsPhrase(shows.inMore)}. Edit widget",
-                    note = null,
-                    noteWidthDp = null,
-                    edit = null,
-                )
-                StateBody(
-                    meter = meter,
-                    widthDp = widthDp,
-                    heightDp = bodyHeightDp,
-                    symbol = Sym.home,
-                    title = if (shows.inMore == 0) "No apps in $title right now" else "Only ${appsPhrase(shows.inMore)} in $title",
-                    supporting = when (shows.inMore) {
-                        0 -> null
-                        1 -> "It's shown in More for now."
-                        else -> "They're shown in More for now."
-                    },
-                    button = "Edit",
-                    buttonIcon = Sym.edit,
-                    filled = false,
-                    action = edit,
-                )
-            }
-            WidgetShows.ChooseGroup -> {
-                Header(
-                    title = "PadStudio",
-                    count = null,
-                    showPill = true,
-                    primary = edit,
-                    primaryDescription = "Choose a group for this widget",
-                    note = null,
-                    noteWidthDp = null,
-                    edit = null,
-                )
-                StateBody(
-                    meter = meter,
-                    widthDp = widthDp,
-                    heightDp = bodyHeightDp,
-                    symbol = Sym.widgets,
-                    title = "Choose a group",
-                    supporting = "Pick which apps this widget shows.",
-                    button = "Choose",
-                    buttonIcon = null,
-                    filled = true,
-                    action = edit,
-                )
+        Image(
+            ImageProvider(if (glass == WidgetGlass.LIGHT) R.drawable.widget_glass_light else R.drawable.widget_glass_dark),
+            contentDescription = null,
+            modifier = GlanceModifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds,
+        )
+        Column(modifier = GlanceModifier.fillMaxSize().padding(bottom = PAD_DP.dp)) {
+            when (shows) {
+                is WidgetShows.Apps -> {
+                    val group = shows.group
+                    val layout = widgetLayout(widthDp, heightDp, savedGrid, config.widgetGrid, density, meter.labelLineDp)
+                    logInvalidGrids(appWidgetId, savedGrid, config.widgetGrid)
+                    // The widget id lets the folder panel offer Edit widget for this widget (Panels, 840 dp and wider).
+                    val openPanel = actionStartActivity(
+                        Intent(context, FolderPanelActivity::class.java)
+                            .putExtra(FolderPanelActivity.EXTRA_GROUP, group.group.name)
+                            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            .setIdentifier(widgetIntentId(appWidgetId, "panel")),
+                    )
+                    val count = group.apps.size.toString()
+                    val note = layout.note
+                    val pillDp = meter.pillWidthDp(group.group.title, count)
+                    val noteTextDp = note?.let { meter.widthDp(it, LABEL_SP, WEIGHT_REGULAR) }
+                    val headerRoomDp = widthDp - 2 * PAD_DP - EDIT_START_DP - EDIT_BOX_DP
+                    val showPill = headerShowsPill(headerRoomDp, pillDp, noteTextDp?.let { NOTE_FRAME_DP + it })
+                    Header(
+                        title = group.group.title,
+                        count = count,
+                        showPill = showPill,
+                        primary = openPanel,
+                        primaryDescription = "${group.group.title}, ${appsPhrase(group.apps.size)}. Opens the folder",
+                        note = note,
+                        noteWidthDp = noteTextDp?.let { noteWidth(headerRoomDp - (if (showPill) pillDp + PILL_NOTE_GAP_DP else 0f) - NOTE_FRAME_DP, it) },
+                        edit = edit,
+                        ink = ink,
+                    )
+                    AppGrid(context, snapshot, config, group, layout, cellGeometry(layout, bodyHeightDp, meter), meter, openPanel, ink)
+                }
+                is WidgetShows.NoApps -> {
+                    val title = shows.group.title
+                    Header(
+                        title = title,
+                        count = shows.inMore.toString(),
+                        showPill = true,
+                        primary = edit,
+                        primaryDescription = "$title, ${appsPhrase(shows.inMore)}. Edit widget",
+                        note = null,
+                        noteWidthDp = null,
+                        edit = null,
+                        ink = ink,
+                    )
+                    StateBody(
+                        meter = meter,
+                        widthDp = widthDp,
+                        heightDp = bodyHeightDp,
+                        symbol = Sym.home,
+                        title = if (shows.inMore == 0) "No apps in $title right now" else "Only ${appsPhrase(shows.inMore)} in $title",
+                        supporting = when (shows.inMore) {
+                            0 -> null
+                            1 -> "It's shown in More for now."
+                            else -> "They're shown in More for now."
+                        },
+                        button = "Edit",
+                        buttonIcon = Sym.edit,
+                        filled = false,
+                        action = edit,
+                        ink = ink,
+                    )
+                }
+                WidgetShows.ChooseGroup -> {
+                    Header(
+                        title = "PadStudio",
+                        count = null,
+                        showPill = true,
+                        primary = edit,
+                        primaryDescription = "Choose a group for this widget",
+                        note = null,
+                        noteWidthDp = null,
+                        edit = null,
+                        ink = ink,
+                    )
+                    StateBody(
+                        meter = meter,
+                        widthDp = widthDp,
+                        heightDp = bodyHeightDp,
+                        symbol = Sym.widgets,
+                        title = "Choose a group",
+                        supporting = "Pick which apps this widget shows.",
+                        button = "Choose",
+                        buttonIcon = null,
+                        filled = true,
+                        action = edit,
+                        ink = ink,
+                    )
+                }
             }
         }
     }
@@ -308,6 +328,7 @@ private fun Header(
     note: String?,
     noteWidthDp: Float?,
     edit: Action?,
+    ink: GlassInk,
 ) {
     Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
         Box(
@@ -318,7 +339,7 @@ private fun Header(
                 .padding(start = PAD_DP.dp, top = PAD_DP.dp, bottom = HEADER_GAP_DP.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
-            if (showPill) Pill(title, count) else Spacer(GlanceModifier.width(1.dp).height(PILL_MIN_DP.dp))
+            if (showPill) Pill(title, count, ink) else Spacer(GlanceModifier.width(1.dp).height(PILL_MIN_DP.dp))
         }
         if (edit != null) {
             Row(
@@ -335,7 +356,7 @@ private fun Header(
                         provider = ImageProvider(Sym.fitWarn),
                         contentDescription = null,
                         modifier = GlanceModifier.size(FIT_ICON_DP.dp),
-                        colorFilter = ColorFilter.tint(WarnInk),
+                        colorFilter = ColorFilter.tint(ink.warn),
                     )
                     // A fixed width stops long words from pushing the edit button out of the row.
                     if (noteWidthDp != 0f) {
@@ -344,7 +365,7 @@ private fun Header(
                             note,
                             maxLines = 1,
                             modifier = if (noteWidthDp != null) GlanceModifier.width(noteWidthDp.dp) else GlanceModifier,
-                            style = TextStyle(fontSize = LABEL_SP.sp, color = GlanceTheme.colors.onSurfaceVariant),
+                            style = TextStyle(fontSize = LABEL_SP.sp, color = ink.secondary),
                         )
                     }
                     Spacer(GlanceModifier.width(NOTE_END_GAP_DP.dp))
@@ -354,7 +375,7 @@ private fun Header(
                         provider = ImageProvider(Sym.edit),
                         contentDescription = null,
                         modifier = GlanceModifier.size(EDIT_ICON_DP.dp),
-                        colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant),
+                        colorFilter = ColorFilter.tint(ink.text),
                     )
                 }
             }
@@ -362,11 +383,11 @@ private fun Header(
     }
 }
 
-/** The group's name and app count on a pill, at least 24 dp tall (kit .widget__pill). */
+/** The group's name and app count on a glass chip, at least 24 dp tall (kit .widget__pill). */
 @Composable
-private fun Pill(title: String, count: String?) {
+private fun Pill(title: String, count: String?, ink: GlassInk) {
     Box(
-        modifier = GlanceModifier.cornerRadius(PILL_RADIUS_DP.dp).background(GlanceTheme.colors.secondaryContainer),
+        modifier = GlanceModifier.cornerRadius(PILL_RADIUS_DP.dp).background(ink.chip),
         contentAlignment = Alignment.Center,
     ) {
         Spacer(GlanceModifier.width(1.dp).height(PILL_MIN_DP.dp))
@@ -374,7 +395,7 @@ private fun Pill(title: String, count: String?) {
             modifier = GlanceModifier.padding(horizontal = PILL_PAD_H_DP.dp, vertical = PILL_PAD_V_DP.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val color = GlanceTheme.colors.onSecondaryContainer
+            val color = ink.text
             Text(title, maxLines = 1, style = TextStyle(fontSize = LABEL_SP.sp, fontWeight = FontWeight.Medium, color = color))
             if (count != null) {
                 Spacer(GlanceModifier.width(PILL_COUNT_GAP_DP.dp))
@@ -407,6 +428,7 @@ private fun ColumnScope.AppGrid(
     geometry: CellGeometry,
     meter: TextMeter,
     openPanel: Action,
+    ink: GlassInk,
 ) {
     val colors = themedIconColors(context)
     // Up to 10 rows share the height. A taller Auto grid can't (drawnRows), so each row gets its share fixed.
@@ -427,9 +449,9 @@ private fun ColumnScope.AppGrid(
                     when (cell) {
                         is Cell.App -> {
                             val app = snapshot.app(cell.app)
-                            AppCell(cell.app, app, app?.let { appIcon(context, it, config, colors.background, colors.glyph) }, geometry, meter)
+                            AppCell(cell.app, app, app?.let { appIcon(context, it, config, colors.background, colors.glyph) }, geometry, meter, ink)
                         }
-                        is Cell.More -> MoreCell(cell.count, geometry, meter, openPanel)
+                        is Cell.More -> MoreCell(cell.count, geometry, meter, openPanel, ink)
                         Cell.Empty -> Spacer(GlanceModifier.defaultWeight())
                     }
                 }
@@ -439,7 +461,7 @@ private fun ColumnScope.AppGrid(
 }
 
 @Composable
-private fun RowScope.AppCell(facts: AppFacts, app: InstalledApp?, icon: Icon?, geometry: CellGeometry, meter: TextMeter) {
+private fun RowScope.AppCell(facts: AppFacts, app: InstalledApp?, icon: Icon?, geometry: CellGeometry, meter: TextMeter, ink: GlassInk) {
     val label = app?.facts?.label ?: facts.label
     Column(
         modifier = GlanceModifier
@@ -453,7 +475,7 @@ private fun RowScope.AppCell(facts: AppFacts, app: InstalledApp?, icon: Icon?, g
         if (icon != null) {
             Image(ImageProvider(icon), contentDescription = null, modifier = GlanceModifier.size(geometry.iconDp.dp))
         } else {
-            InitialTile(appInitial(label, facts.packageName), geometry.iconDp, meter)
+            InitialTile(appInitial(label, facts.packageName), geometry.iconDp, meter, ink)
         }
         if (geometry.showLabel) {
             Spacer(GlanceModifier.height(LABEL_SPACER_DP.dp))
@@ -461,7 +483,7 @@ private fun RowScope.AppCell(facts: AppFacts, app: InstalledApp?, icon: Icon?, g
                 label,
                 maxLines = 1,
                 modifier = GlanceModifier.padding(horizontal = LABEL_PAD_H_DP.dp),
-                style = TextStyle(fontSize = LABEL_SP.sp, color = GlanceTheme.colors.onSurface, textAlign = TextAlign.Center),
+                style = TextStyle(fontSize = LABEL_SP.sp, color = ink.text, textAlign = TextAlign.Center),
             )
         }
     }
@@ -469,7 +491,7 @@ private fun RowScope.AppCell(facts: AppFacts, app: InstalledApp?, icon: Icon?, g
 
 /** The "+N" tile: the whole last cell is its touch target (at least 48 dp in any grid that fits). */
 @Composable
-private fun RowScope.MoreCell(count: Int, geometry: CellGeometry, meter: TextMeter, openPanel: Action) {
+private fun RowScope.MoreCell(count: Int, geometry: CellGeometry, meter: TextMeter, openPanel: Action, ink: GlassInk) {
     val text = "+$count"
     Box(
         modifier = GlanceModifier
@@ -483,7 +505,7 @@ private fun RowScope.MoreCell(count: Int, geometry: CellGeometry, meter: TextMet
             modifier = GlanceModifier
                 .size(geometry.iconDp.dp)
                 .cornerRadius((geometry.iconDp * TILE_CORNER).dp)
-                .background(GlanceTheme.colors.secondaryContainer),
+                .background(ink.chip),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -492,21 +514,21 @@ private fun RowScope.MoreCell(count: Int, geometry: CellGeometry, meter: TextMet
                 style = TextStyle(
                     fontSize = meter.fitSp(text, MORE_SP, geometry.iconDp * TILE_TEXT_SHARE, WEIGHT_MEDIUM).sp,
                     fontWeight = FontWeight.Medium,
-                    color = GlanceTheme.colors.onSecondaryContainer,
+                    color = ink.text,
                 ),
             )
         }
     }
 }
 
-/** A missing icon: the app's initial on a tonal tile (kit .app-icon--initial), never a blank cell. */
+/** A missing icon: the app's initial on a glass chip (kit .app-icon--initial), never a blank cell. */
 @Composable
-private fun InitialTile(initial: String, sizeDp: Float, meter: TextMeter) {
+private fun InitialTile(initial: String, sizeDp: Float, meter: TextMeter, ink: GlassInk) {
     Box(
         modifier = GlanceModifier
             .size(sizeDp.dp)
             .cornerRadius((sizeDp * TILE_CORNER).dp)
-            .background(GlanceTheme.colors.tertiaryContainer),
+            .background(ink.chip),
         contentAlignment = Alignment.Center,
     ) {
         // Part of the icon, so it keeps the icon's proportions at any font scale.
@@ -516,7 +538,7 @@ private fun InitialTile(initial: String, sizeDp: Float, meter: TextMeter) {
             style = TextStyle(
                 fontSize = meter.spForDp(sizeDp * INITIAL_SHARE).sp,
                 fontWeight = FontWeight.Medium,
-                color = GlanceTheme.colors.onTertiaryContainer,
+                color = ink.text,
             ),
         )
     }
@@ -539,6 +561,7 @@ private fun ColumnScope.StateBody(
     @DrawableRes buttonIcon: Int?,
     filled: Boolean,
     action: Action,
+    ink: GlassInk,
 ) {
     val textWidthDp = widthDp - 2 * (PAD_DP + STATE_SIDE_DP)
     val titleLines = lineCount(title, textWidthDp) { meter.widthDp(it, TITLE_SP, WEIGHT_MEDIUM) }
@@ -563,14 +586,14 @@ private fun ColumnScope.StateBody(
                 modifier = GlanceModifier
                     .size(STATE_ICON_DP.dp)
                     .cornerRadius((STATE_ICON_DP / 2).dp)
-                    .background(GlanceTheme.colors.secondaryContainer),
+                    .background(ink.chip),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
                     provider = ImageProvider(symbol),
                     contentDescription = null,
                     modifier = GlanceModifier.size(STATE_SYMBOL_DP.dp),
-                    colorFilter = ColorFilter.tint(GlanceTheme.colors.onSecondaryContainer),
+                    colorFilter = ColorFilter.tint(ink.text),
                 )
             }
             Spacer(GlanceModifier.height(STATE_ICON_GAP_DP.dp))
@@ -578,28 +601,31 @@ private fun ColumnScope.StateBody(
         Text(
             title,
             maxLines = fit.titleLines,
-            style = TextStyle(fontSize = TITLE_SP.sp, fontWeight = FontWeight.Medium, color = GlanceTheme.colors.onSurface, textAlign = TextAlign.Center),
+            style = TextStyle(fontSize = TITLE_SP.sp, fontWeight = FontWeight.Medium, color = ink.text, textAlign = TextAlign.Center),
         )
         if (fit.supportingLines > 0 && supporting != null) {
             Spacer(GlanceModifier.height(STATE_GAP_DP.dp))
             Text(
                 supporting,
                 maxLines = fit.supportingLines,
-                style = TextStyle(fontSize = BODY_SP.sp, color = GlanceTheme.colors.onSurfaceVariant, textAlign = TextAlign.Center),
+                style = TextStyle(fontSize = BODY_SP.sp, color = ink.secondary, textAlign = TextAlign.Center),
             )
         }
         if (fit.button) {
             Spacer(GlanceModifier.height(STATE_GAP_DP.dp))
-            PillButton(button, buttonIcon, filled, action)
+            PillButton(button, buttonIcon, filled, action, ink)
         }
     }
 }
 
-/** A 40 dp pill button inside a 48 dp touch target: filled for the main action, tonal otherwise. */
+/**
+ * A 40 dp pill button inside a 48 dp touch target: the main action is filled in the text colour with the glass
+ * ink's turned-over colour on it, any other is a glass chip.
+ */
 @Composable
-private fun PillButton(label: String, @DrawableRes icon: Int?, filled: Boolean, action: Action) {
-    val container = if (filled) GlanceTheme.colors.primary else GlanceTheme.colors.secondaryContainer
-    val content = if (filled) GlanceTheme.colors.onPrimary else GlanceTheme.colors.onSecondaryContainer
+private fun PillButton(label: String, @DrawableRes icon: Int?, filled: Boolean, action: Action, ink: GlassInk) {
+    val container = if (filled) ink.action else ink.chip
+    val content = if (filled) ink.onAction else ink.text
     Box(
         modifier = GlanceModifier
             .cornerRadius(PILL_RADIUS_DP.dp)
@@ -637,27 +663,36 @@ private fun PillButton(label: String, @DrawableRes icon: Int?, filled: Boolean, 
 // --- Android helpers -----------------------------------------------------------------------------
 
 /**
- * The brand palette's colours; the launcher picks light or dark as the system is. Lazy: Glance builds
- * them with android.graphics.Color, which must not run when this file's plain rules are unit-tested.
+ * A glass tint's [GlassPalette] as Glance colour providers: fixed colours, one set per tint, never day/night.
+ * The wallpaper picks the tint ([widgetGlass]), so the system theme decides nothing here.
  */
-private val BrandColors: ColorProviders by lazy {
-    materialColors(light = Tokens.lightScheme(Tokens.DefaultPalette), dark = Tokens.darkScheme(Tokens.DefaultPalette))
+private class GlassInk(palette: GlassPalette) {
+    val text: ColorProvider = ColorProvider(palette.text)
+    val secondary: ColorProvider = ColorProvider(palette.secondary)
+    val chip: ColorProvider = ColorProvider(palette.chip)
+    val warn: ColorProvider = ColorProvider(palette.warn)
+    val action: ColorProvider = ColorProvider(palette.action)
+    val onAction: ColorProvider = ColorProvider(palette.onAction)
 }
 
-private val BrandSurface: ColorProvider = DayNight(
-    day = brandSurface(Tokens.lightScheme(Tokens.DefaultPalette), dark = false),
-    night = brandSurface(Tokens.darkScheme(Tokens.DefaultPalette), dark = true),
-)
+private val DarkInk = GlassInk(glassPalette(WidgetGlass.DARK))
+private val LightInk = GlassInk(glassPalette(WidgetGlass.LIGHT))
 
-/** The fit note's icon: the warning ink, which reaches 3:1 on the brand surfaces (GroupWidgetTest). */
-private val WarnInk: ColorProvider = DayNight(day = Tokens.WarnInkLight, night = Tokens.WarnInkDark)
+private fun inkFor(glass: WidgetGlass): GlassInk = if (glass == WidgetGlass.LIGHT) LightInk else DarkInk
 
-/** Brand colours, or Glance's wallpaper (dynamic) colours while Looks → "Match wallpaper colours" is on. */
-private fun widgetColors(matchWallpaper: Boolean): ColorProviders = if (matchWallpaper) DynamicThemeColorProviders else BrandColors
+/** What the home wallpaper says about itself: its colour hints and its main colour, each null where it can't tell. */
+private class WallpaperLook(val hints: Int?, val primary: Color?)
 
-@Composable
-private fun widgetSurface(matchWallpaper: Boolean): ColorProvider =
-    if (matchWallpaper) GlanceTheme.colors.widgetBackground else BrandSurface
+/**
+ * The home wallpaper's colour hints and main colour (no permission needed; the picture itself can't be read).
+ * It asks the system, so provideGlance runs it on IO. When the colours can't be read the widget draws dark glass.
+ */
+private fun readWallpaper(context: Context): WallpaperLook {
+    val colors = runCatching { WallpaperManager.getInstance(context).getWallpaperColors(WallpaperManager.FLAG_SYSTEM) }
+        .onFailure { warnOnce("wallpaper", "Couldn't read the wallpaper's colours; drawing the dark glass", it) }
+        .getOrNull()
+    return WallpaperLook(colors?.colorHints, colors?.primaryColor?.let { Color(it.toArgb()) })
+}
 
 /** An app's icon in the chosen style, or null when it can't be made (the cell then shows the initial). */
 private fun appIcon(context: Context, app: InstalledApp, config: StudioConfig, accent: Int, onAccent: Int): Icon? =
@@ -877,12 +912,65 @@ internal fun appInitial(label: String, packageName: String): String {
     return firstLetter(label) ?: firstLetter(packageName.substringAfterLast('.')) ?: "?"
 }
 
+/** The widget's glass tint: light glass (white, with dark ink) over a bright wallpaper, dark glass (black, with white ink) otherwise. */
+internal enum class WidgetGlass { LIGHT, DARK }
+
 /**
- * PadStudio's widget surface (mock-widget.html): the scheme's low container mixed in Oklab with 14 %
- * (dark) or 6 % (light) of primary container, the reference's navy-violet card.
+ * LIGHT when the wallpaper asks for dark text ([WallpaperColors.HINT_SUPPORTS_DARK_TEXT], which a bright
+ * wallpaper sets); DARK otherwise, and when the hints can't be read ([hints] is null).
  */
-internal fun brandSurface(scheme: ColorScheme, dark: Boolean): Color =
-    lerp(scheme.surfaceContainerLow, scheme.primaryContainer, if (dark) DARK_TINT else LIGHT_TINT)
+internal fun widgetGlass(hints: Int?): WidgetGlass =
+    if (hints != null && (hints and WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0) WidgetGlass.LIGHT else WidgetGlass.DARK
+
+/**
+ * The fill laid over the wallpaper: white at 52 % for LIGHT, black at 55 % for DARK, so never fully
+ * transparent. With [wallpaperPrimary] (the wallpaper's main colour, while Looks → "Match wallpaper
+ * colours" is on) 20 % of that colour is mixed into it, in Oklab, and the alpha stays the same.
+ */
+internal fun glassFill(glass: WidgetGlass, wallpaperPrimary: Color? = null): Color {
+    val light = glass == WidgetGlass.LIGHT
+    val base = if (light) Color.White else Color.Black
+    val mixed = if (wallpaperPrimary == null) base else lerp(base, wallpaperPrimary.copy(alpha = 1f), WALLPAPER_MIX)
+    return mixed.copy(alpha = if (light) LIGHT_FILL_ALPHA else DARK_FILL_ALPHA)
+}
+
+/**
+ * What the widget is drawn in on one glass tint. Fixed colours, never day/night. The text colours reach 4.5:1
+ * on the glass over the worst wallpaper for the tint (white behind dark glass, black behind light glass);
+ * GroupWidgetTest pins it.
+ */
+internal class GlassPalette(
+    /** Labels, titles, icons and the text on chips. */
+    val text: Color,
+    /** The fit note and the help line. */
+    val secondary: Color,
+    /** The header pill, the "+N" tile and the other tonal chips. */
+    val chip: Color,
+    /** The fit note's icon. */
+    val warn: Color,
+    /** The main action's button, and the colour of its text: the text colour turned over. */
+    val action: Color,
+    val onAction: Color,
+)
+
+internal fun glassPalette(glass: WidgetGlass): GlassPalette = when (glass) {
+    WidgetGlass.DARK -> GlassPalette(
+        text = Color.White,
+        secondary = Color.White.copy(alpha = 0.7f),
+        chip = Color.White.copy(alpha = 0.14f),
+        warn = Tokens.WarnInkDark,
+        action = Color.White,
+        onAction = Color(0xFF1B1C1C),
+    )
+    WidgetGlass.LIGHT -> GlassPalette(
+        text = Color(0xFF1B1C1C),
+        secondary = Color(0xFF4A4A55),
+        chip = Color.Black.copy(alpha = 0.08f),
+        warn = Tokens.WarnInkLight,
+        action = Color(0xFF1B1C1C),
+        onAction = Color.White,
+    )
+}
 
 /** Whether an icon (and its label line, if any) fits a cell's height whole, so it can be centred. */
 internal fun cellHolds(cellHeightDp: Float, iconDp: Float, labelLineDp: Float?): Boolean =
@@ -1060,6 +1148,7 @@ private const val BUTTON_ICON_GAP_DP = 8f
 /** Sub-pixel slack when comparing heights made of rounded parts. */
 private const val ROUNDING_DP = 0.5f
 
-/** mock-widget.html's color-mix: 86 % low container + 14 % primary container (dark), 94 % + 6 % (light). */
-private const val DARK_TINT = 0.14f
-private const val LIGHT_TINT = 0.06f
+/** The glass fill's alpha (white over a bright wallpaper, black over a dark one) and the share of the wallpaper's colour mixed in. */
+private const val LIGHT_FILL_ALPHA = 0.52f
+private const val DARK_FILL_ALPHA = 0.55f
+private const val WALLPAPER_MIX = 0.2f
