@@ -159,7 +159,7 @@ class ConfigStoreTest {
     }
 }
 
-/** StudioConfig exactly as the build before the redesign declared it (commit 18e4a71), to test a rollback. */
+/** StudioConfig exactly as the build before the redesign declared it (commit 07c10d8), to test a rollback. */
 @Serializable
 private data class StudioConfigBeforeRedesign(
     val penMode: PenMode = PenMode.BASIC,

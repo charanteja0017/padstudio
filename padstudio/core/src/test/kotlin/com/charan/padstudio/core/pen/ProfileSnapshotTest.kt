@@ -27,7 +27,7 @@ import kotlin.test.fail
  * (every group and key map name) and KeyMapperJson. If PenStudio.plan() changes, change [plan].
  * On 11 Oct 2026 [plan] was fed the tablet's backed-up config.json, device-facts.json and package
  * list and rebuilt the profile the tablet had sent, byte for byte, apart from five key map names:
- * that profile predates commit 02229e1, which renamed "Double tap press →" to "Double tap →".
+ * that profile predates commit 4749fd9, which renamed "Double tap press →" to "Double tap →".
  *
  * A failure means the profile Key Mapper would receive has changed. Only if that is intended,
  * regenerate, review the goldens' diff, and say why in the commit (from the repo root):

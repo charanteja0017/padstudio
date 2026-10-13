@@ -95,7 +95,7 @@
 
 ## W2 facts you code against (filled in as the foundation agents report)
 
-### From :core (task B, commit `4c02721`)
+### From :core (task B, commit `05634e7`)
 - **`GridSpec(columns, rows)`.**
   - `toString()` gives `"8x4"` (the stored form); `label` gives `"8 × 4"` (for display).
   - The constructor **throws** outside 4–10 × 2–8, so saved strings go only through `GridSpec.parse(String?)` / `GridSpec.resolve(perWidget, defaultSpec)`. Both return null for Auto, or for anything invalid.

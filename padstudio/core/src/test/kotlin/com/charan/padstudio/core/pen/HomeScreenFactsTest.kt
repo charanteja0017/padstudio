@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 
 /**
  * The optional homeScreen block of device-facts.json (redesign plan §6a). pad8-device-facts-2026-10-11.json
- * is docs/device/device-facts.json as committed at 18e4a71 (gate G5); pad8-device-facts.json is an
+ * is docs/device/device-facts.json as committed at 07c10d8 (gate G5); pad8-device-facts.json is an
  * older file from before the block existed.
  */
 class HomeScreenFactsTest {
